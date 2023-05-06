@@ -72,3 +72,5 @@ influence_explainer = InfluenceExplainer4Classification(
     loss_function=BinaryCrossentropy(from_logits=False,
                                      reduction=Reduction.NONE))
 influence_explainer.get_test_grad_loss_no_reg_val(test_indices=[test_idx])
+influence_explainer.get_influence_on_test_loss(test_indices=[test_idx])
+print('Done!')

@@ -3,14 +3,17 @@ import os
 import tensorflow as tf
 import scipy.io as scio
 import numpy as np
+from matplotlib import colors, colorbar, cm
+
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, LSTM, multiply, concatenate, Activation, Masking, Reshape, \
     RepeatVector, \
-    TimeDistributed
+    TimeDistributed, Lambda
 from tensorflow.keras.layers import Conv1D, BatchNormalization, GlobalAveragePooling1D, Permute, Dropout
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import RobustScaler
 from tensorflow.keras.models import Sequential, load_model
+
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
@@ -19,8 +22,11 @@ import seaborn as sns
 import pandas as pd
 import time
 import matplotlib.ticker as mtick
+import configparser
+from deel_modified.influenciae.common import InfluenceModel
+from tensorflow.keras.optimizers import Adam
 
-path_project = ''
+path_project = '/home/yukina/Missile_Fault_Detection/project/'
 
 
 def data_preprocess(path1):
@@ -591,6 +597,15 @@ def get_processed_data():
 
 
 if __name__ == "__main__":
+    seed = 0  # random seed
+    start_layer = 0  # start layer of weights to be calculated for influence function
+    last_layer = -1  # last layer of weights to be calculated for influence function
+    learning_rate = 0.001  # initial learning rate
+    epochs = 100  # number of training epochs
+    batch = 64  # batch size
+    unreduced_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False,
+                                                           reduction=tf.keras.losses.Reduction.NONE)
+
     plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
     plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
     # # path = 'D:\share\\normal\\zc1.dat'
@@ -610,42 +625,70 @@ if __name__ == "__main__":
     f = []
     r = []
     l = []
-    seeds_num = 1
 
     np.save(path_project + 'data/one_hot_label.npy', mode)
-    for i in range(0, seeds_num):
-        print(f'Training seed={i}........................')
-        # add sample_id to the data, for later use of explaining
-        new_col = np.array([i for i in range(mode.shape[0])]).reshape((mode.shape[0], 1))
-        mode = np.concatenate((mode, new_col), axis=1)
 
-        X_train, X_test, Y_train, Y_test = train_test_split(fea, mode, test_size=0.30, random_state=i)
+    print(f'Training seed={seed}........................')
+    # add sample_id to the data, for later use of explaining
+    new_col = np.array([i for i in range(mode.shape[0])]).reshape((mode.shape[0], 1))
+    mode = np.concatenate((mode, new_col), axis=1)
 
-        ID_train = np.squeeze(Y_train[:, -1:])
-        ID_test = np.squeeze(Y_test[:, -1:])
+    X_train, X_test, Y_train, Y_test = train_test_split(fea, mode, test_size=0.30, random_state=seed)
 
-        # remode sample_id from data
-        mode = mode[:, :-1]
-        Y_train = Y_train[:, :-1]
-        Y_test = Y_test[:, :-1]
+    ID_train = np.squeeze(Y_train[:, -1:])
+    ID_test = np.squeeze(Y_test[:, -1:])
 
-        # Save the training set and test set and sample_id
-        np.save(path_project + 'data/X_train.npy', X_train)
-        np.save(path_project + 'data/X_test.npy', X_test)
-        np.save(path_project + 'data/Y_train.npy', Y_train)
-        np.save(path_project + 'data/Y_test.npy', Y_test)
-        np.save(path_project + 'data/ID_train.npy', ID_train)
-        np.save(path_project + 'data/ID_test.npy', ID_test)
+    # remode sample_id from data
+    mode = mode[:, :-1]
+    Y_train = Y_train[:, :-1]
+    Y_test = Y_test[:, :-1]
 
+    # Save the training set and test set and sample_id
+    np.save(path_project + f'data_seed={seed}/X_train.npy', X_train)
+    np.save(path_project + f'data_seed={seed}/X_test.npy', X_test)
+    np.save(path_project + f'data_seed={seed}/Y_train.npy', Y_train)
+    np.save(path_project + f'data_seed={seed}/Y_test.npy', Y_test)
+    np.save(path_project + f'data_seed={seed}/ID_train.npy', ID_train)
+    np.save(path_project + f'data_seed={seed}//ID_test.npy', ID_test)
+
+    model_list = []
+    if os.path.exists(path_project + 'trac/checkpoints/config.ini'):
+        print('Loading model from checkpoints...')
+        config = configparser.ConfigParser()
+        config.read(path_project + 'trac/checkpoints/config.ini')
+        for i in range(0, 100):
+            model = load_model(path_project + f'trac/checkpoints/model-{i}.h5')
+        model_list.append(
+            InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
+        print('Model loaded successfully.')
+    else:
         model = generate_model(fea.shape[1], 5, fea.shape[2])
-        from tensorflow.keras.optimizers import Adam
-        learning_rate = 0.001
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
         # history = model.fit(X_train, mode, batch_size=64, epochs=100)  # 每次取32张图片，共计循环10次
-        history = model.fit(X_train, Y_train, validation_data=(X_test, Y_test), batch_size=64,
-                            epochs=100)  # 每次取32张图片，共计循环10次
-        model.save(path_project + f'models/lstm-fcn-{i}.h5')
+        # history = model.fit(X_train, Y_train, validation_data=(X_test, Y_test), batch_size=64,
+        #                     epochs=100)  # 每次取32张图片，共计循环10次
+
+
+        model_list.append(
+            InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
+        history = dict(
+            loss=[],
+            accuracy=[],
+            val_loss=[],
+            val_accuracy=[]
+        )
+        for i in range(epochs):
+            status = model.fit(X_train, Y_train, epochs=1, validation_data=(X_test, Y_test), batch_size=batch, verbose=2)
+            history['loss'].append(status.history['loss'][0])
+            history['accuracy'].append(status.history['accuracy'][0])
+            history['val_loss'].append(status.history['val_loss'][0])
+            history['val_accuracy'].append(status.history['val_accuracy'][0])
+            model.save(path_project + f'trac/checkpoints/model-{i}.h5')
+            updated_model = tf.keras.models.clone_model(model)
+            updated_model.set_weights(model.get_weights())
+            model_list.append(
+                InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
         # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'wb') as file_pi:
         #     pickle.dump(history.history, file_pi)
         # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'rb') as file_pi:
@@ -653,6 +696,7 @@ if __name__ == "__main__":
 
         # from deel.influenciae.common import InfluenceModel, ExactIHVP
         # influence_model = InfluenceModel(model, loss_function=tf.keras.losses.binary_crossentropy)
+
         fig, ax = plt.subplots(1, 2, figsize=(7, 3), dpi=200, tight_layout=True)
         ax[0].grid(which='major', ls='--', alpha=.8, lw=.8)
         ax[0].plot(history.history['loss'], label='训练集')
@@ -701,43 +745,187 @@ if __name__ == "__main__":
         r.append(recall_score(label, train_pred, average='macro'))
         l.append(history.history['loss'][-1])
 
-    # save result to disk
-    result = pd.DataFrame({
-        'accuracy': a,
-        'f1': f,
-        'recall': r,
-        'loss': l
-    })
-    result.to_csv(path_project + 'models/performance.csv', index=False)
-    '''测试'''
-    # print(model.predict(X_train))
-    # path2 = 'F:\微信文件\研一上大作业\DD\demo_x\demoV9-7.07\data\\1ka\\1ka0.mat'
-    # testdata = data_preprocess(path2)
-    # scaler = RobustScaler().fit(normal_data[3000:8000, :])
-    # xtest = scaler.transform(testdata)
-    # lookback = 5
-    # test_extract = np.array(temporalize(xtest, lookback))
-    # print(np.shape(test_extract))
-    # test_extract = np.reshape(test_extract, (test_extract.shape[0], lookback, test_extract.shape[3]))
-    # time_steps = test_extract.shape[1]
-    # n_features = test_extract.shape[2]
-    # model = load_model('location.h5')
-    # pred = model.predict(test_extract)
-    # test_pred = data_flatten(pred)
-    # test_real = data_flatten(test_extract)
-    # # test_error = np.sum(abs(test_real - test_pred), axis=1)
-    # test_error = test_real - test_pred
-    # # test_fea = np.array(test_error[7993:8020, :])
-    # test_fea = np.array(test_error[7993:8020,:])
-    # print(test_fea.shape[0])
-    # # x_test = np.reshape(test_fea, (1, 1, test_fea.shape[0]))
-    # test_fea = test_fea.T
-    # x_test = np.reshape(test_fea, (1, test_fea.shape[0], test_fea.shape[1]))
-    # print('x_test',x_test.shape)
-    # model_classify = load_model('lstm-fcn.h5')
-    # y_test = model_classify.predict(x_test)
-    # print('松浮-0，缺损-1，卡死-2')
-    # print(y_test)
-    # # model = generate_model_2()
-    # # # train_model(model, DATASET_INDEX, dataset_prefix='lp5_', epochs=1000, batch_size=128)
-    # # evaluate_model(model, DATASET_INDEX, dataset_prefix='lp5_', batch_size=128)
+        # save result to disk
+        result = pd.DataFrame({
+            'accuracy': a,
+            'f1': f,
+            'recall': r,
+            'loss': l
+        })
+        result.to_csv(path_project + 'models/performance.csv', index=False)
+
+        # 创建一个 ConfigParser 对象
+        config = configparser.ConfigParser()
+
+        # 添加配置选项
+        config['experiment'] = {
+            'seed': seed,
+            'start_layer': start_layer,
+            'last_layer': last_layer,
+            'learning_rate': learning_rate,
+            'epochs': epochs,
+            'batch': batch
+        }
+
+        # 写入配置文件
+        with open(path_project + 'trac/checkpoints/config.ini', 'w') as f:
+            config.write(f)
+
+
+
+################################################################
+
+    print('Start calculate influence...')
+
+    # Load the training set and test set
+    X_train = np.load(path_project + f'data_seed={seed}/X_train.npy')
+    X_test = np.load(path_project + f'data_seed={seed}/X_test.npy')
+    Y_train = np.load(path_project + f'data_seed={seed}/Y_train.npy')
+    Y_test = np.load(path_project + f'data_seed={seed}/Y_test.npy')
+    ID_train = np.load(path_project + f'data_seed={seed}/ID_train.npy')
+    ID_test = np.load(path_project + f'data_seed={seed}/ID_test.npy')
+
+    train_ds = tf.data.Dataset.from_tensor_slices((X_train, Y_train)).map(
+        lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
+
+    # load the model
+    # if os.path.exists(f'data_seed={seed}/lstm-fcn-{seed}.h5'):
+    #     model = load_model(f'data_seed={seed}/lstm-fcn-{seed}.h5')
+
+
+    if os.path.exists(path_project + f'data_seed={seed}/Prediction_train.npy'):
+        Prediction_train = np.load(path_project + f'data_seed={seed}/Prediction_train.npy')
+    else:
+        Prediction_train = model.predict(X_train)
+        np.save(path_project + f'data_seed={seed}/Prediction_train.npy', Prediction_train)
+
+    # 找出测试集中预测错误的样本
+    test_pred = model.predict(X_test)
+    test_pred = np.argmax(test_pred, axis=1)
+    label_test = np.argmax(Y_test, axis=1)
+    wrong_id = np.where(test_pred != label_test)[0]
+    test_ds = tf.data.Dataset.from_tensor_slices((X_test[wrong_id], Y_test[wrong_id])).map(
+        lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
+
+    from deel_modified.influenciae.common import InfluenceModel, ExactIHVP, ConjugateGradientDescentIHVP
+    from tensorflow.keras.losses import BinaryCrossentropy, Reduction
+
+    # sequential_model = Sequential()
+    # for layer in model.layers:
+    #     sequential_model.add(layer)
+
+
+    from deel_modified.influenciae.trac_in import TracIn
+
+    trac_in = TracIn(model_list, learning_rate)
+
+    tesk_point = test_ds.take(1).batch(1)
+    explanations = trac_in.estimate_influence_values_in_batches(tesk_point, train_ds.batch(1))
+    # explanations = influence_calculator.top_k(tesk_point, train_ds.take(10).batch(1), k=5)
+    for (test_fea, test_label), explanation in explanations:
+        fea = test_fea.numpy()
+        # fea的维度为(1, 13, 27), 绘制test_fea为表格数据, 并在图上标出真实标签和预测标签
+        fea = fea.reshape((fea.shape[1], fea.shape[2]))
+        fea = np.transpose(fea)
+
+        # 收集样本的影响力数据
+        explanation_dict = {
+            'sample_id': [],
+            'train_feature': [],
+            'train_label': [],
+            'predicted label': [],
+            'influence': []
+        }
+        for id, ((train_fea, train_label), influence) in enumerate(explanation):
+            # 确保经过影响力计算后训练样本的id没有发生改变
+            assert np.argmax(np.squeeze(train_label.numpy())) == np.argmax(Y_train[id])
+
+            explanation_dict['sample_id'].append(int(ID_train[id]))
+            explanation_dict['train_feature'].append(np.squeeze(train_fea.numpy()))
+            explanation_dict['train_label'].append(np.squeeze(train_label.numpy()))
+            explanation_dict['predicted label'].append(np.argmax(Prediction_train[id]))
+            explanation_dict['influence'].append(np.squeeze(influence.numpy()))
+        # 将影响力数据转换为DataFrame
+        explanation_df = pd.DataFrame(explanation_dict)
+        # 将影响力数据按照影响力大小排序
+        explanation_df = explanation_df.sort_values(by='influence', ascending=False)
+        explanation_df.to_csv(path_project + f'data_seed={seed}/explanation_df.csv', index=True)
+        # explanation_df = pd.read_csv(path_project + f'data_seed={seed}/explanation_df.csv')
+
+        # 收集所有绘图数据的最小值和最大值，以画出colorbar
+        min_list = [np.min(test_fea)]
+        max_list = [np.max(test_fea)]
+        for i in range(0, 5):
+            min_list.append(np.min(explanation_df.iloc[i]['train_feature']))
+            min_list.append(np.min(explanation_df.iloc[-i - 1]['train_feature']))
+            min_list.append(np.min(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']))
+            max_list.append(np.max(explanation_df.iloc[i]['train_feature']))
+            max_list.append(np.max(explanation_df.iloc[-i - 1]['train_feature']))
+            max_list.append(np.max(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']))
+        print(f'min_list: {min_list}')
+        print(f'max_list: {max_list}')
+
+    # 创建统一的colorbar
+    norm = colors.Normalize(vmin=min(min_list), vmax=max(max_list))
+    fig, ax = plt.subplots(4, 5, figsize=(15, 16))
+    im = ax[0][0].imshow(fea, cmap='coolwarm', interpolation='nearest', norm=norm)
+    fig.colorbar(im, ax=ax[0][0])
+
+    ax[0][0].set_title('Test Sample')
+    ax[0][0].set_xticks(np.arange(0, 13, 2))
+    ax[0][0].set_yticks(np.arange(0, 27, 2))
+    ax[0][0].set_xlabel('feature')
+    ax[0][0].set_ylabel('timestep')
+    ax[0][0].text(x=6, y=-4,
+                  s=f'true label: {np.argmax(test_label)}, predicted label: {np.argmax(model.predict(test_fea))}',
+                  ha='center', va='center')
+
+    for i in range(1, 5):
+        ax[0][i].axis('off')
+
+    for i in range(0, 5):
+        # 绘制影响力最大的前5个样本
+        im = ax[1][i].imshow(np.transpose(explanation_df.iloc[i]['train_feature']), cmap='coolwarm',
+                             interpolation='nearest', norm=norm)
+        fig.colorbar(im, ax=ax[1][i])
+        ax[1][i].set_title(
+            f'id:{explanation_df.iloc[i]["sample_id"]}, influence: {explanation_df.iloc[i]["influence"]:.3f} ')
+        ax[1][i].set_xticks(np.arange(0, 13, 2))
+        ax[1][i].set_yticks(np.arange(0, 27, 2))
+        ax[1][i].set_xlabel('feature')
+        ax[1][i].set_ylabel('timestep')
+        ax[1][i].text(x=6, y=-4,
+                      s=f'label: {np.argmax(explanation_df.iloc[i]["train_label"])}, predict: {explanation_df.iloc[i]["predicted label"]}',
+                      ha='center', va='center')
+
+        # 绘制影响力最小的前5个样本
+        im = ax[2][i].imshow(np.transpose(explanation_df.iloc[-i - 1]['train_feature']), cmap='coolwarm',
+                             interpolation='nearest', norm=norm)
+        fig.colorbar(im, ax=ax[2][i])
+        ax[2][i].set_title(
+            f'id:{explanation_df.iloc[-i - 1]["sample_id"]}, influence: {explanation_df.iloc[-i - 1]["influence"]:.3f} ')
+        ax[2][i].set_xticks(np.arange(0, 13, 2))
+        ax[2][i].set_yticks(np.arange(0, 27, 2))
+        ax[2][i].set_xlabel('feature')
+        ax[2][i].set_ylabel('timestep')
+        ax[2][i].text(x=6, y=-4,
+                      s=f'label: {np.argmax(explanation_df.iloc[-i - 1]["train_label"])}, predict: {explanation_df.iloc[-i - 1]["predicted label"]}',
+                      ha='center', va='center')
+
+        # 绘制影响力居中的5个样本
+        im = ax[3][i].imshow(np.transpose(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']),
+                             cmap='coolwarm', interpolation='nearest', norm=norm)
+        fig.colorbar(im, ax=ax[3][i])
+        ax[3][i].set_title(
+            f'id:{explanation_df.iloc[int(X_train.shape[0] / 2) + i]["sample_id"]}, influence: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["influence"]:.3f} ')
+        ax[3][i].set_xticks(np.arange(0, 13, 2))
+        ax[3][i].set_yticks(np.arange(0, 27, 2))
+        ax[3][i].set_xlabel('feature')
+        ax[3][i].set_ylabel('timestep')
+        ax[3][i].text(x=6, y=-4,
+                      s=f'label: {np.argmax(explanation_df.iloc[int(X_train.shape[0] / 2) + i]["train_label"])}, predict: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["predicted label"]}',
+                      ha='center', va='center')
+
+    plt.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.4)
+    plt.savefig(path_project + 'outputs/top 5 influence.png')
+    plt.show()

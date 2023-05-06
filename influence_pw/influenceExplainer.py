@@ -35,9 +35,9 @@ class InfluenceExplainer4Classification:
         loss_function: a tensorflow loss function, the loss function used to calculate the loss
     """
 
-    def __init__(self, model, model_name, train_ds, test_ds, output_dir, mini_batch=True,
+    def __init__(self, model, model_name, train_ds, test_ds, output_dir, mini_batch=True, batch_size=100,
                  loss_function=BinaryCrossentropy(from_logits=False,
-                                                  reduction=Reduction.NONE), ** kwargs):
+                                                  reduction=Reduction.NONE), **kwargs):
         self.model = model
         self.model_name = model_name
         self.train_ds = train_ds
@@ -47,51 +47,70 @@ class InfluenceExplainer4Classification:
             os.makedirs(self.output_dir)
         self.loss_function = loss_function
         self.mini_batch = mini_batch
+        self.batch_size = batch_size
         self.num_train_examples = tf.data.experimental.cardinality(train_ds).numpy()
         self.num_test_examples = tf.data.experimental.cardinality(test_ds).numpy()
         if 'damping' in kwargs:
             self.damping = kwargs.pop('damping')
         else:
             self.damping = 0.0
-        self.grad_train_loss = None
+        self.train_losses = None  # the list of training loss
+        self.grad_train_loss = None  # the list of gradients of the training loss
 
-    def cal_grad_train_loss(self, loss_function, batch_size):
+    def cal_grad_train_loss(self):
         if self.grad_train_loss is not None:
             return self.grad_train_loss
         else:
+            train_losses = []
             grad_train_loss = []
-            for xs, ys in self.train_ds.batch(batch_size):
+            for xs, ys in self.train_ds.batch(self.batch_size):
                 with tf.GradientTape() as tape:
                     tape.watch(self.model.trainable_variables)
                     train_predictions = self.model(xs)
-                    train_loss = loss_function(ys, train_predictions)
+                    train_loss = self.loss_function(ys, train_predictions)
+                    train_losses.append(train_loss)
                 temp = tape.gradient(train_loss, self.model.trainable_variables)
                 grad_train_loss.append(temp)
+            i = 0
+            for batch_loss in train_losses:
+                if i == 0:
+                    self.train_losses = batch_loss
+                else:
+                    self.train_losses = tf.concat([self.train_losses, batch_loss], axis=0)
+                i = i + 1
             self.grad_train_loss = grad_train_loss
 
-    def get_grad_total_train_loss(self, loss_function, batch_size):
-        self.cal_grad_train_loss(loss_function, batch_size)
+    def get_total_train_loss(self):
+        if self.train_losses is None:
+            self.cal_grad_train_loss()
+        return tf.reduce_sum(self.train_losses, axis=0)
+    def get_grad_total_train_loss(self):
+        if self.grad_train_loss is None:
+            self.cal_grad_train_loss()
         return [tf.reduce_sum(grad, axis=0) for grad in zip(*self.grad_train_loss)]
 
     def minibatch_hessian_vector_val(self, v):
 
         num_examples = self.num_train_examples
         if self.mini_batch == True:
-            batch_size = 100
-            assert num_examples % batch_size == 0
+            batch_size = self.batch_size
+            # assert num_examples % batch_size == 0
         else:
             batch_size = self.num_train_examples
 
         num_iter = int(num_examples / batch_size)
 
         hessian_vector_val = None
+        total_loss = self.get_total_train_loss()
+        parameters = np.concatenate([tf.reshape(a, [-1]) for a in self.model.trainable_variables])
         for xs, ys in self.train_ds.batch(batch_size):
-            hessian_vector_val_temp = hessian_vector_product(ys, xs, v)
-            if hessian_vector_val is None:
-                hessian_vector_val = [b / float(num_iter) for b in hessian_vector_val_temp]
-            else:
-                hessian_vector_val = [a + (b / float(num_iter)) for (a, b) in
-                                      zip(hessian_vector_val, hessian_vector_val_temp)]
+            hessian_vector_val_temp = hessian_vector_product(total_loss, parameters, v)
+            hessian_vector_val = [a + b for (a, b) in zip(hessian_vector_val, hessian_vector_val_temp)]
+            # if hessian_vector_val is None:
+            #     hessian_vector_val = [b / float(num_iter) for b in hessian_vector_val_temp]
+            # else:
+            #     hessian_vector_val = [a + (b / float(num_iter)) for (a, b) in
+            #                           zip(hessian_vector_val, hessian_vector_val_temp)]
 
         hessian_vector_val = [a + self.damping * b for (a, b) in zip(hessian_vector_val, v)]
 
@@ -132,7 +151,7 @@ class InfluenceExplainer4Classification:
             v = x
             idx_to_remove = 5
 
-            train_grad_loss_val = self.get_grad_total_train_loss(BinaryCrossentropy(reduction=Reduction.NONE), 100)
+            train_grad_loss_val = self.get_grad_total_train_loss()
             predicted_loss_diff = np.dot(np.concatenate(v),
                                          np.concatenate(train_grad_loss_val)) / self.num_train_examples
 
@@ -149,11 +168,12 @@ class InfluenceExplainer4Classification:
         fmin_grad_fn = self.get_fmin_grad_fn(v)
         cg_callback = self.get_cg_callback(v, verbose)
 
+        v = [tf.reshape(a, [-1]) for a in v]
         fmin_results = fmin_ncg(
             f=fmin_loss_fn,
             x0=np.concatenate(v),
             fprime=fmin_grad_fn,
-            fhess_p=self.get_fmin_hvp,
+            # fhess_p=self.get_fmin_hvp,
             callback=cg_callback,
             avextol=1e-8,
             maxiter=100)
@@ -167,16 +187,16 @@ class InfluenceExplainer4Classification:
         elif approx_type == 'cg':
             return self.get_inverse_hvp_cg(v, verbose)
 
-    def get_test_grad_loss_no_reg_val(self, test_indices, batch_size=100,
+    def get_test_grad_loss_no_reg_val(self, test_indices,
                                       loss_function=BinaryCrossentropy(from_logits=False, reduction=Reduction.NONE)):
 
         # 一次迭代计算batch_size个测试样本的梯度
-        num_iter = int(np.ceil(len(test_indices) / batch_size))
+        num_iter = int(np.ceil(len(test_indices) / self.batch_size))
 
         test_grad_loss_no_reg_val = None
         for i in range(num_iter):
-            start = i * batch_size
-            end = int(min((i + 1) * batch_size, len(test_indices)))
+            start = i * self.batch_size
+            end = int(min((i + 1) * self.batch_size, len(test_indices)))
 
             with tf.GradientTape() as tape:
                 tape.watch(self.model.trainable_variables)
@@ -203,23 +223,12 @@ class InfluenceExplainer4Classification:
         test_grad_loss_no_reg_val = [a / len(test_indices) for a in test_grad_loss_no_reg_val]
         return test_grad_loss_no_reg_val
 
-    def get_influence_on_test_loss(self, test_indices, train_idx,
-                                   approx_type='cg', approx_params=None, force_refresh=True, test_description=None,
-                                   X=None, Y=None):
-        # If train_idx is None then use X and Y (phantom points)
-        # Need to make sure test_idx stays consistent between models
-        # because mini-batching permutes dataset order
-
-        if train_idx is None:
-            if (X is None) or (Y is None): raise ValueError('X and Y must be specified if using phantom points.')
-            if X.shape[0] != len(Y): raise ValueError('X and Y must have the same length.')
-        else:
-            if (X is not None) or (Y is not None): raise ValueError(
-                'X and Y cannot be specified if train_idx is specified.')
+    def get_influence_on_test_loss(self, test_indices,
+                                   approx_type='cg', approx_params=None, force_refresh=True, test_description=None):
 
         test_grad_loss_no_reg_val = self.get_test_grad_loss_no_reg_val(test_indices)
         # Calculate the gradient of the test loss w.r.t. the parameters, for the test examples
-
+        test_grad_loss_no_reg_val = [tf.reshape(a, [-1]) for a in test_grad_loss_no_reg_val]
         print('Norm of test gradient: %s' % np.linalg.norm(np.concatenate(test_grad_loss_no_reg_val)))
 
         start_time = time.time()
@@ -244,24 +253,24 @@ class InfluenceExplainer4Classification:
         duration = time.time() - start_time
         print('Inverse HVP took %s sec' % duration)
 
-        start_time = time.time()
-        if train_idx is None:
-            num_to_remove = len(Y)
-            predicted_loss_diffs = np.zeros([num_to_remove])
-            for counter in np.arange(num_to_remove):
-                single_train_feed_dict = self.fill_feed_dict_manual(X[counter, :], [Y[counter]])
-                train_grad_loss_val = self.sess.run(self.grad_total_loss_op, feed_dict=single_train_feed_dict)
-                predicted_loss_diffs[counter] = np.dot(np.concatenate(inverse_hvp),
-                                                       np.concatenate(train_grad_loss_val)) / self.num_train_examples
-
-        else:
-            num_to_remove = len(train_idx)
-            predicted_loss_diffs = np.zeros([num_to_remove])
-            for counter, idx_to_remove in enumerate(train_idx):
-                single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets.train, idx_to_remove)
-                train_grad_loss_val = self.sess.run(self.grad_total_loss_op, feed_dict=single_train_feed_dict)
-                predicted_loss_diffs[counter] = np.dot(np.concatenate(inverse_hvp),
-                                                       np.concatenate(train_grad_loss_val)) / self.num_train_examples
-
-        duration = time.time() - start_time
-        print('Multiplying by %s train examples took %s sec' % (num_to_remove, duration))
+        # start_time = time.time()
+        # if train_idx is None:
+        #     num_to_remove = len(Y)
+        #     predicted_loss_diffs = np.zeros([num_to_remove])
+        #     for counter in np.arange(num_to_remove):
+        #         single_train_feed_dict = self.fill_feed_dict_manual(X[counter, :], [Y[counter]])
+        #         train_grad_loss_val = self.sess.run(self.grad_total_loss_op, feed_dict=single_train_feed_dict)
+        #         predicted_loss_diffs[counter] = np.dot(np.concatenate(inverse_hvp),
+        #                                                np.concatenate(train_grad_loss_val)) / self.num_train_examples
+        #
+        # else:
+        #     num_to_remove = len(train_idx)
+        #     predicted_loss_diffs = np.zeros([num_to_remove])
+        #     for counter, idx_to_remove in enumerate(train_idx):
+        #         single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets.train, idx_to_remove)
+        #         train_grad_loss_val = self.sess.run(self.grad_total_loss_op, feed_dict=single_train_feed_dict)
+        #         predicted_loss_diffs[counter] = np.dot(np.concatenate(inverse_hvp),
+        #                                                np.concatenate(train_grad_loss_val)) / self.num_train_examples
+        #
+        # duration = time.time() - start_time
+        # print('Multiplying by %s train examples took %s sec' % (num_to_remove, duration))
