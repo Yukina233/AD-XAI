@@ -24,3 +24,33 @@ for batch in d1.take(20):
     print(batch.numpy())
 for batch in d2.take(20):
     print(batch.numpy())
+
+d4 = dataset.take(1)
+print('d4 ')
+for data in d4:
+    print(data.numpy())
+
+d5 = dataset.take(1)
+print('d5 ')
+for data in d5:
+    print(data.numpy())
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 假设你的 DataFrame 如下：
+data = {
+    'id': [3, 1, 4, 2],
+    'score': [70, 85, 90, 75]
+}
+df = pd.DataFrame(data)
+
+# 按照 'id' 列进行排序
+sorted_df = df.sort_values(by='id')
+
+# 绘制横轴为 'id'，纵轴为 'score' 的直方图
+plt.bar(sorted_df['id'], sorted_df['score'])
+plt.xlabel('ID')
+plt.ylabel('Score')
+plt.title('Scores by ID')
+plt.show()
