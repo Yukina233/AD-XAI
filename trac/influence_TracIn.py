@@ -688,7 +688,7 @@ if __name__ == "__main__":
             history['accuracy'].append(status.history['accuracy'][0])
             history['val_loss'].append(status.history['val_loss'][0])
             history['val_accuracy'].append(status.history['val_accuracy'][0])
-            model.save(path_project + f'trac/checkpoints/model-{i}.h5')
+            model.save(path_project + f'trac/checkpoints/model-{i+1}.h5')
             updated_model = tf.keras.models.clone_model(model)
             updated_model.set_weights(model.get_weights())
             model_list.append(
@@ -823,7 +823,7 @@ if __name__ == "__main__":
 
     trac_in = TracIn(model_list, learning_rate)
 
-    tesk_point = test_ds.take.batch(1)
+    tesk_point = test_ds.take(1).batch(1)
     explanations = trac_in.estimate_influence_values_in_batches(tesk_point, train_ds.batch(1))
     # explanations = influence_calculator.top_k(tesk_point, train_ds.take(10).batch(1), k=5)
     for (test_fea, test_label), explanation in explanations:
