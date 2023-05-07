@@ -658,10 +658,10 @@ if __name__ == "__main__":
         print('Loading model from checkpoints...')
         config = configparser.ConfigParser()
         config.read(path_project + 'trac/checkpoints/config.ini')
-        for i in range(0, 100):
+        for i in range(0, 101):
             model = load_model(path_project + f'trac/checkpoints/model-{i}.h5')
-        model_list.append(
-            InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
+            model_list.append(
+                InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
         print('Model loaded successfully.')
     else:
         model = generate_model(fea.shape[1], 5, fea.shape[2])
@@ -673,6 +673,8 @@ if __name__ == "__main__":
 
         model_list.append(
             InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
+        model.save(path_project + f'trac/checkpoints/model-0.h5')
+
         history = dict(
             loss=[],
             accuracy=[],
@@ -789,20 +791,23 @@ if __name__ == "__main__":
         lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
 
     # load the model
-    # if os.path.exists(f'data_seed={seed}/lstm-fcn-{seed}.h5'):
-    #     model = load_model(f'data_seed={seed}/lstm-fcn-{seed}.h5')
+
+    model1 = load_model(path_project + f'trac/seed={seed}/model1.h5')
+    model2 = load_model(path_project + f'trac/seed={seed}/model2.h5')
 
     if os.path.exists(path_project + f'data_seed={seed}/Prediction_train.npy'):
         Prediction_train = np.load(path_project + f'data_seed={seed}/Prediction_train.npy')
     else:
-        Prediction_train = model.predict(X_train)
+        Prediction_train = model1.predict(X_train)
         np.save(path_project + f'data_seed={seed}/Prediction_train.npy', Prediction_train)
 
     # 找出测试集中预测错误的样本
-    test_pred = model.predict(X_test)
-    test_pred = np.argmax(test_pred, axis=1)
+    test_pred1 = model1.predict(X_test)
+    test_pred1 = np.argmax(test_pred1, axis=1)
+    test_pred2 = model2.predict(X_test)
+    test_pred2 = np.argmax(test_pred2, axis=1)
     label_test = np.argmax(Y_test, axis=1)
-    wrong_id = np.where(test_pred != label_test)[0]
+    wrong_id = np.intersect1d(np.where(test_pred1 != label_test)[0], np.where(test_pred2 != label_test)[0])
     test_ds = tf.data.Dataset.from_tensor_slices((X_test[wrong_id], Y_test[wrong_id])).map(
         lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
     ID_test_wrong = ID_test[wrong_id] # 分类错误的样本的id
@@ -818,7 +823,7 @@ if __name__ == "__main__":
 
     trac_in = TracIn(model_list, learning_rate)
 
-    tesk_point = test_ds.take(1).batch(1)
+    tesk_point = test_ds.take.batch(1)
     explanations = trac_in.estimate_influence_values_in_batches(tesk_point, train_ds.batch(1))
     # explanations = influence_calculator.top_k(tesk_point, train_ds.take(10).batch(1), k=5)
     for (test_fea, test_label), explanation in explanations:
@@ -854,7 +859,7 @@ if __name__ == "__main__":
         explanation_df = explanation_df.sort_values(by='influence', ascending=False)
 
         # 保存到本地
-
+        pickle.dump(explanation_dict, open(path_project + f'data_seed={seed}/explanation_dict.pkl', 'wb'))
 
         # 收集所有绘图数据的最小值和最大值，以画出colorbar
         min_list = [np.min(test_fea)]
