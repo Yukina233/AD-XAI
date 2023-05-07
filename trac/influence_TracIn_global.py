@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 
@@ -604,7 +605,6 @@ if __name__ == "__main__":
     learning_rate = 0.001  # initial learning rate
     epochs = 100  # number of training epochs
     batch = 64  # batch size
-    percentage = 0  # percentage of harmful training data to be removed
     unreduced_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False,
                                                            reduction=tf.keras.losses.Reduction.NONE)
 
@@ -615,8 +615,8 @@ if __name__ == "__main__":
 
     # label = np.load('F:\微信文件\研一上大作业\DD\python\detect\data\classify\\cla_mode.npy')
 
-    # fea, label = get_processed_data()
-    # mode = to_categorical(label, num_classes=5)
+    fea, label = get_processed_data()
+    mode = to_categorical(label, num_classes=5)
     ''''''
     # X_train = np.reshape(fea, (fea.shape[0], 1, fea.shape[1]))
     # print(fea.shape)
@@ -628,12 +628,155 @@ if __name__ == "__main__":
     r = []
     l = []
 
-    # np.save(path_project + 'data/one_hot_label.npy', mode)
-    #
-    # print(f'Training seed={seed}........................')
-    # # add sample_id to the data, for later use of explaining
-    # new_col = np.array([i for i in range(mode.shape[0])]).reshape((mode.shape[0], 1))
-    # mode = np.concatenate((mode, new_col), axis=1)
+    np.save(path_project + 'data/one_hot_label.npy', mode)
+
+    print(f'Training seed={seed}........................')
+    # add sample_id to the data, for later use of explaining
+    new_col = np.array([i for i in range(mode.shape[0])]).reshape((mode.shape[0], 1))
+    mode = np.concatenate((mode, new_col), axis=1)
+
+    X_train, X_test, Y_train, Y_test = train_test_split(fea, mode, test_size=0.30, random_state=seed)
+
+    ID_train = np.squeeze(Y_train[:, -1:])
+    ID_test = np.squeeze(Y_test[:, -1:])
+
+    # remode sample_id from data
+    mode = mode[:, :-1]
+    Y_train = Y_train[:, :-1]
+    Y_test = Y_test[:, :-1]
+
+    # Save the training set and test set and sample_id
+    np.save(path_project + f'data_seed={seed}/X_train.npy', X_train)
+    np.save(path_project + f'data_seed={seed}/X_test.npy', X_test)
+    np.save(path_project + f'data_seed={seed}/Y_train.npy', Y_train)
+    np.save(path_project + f'data_seed={seed}/Y_test.npy', Y_test)
+    np.save(path_project + f'data_seed={seed}/ID_train.npy', ID_train)
+    np.save(path_project + f'data_seed={seed}//ID_test.npy', ID_test)
+
+    model_list = []
+    if os.path.exists(path_project + 'trac/checkpoints/config.ini'):
+        print('Loading model from checkpoints...')
+        config = configparser.ConfigParser()
+        config.read(path_project + 'trac/checkpoints/config.ini')
+        for i in range(0, 101):
+            model = load_model(path_project + f'trac/checkpoints/model-{i}.h5')
+            model_list.append(
+                InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
+        print('Model loaded successfully.')
+    else:
+        model = generate_model(fea.shape[1], 5, fea.shape[2])
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+        # history = model.fit(X_train, mode, batch_size=64, epochs=100)  # 每次取32张图片，共计循环10次
+        # history = model.fit(X_train, Y_train, validation_data=(X_test, Y_test), batch_size=64,
+        #                     epochs=100)  # 每次取32张图片，共计循环10次
+
+        model_list.append(
+            InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
+        model.save(path_project + f'trac/checkpoints/model-0.h5')
+        history = dict(
+            loss=[],
+            accuracy=[],
+            val_loss=[],
+            val_accuracy=[]
+        )
+        for i in range(epochs):
+            status = model.fit(X_train, Y_train, epochs=1, validation_data=(X_test, Y_test), batch_size=batch,
+                               verbose=2)
+            history['loss'].append(status.history['loss'][0])
+            history['accuracy'].append(status.history['accuracy'][0])
+            history['val_loss'].append(status.history['val_loss'][0])
+            history['val_accuracy'].append(status.history['val_accuracy'][0])
+            model.save(path_project + f'trac/checkpoints/model-{i+1}.h5')
+            updated_model = tf.keras.models.clone_model(model)
+            updated_model.set_weights(model.get_weights())
+            model_list.append(
+                InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
+        # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'wb') as file_pi:
+        #     pickle.dump(history.history, file_pi)
+        # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'rb') as file_pi:
+        #     history = pickle.load(file_pi)
+
+        # from deel.influenciae.common import InfluenceModel, ExactIHVP
+        # influence_model = InfluenceModel(model, loss_function=tf.keras.losses.binary_crossentropy)
+
+        fig, ax = plt.subplots(1, 2, figsize=(7, 3), dpi=200, tight_layout=True)
+        ax[0].grid(which='major', ls='--', alpha=.8, lw=.8)
+        ax[0].plot(history['loss'], label='训练集')
+        ax[0].plot(history['val_loss'], label='验证集')
+        # plt.title('model loss')
+        xticks = ax[0].get_xticks()
+        ax[0].set_xticks(xticks)
+        ax[0].set_xticklabels(xticks, fontdict={'family': 'Times New Roman', 'size': 10})
+        ax[0].set_xlim(-10, 110)
+        yticks = ax[0].get_yticks()
+        ax[0].set_yticks(yticks)
+        ax[0].set_yticklabels(yticks, fontdict={'family': 'Times New Roman', 'size': 10})
+        ax[0].set_xlabel('训练轮数', fontdict={'family': ['SimSun'], 'size': 12})
+        ax[0].set_ylabel('Loss', fontdict={'family': 'Times New Roman', 'size': 12})
+        ax[0].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.3f'))
+        ax[0].legend(loc='best', prop={'family': ['SimSun'], 'size': 12})
+        # plot_acc(history,ax[0])
+        '''plotacc'''
+        # model.save('F:\微信文件\研一上大作业\DD\python\detect\data\classify\lstm-fcn.h5')
+        # model = load_model('lstm-fcn.h5')
+        # cof(model,fea,label,ax[1])
+        '''cof'''
+        train_pred = model.predict(fea)
+        train_pred = np.argmax(train_pred, axis=1)
+        con_mat = confusion_matrix(label, train_pred)
+        con_mat_norm = con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis]  # 归一化
+        con_mat_norm = np.around(con_mat_norm, decimals=2)
+
+        print(con_mat)
+        LABELS = ['松浮故障', '缺损故障', '卡死故障', '推力故障', '升力面故障']
+        sns.set_theme(font='Times New Roman')
+        sns.heatmap(con_mat_norm, xticklabels=LABELS, yticklabels=LABELS, annot=True)
+        ax[1].set_xticklabels(LABELS, fontdict={'family': ['SimSun'], 'size': 10})
+        ax[1].set_yticklabels(LABELS, fontdict={'family': ['SimSun'], 'size': 10})
+        plt.ylabel('实际标签', fontdict={'family': ['SimSun'], 'size': 12})
+        plt.xlabel('预测分类', fontdict={'family': ['SimSun'], 'size': 12})
+        plt.show()
+        # plt.savefig(path_project + f'models/lstm-fcn-{i}.png')
+
+        print('a', accuracy_score(label, train_pred))
+        print('f', f1_score(label, train_pred, average='macro'))
+        print('r', recall_score(label, train_pred, average='macro'))
+        print('l', history['loss'][-1])
+        a.append(accuracy_score(label, train_pred))
+        f.append(f1_score(label, train_pred, average='macro'))
+        r.append(recall_score(label, train_pred, average='macro'))
+        l.append(history['loss'][-1])
+
+        # save result to disk
+        result = pd.DataFrame({
+            'accuracy': a,
+            'f1': f,
+            'recall': r,
+            'loss': l
+        })
+        result.to_csv(path_project + 'models/performance.csv', index=False)
+
+        # 创建一个 ConfigParser 对象
+        config = configparser.ConfigParser()
+
+        # 添加配置选项
+        config['experiment'] = {
+            'seed': seed,
+            'start_layer': start_layer,
+            'last_layer': last_layer,
+            'learning_rate': learning_rate,
+            'epochs': epochs,
+            'batch': batch
+        }
+
+        # 写入配置文件
+        with open(path_project + 'trac/checkpoints/config.ini', 'w') as f:
+            config.write(f)
+
+    ################################################################
+
+    print('Start calculate influence...')
 
     # Load the training set and test set
     X_train = np.load(path_project + f'data_seed={seed}/X_train.npy')
@@ -643,126 +786,80 @@ if __name__ == "__main__":
     ID_train = np.load(path_project + f'data_seed={seed}/ID_train.npy')
     ID_test = np.load(path_project + f'data_seed={seed}/ID_test.npy')
 
-    # load the influence of each training sample on the test set
-    explanation_dict = pickle.load(open(path_project + f'data_seed={seed}/explanation_dict.pkl', 'rb'))
-    explanation_df = pd.DataFrame(explanation_dict)
-    df = explanation_df.sort_values(by='influence', ascending=True)
+    train_ds = tf.data.Dataset.from_tensor_slices((X_train, Y_train)).map(
+        lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
 
-    # 去除影响力小于0的样本
-    negative_influence_df = df[df['influence'] <= 0]
-    count_negative_influence = negative_influence_df.shape[0]
-    count_remove = int(count_negative_influence * percentage / 100)
-    print(
-        f'Number of negative influence samples: {count_negative_influence}, Number of samples to be removed: {count_remove}, Percentage: {percentage}%')
-    negative_sample_id = negative_influence_df['sample_id'].to_numpy()
-    remove_sample_id = negative_sample_id[:count_remove]
-    X_train = np.delete(X_train, remove_sample_id, axis=0)
-    Y_train = np.delete(Y_train, remove_sample_id, axis=0)
+    # load the model
 
-    # X_train, X_test, Y_train, Y_test = train_test_split(fea, mode, test_size=0.30, random_state=seed)
+    model1 = load_model(path_project + f'trac/seed={seed}/model1.h5')
+    model2 = load_model(path_project + f'trac/seed={seed}/model2.h5')
 
-    # ID_train = np.squeeze(Y_train[:, -1:])
-    # ID_test = np.squeeze(Y_test[:, -1:])
-    #
-    # # remode sample_id from data
-    # mode = mode[:, :-1]
-    # Y_train = Y_train[:, :-1]
-    # Y_test = Y_test[:, :-1]
+    if os.path.exists(path_project + f'data_seed={seed}/Prediction_train.npy'):
+        Prediction_train = np.load(path_project + f'data_seed={seed}/Prediction_train.npy')
+    else:
+        Prediction_train = model1.predict(X_train)
+        np.save(path_project + f'data_seed={seed}/Prediction_train.npy', Prediction_train)
 
-    # # Save the training set and test set and sample_id
-    # np.save(path_project + f'data_seed={seed}/X_train.npy', X_train)
-    # np.save(path_project + f'data_seed={seed}/X_test.npy', X_test)
-    # np.save(path_project + f'data_seed={seed}/Y_train.npy', Y_train)
-    # np.save(path_project + f'data_seed={seed}/Y_test.npy', Y_test)
-    # np.save(path_project + f'data_seed={seed}/ID_train.npy', ID_train)
-    # np.save(path_project + f'data_seed={seed}//ID_test.npy', ID_test)
+    # 找出测试集中预测错误的样本
+    test_pred1 = model1.predict(X_test)
+    test_pred1 = np.argmax(test_pred1, axis=1)
+    test_pred2 = model2.predict(X_test)
+    test_pred2 = np.argmax(test_pred2, axis=1)
+    label_test = np.argmax(Y_test, axis=1)
+    wrong_id = np.intersect1d(np.where(test_pred1 != label_test)[0], np.where(test_pred2 != label_test)[0])
+    test_ds = tf.data.Dataset.from_tensor_slices((X_test[wrong_id], Y_test[wrong_id])).map(
+        lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
+    ID_test_wrong = ID_test[wrong_id] # 分类错误的样本的id
 
-    model = generate_model(X_train.shape[1], 5, X_train.shape[2])
-    optimizer = Adam(learning_rate=learning_rate)
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-    # history = model.fit(X_train, mode, batch_size=64, epochs=100)  # 每次取32张图片，共计循环10次
-    # history = model.fit(X_train, Y_train, validation_data=(X_test, Y_test), batch_size=64,
-    #                     epochs=100)  # 每次取32张图片，共计循环10次
+    from deel_modified.influenciae.common import InfluenceModel, ExactIHVP, ConjugateGradientDescentIHVP
+    from tensorflow.keras.losses import BinaryCrossentropy, Reduction
 
-    history = dict(
-        loss=[],
-        accuracy=[],
-        val_loss=[],
-        val_accuracy=[]
-    )
-    for i in range(epochs):
-        status = model.fit(X_train, Y_train, epochs=1, validation_data=(X_test, Y_test), batch_size=batch,
-                           verbose=2)
-        history['loss'].append(status.history['loss'][0])
-        history['accuracy'].append(status.history['accuracy'][0])
-        history['val_loss'].append(status.history['val_loss'][0])
-        history['val_accuracy'].append(status.history['val_accuracy'][0])
-    model.save(path_project + f'trac/output/model-remove-{percentage}%.h5')
-    # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'wb') as file_pi:
-    #     pickle.dump(history.history, file_pi)
-    # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'rb') as file_pi:
-    #     history = pickle.load(file_pi)
+    # sequential_model = Sequential()
+    # for layer in model.layers:
+    #     sequential_model.add(layer)
 
-    # from deel.influenciae.common import InfluenceModel, ExactIHVP
-    # influence_model = InfluenceModel(model, loss_function=tf.keras.losses.binary_crossentropy)
+    from deel_modified.influenciae.trac_in import TracIn
+
+    trac_in = TracIn(model_list, learning_rate)
+
+    tesk_point = test_ds.take(2).batch(1)
+    explanations = trac_in.estimate_influence_values_in_batches(tesk_point, train_ds.batch(1))
+    # 收集样本的影响力数据
+    explanation_dict = {
+        'sample_id_original': [],
+        'sample_id': [],
+        'train_feature': [],
+        'train_label': [],
+        'predicted label': [],
+        'influence': []
+    }
+    # explanations = influence_calculator.top_k(tesk_point, train_ds.take(10).batch(1), k=5)
+    for (test_fea, test_label), explanation in explanations:
+        fea = test_fea.numpy()
+        # fea的维度为(1, 13, 27), 绘制test_fea为表格数据, 并在图上标出真实标签和预测标签
+        fea = fea.reshape((fea.shape[1], fea.shape[2]))
+        fea = np.transpose(fea)
+        i = 0
+
+        for id, ((train_fea, train_label), influence) in enumerate(explanation):
+            # 确保经过影响力计算后训练样本的id没有发生改变
+            # assert np.argmax(np.squeeze(train_label.numpy())) == np.argmax(Y_train[id])
+
+            if i == 0:
+                explanation_dict['sample_id_original'].append(int(ID_train[id]))
+                explanation_dict['sample_id'].append(id)
+                explanation_dict['train_feature'].append(np.squeeze(train_fea.numpy()))
+                explanation_dict['train_label'].append(np.squeeze(train_label.numpy()))
+                explanation_dict['predicted label'].append(np.argmax(Prediction_train[id]))
+                explanation_dict['influence'].append(np.squeeze(influence.numpy()))
+            else:
+                # 将influence增加到对应的样本中
+                explanation_dict['influence'][id] += np.squeeze(influence.numpy())
+        i += 1
+    explanation_dict['influence'] = [x/X_train.shape[0] for x in explanation_dict['influence']]
+
+    # 保存到本地
+    pickle.dump(explanation_dict, open(path_project + f'data_seed={seed}/explanation_dict_global.pkl', 'wb'))
 
 
-    fig, ax = plt.subplots(1, 2, figsize=(7, 3), dpi=200, tight_layout=True)
-    ax[0].grid(which='major', ls='--', alpha=.8, lw=.8)
-    ax[0].plot(history['loss'], label='训练集')
-    ax[0].plot(history['val_loss'], label='验证集')
-    # plt.title('model loss')
-    xticks = ax[0].get_xticks()
-    ax[0].set_xticks(xticks)
-    ax[0].set_xticklabels(xticks, fontdict={'family': 'Times New Roman', 'size': 10})
-    ax[0].set_xlim(-10, 110)
-    yticks = ax[0].get_yticks()
-    ax[0].set_yticks(yticks)
-    ax[0].set_yticklabels(yticks, fontdict={'family': 'Times New Roman', 'size': 10})
-    ax[0].set_xlabel('训练轮数', fontdict={'family': ['SimSun'], 'size': 12})
-    ax[0].set_ylabel('Loss', fontdict={'family': 'Times New Roman', 'size': 12})
-    ax[0].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.3f'))
-    ax[0].legend(loc='best', prop={'family': ['SimSun'], 'size': 12})
-    # plot_acc(history,ax[0])
-    '''plotacc'''
-    # model.save('F:\微信文件\研一上大作业\DD\python\detect\data\classify\lstm-fcn.h5')
-    # model = load_model('lstm-fcn.h5')
-    # cof(model,fea,label,ax[1])
-    '''cof'''
-    train_pred = model.predict(X_train)
-    train_pred = np.argmax(train_pred, axis=1)
-    label = np.argmax(Y_train, axis=1)
-    con_mat = confusion_matrix(label, train_pred)
-    con_mat_norm = con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis]  # 归一化
-    con_mat_norm = np.around(con_mat_norm, decimals=2)
-
-    print(con_mat)
-    LABELS = ['松浮故障', '缺损故障', '卡死故障', '推力故障', '升力面故障']
-    sns.set_theme(font='Times New Roman')
-    sns.heatmap(con_mat_norm, xticklabels=LABELS, yticklabels=LABELS, annot=True)
-    ax[1].set_xticklabels(LABELS, fontdict={'family': ['SimSun'], 'size': 10})
-    ax[1].set_yticklabels(LABELS, fontdict={'family': ['SimSun'], 'size': 10})
-    plt.ylabel('实际标签', fontdict={'family': ['SimSun'], 'size': 12})
-    plt.xlabel('预测分类', fontdict={'family': ['SimSun'], 'size': 12})
-    plt.show()
-    # plt.savefig(path_project + f'models/lstm-fcn-{i}.png')
-
-    print('a', accuracy_score(label, train_pred))
-    print('f', f1_score(label, train_pred, average='macro'))
-    print('r', recall_score(label, train_pred, average='macro'))
-    print('l', history['loss'][-1])
-    a.append(accuracy_score(label, train_pred))
-    f.append(f1_score(label, train_pred, average='macro'))
-    r.append(recall_score(label, train_pred, average='macro'))
-    l.append(history['loss'][-1])
-
-    # save result to disk
-    result = pd.DataFrame({
-        'accuracy': a,
-        'f1': f,
-        'recall': r,
-        'loss': l
-    })
-    result.to_csv(path_project + f'trac/output/model-remove-{percentage}%-performance.csv', index=False)
-    pickle.dump(history, open(path_project + f'trac/output/model-remove-{percentage}%-history.pkl', 'wb'))
 

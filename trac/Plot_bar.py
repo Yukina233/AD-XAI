@@ -6,6 +6,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 path_project = '/home/yukina/Missile_Fault_Detection/project/'
+sub_path = 'trac/seed=0/reduction_2797'
 seed = 0
 
 explanation_dict = pickle.load(open(path_project + f'data_seed={seed}/explanation_dict.pkl', 'rb'))
@@ -13,8 +14,9 @@ explanation_df = pd.DataFrame(explanation_dict)
 df = explanation_df.sort_values(by='sample_id')
 
 # 绘制直方图
-plt.bar(df['sample_id'], df['influence'])
-plt.axhline(y=-0.01, color='r', linestyle='--')
+plt.scatter(df['sample_id'], df['influence'])
+plt.axhline(y=-0, color='black', linestyle='-')
+plt.axhline(y=-0.02, color='r', linestyle='--')
 plt.xlabel('sample_id')
 plt.ylabel('influence')
 test_id = df.iloc[0]['test_id_original']
@@ -31,28 +33,32 @@ ID_test = np.load(path_project + f'data_seed={seed}/ID_test.npy')
 # 导入模型
 model_list = []
 for i in range(0, 11):
-    model = tf.keras.models.load_model(path_project + f'trac/output/model-remove-{i * 10}%.h5')
+    model = tf.keras.models.load_model(path_project + sub_path + f'model-remove-{i * 10}%.h5')
     model_list.append(model)
 
 # print
 print(f'test_id: {explanation_dict["test_id_original"]}')
 print(f'label: {np.argmax(Y_test[explanation_dict["test_id"]])}')
-prediction = np.argmax(model_list[0].predict(np.expand_dims(X_test[explanation_dict['test_id']], axis=0), verbose=0))
-print(f'origin model prediction: {prediction}')
-for i in range(1, 11):
-    prediction = np.argmax(model.predict(np.expand_dims(X_test[explanation_dict['test_id']], axis=0), verbose=0))
+for i in range(0, 11):
+    prediction = np.argmax(model_list[i].predict(np.expand_dims(X_test[explanation_dict['test_id']], axis=0), verbose=0))
     print(f'model-remove-{i * 10}% prediction: {prediction}')
 
+model = tf.keras.models.load_model(path_project + sub_path + f'model-remove--0.01.h5')
+prediction = np.argmax(model.predict(np.expand_dims(X_test[explanation_dict['test_id']], axis=0), verbose=0))
+print(f'model-remove--0.02 prediction: {prediction}')
 
 history_list = []
 for i in range(0, 11):
-    history = pickle.load(open(path_project + f'trac/output/model-remove-{i * 10}%-history.pkl', 'rb'))
+    history = pickle.load(open(path_project + sub_path + f'model-remove-{i * 10}%-history.pkl', 'rb'))
     history_list.append(history)
+history = pickle.load(open(path_project + sub_path + f'model-remove--0.02-history.pkl', 'rb'))
+history_list.append(history)
 
 # 绘制验证集的损失函数
 plt.figure(figsize=(10, 10))
 for i in range(0, 11):
     plt.plot(history_list[i]['val_loss'], label=f'model-remove-{i * 10}%')
+plt.plot(history_list[11]['val_loss'], label=f'model-remove--0.02', color='black')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Validation Loss')
@@ -63,6 +69,7 @@ plt.show()
 plt.figure(figsize=(10, 10))
 for i in range(0, 11):
     plt.plot(history_list[i]['val_accuracy'], label=f'model-remove-{i * 10}%')
+plt.plot(history_list[11]['val_accuracy'], label=f'model-remove--0.02', color='black')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.title('Validation Accuracy')
