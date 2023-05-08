@@ -658,10 +658,11 @@ if __name__ == "__main__":
         print('Loading model from checkpoints...')
         config = configparser.ConfigParser()
         config.read(path_project + 'trac/checkpoints/config.ini')
-        for i in range(0, 101):
-            model = load_model(path_project + f'trac/checkpoints/model-{i}.h5')
+        # use 10 checkpoints
+        for i in range(0, 10):
+            model = load_model(path_project + f'trac/checkpoints/model-{i*10}.h5')
             model_list.append(
-                InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
+                InfluenceModel(model, start_layer=-1, last_layer=last_layer, loss_function=unreduced_loss_fn))
         print('Model loaded successfully.')
     else:
         model = generate_model(fea.shape[1], 5, fea.shape[2])
@@ -776,7 +777,9 @@ if __name__ == "__main__":
             config.write(f)
 
     ################################################################
+    import time
 
+    timestamp = time.time()
     print('Start calculate influence...')
 
     # Load the training set and test set
@@ -825,6 +828,8 @@ if __name__ == "__main__":
 
     tesk_point = test_ds.take(1).batch(1)
     explanations = trac_in.estimate_influence_values_in_batches(tesk_point, train_ds.batch(1))
+    print('explanations genereated.')
+    print(f'Time usage: {time.time() - timestamp}')
     # explanations = influence_calculator.top_k(tesk_point, train_ds.take(10).batch(1), k=5)
     for (test_fea, test_label), explanation in explanations:
         fea = test_fea.numpy()
@@ -857,7 +862,7 @@ if __name__ == "__main__":
         explanation_df = pd.DataFrame(explanation_dict)
         # 将影响力数据按照影响力大小排序
         explanation_df = explanation_df.sort_values(by='influence', ascending=False)
-
+        print(f'Time usage: {time.time()-timestamp}')
         # 保存到本地
         pickle.dump(explanation_dict, open(path_project + f'data_seed={seed}/explanation_dict.pkl', 'wb'))
 
@@ -874,68 +879,68 @@ if __name__ == "__main__":
         print(f'min_list: {min_list}')
         print(f'max_list: {max_list}')
 
-    # 创建统一的colorbar
-    norm = colors.Normalize(vmin=min(min_list), vmax=max(max_list))
-    fig, ax = plt.subplots(4, 5, figsize=(15, 16))
-    im = ax[0][0].imshow(fea, cmap='coolwarm', interpolation='nearest', norm=norm)
-    fig.colorbar(im, ax=ax[0][0])
+        # 创建统一的colorbar
+        norm = colors.Normalize(vmin=min(min_list), vmax=max(max_list))
+        fig, ax = plt.subplots(4, 5, figsize=(15, 16))
+        im = ax[0][0].imshow(fea, cmap='coolwarm', interpolation='nearest', norm=norm)
+        fig.colorbar(im, ax=ax[0][0])
 
-    ax[0][0].set_title('Test Sample')
-    ax[0][0].set_xticks(np.arange(0, 13, 2))
-    ax[0][0].set_yticks(np.arange(0, 27, 2))
-    ax[0][0].set_xlabel('feature')
-    ax[0][0].set_ylabel('timestep')
-    ax[0][0].text(x=6, y=-4,
-                  s=f'true label: {np.argmax(test_label)}, predicted label: {np.argmax(model.predict(test_fea))}',
-                  ha='center', va='center')
-
-    for i in range(1, 5):
-        ax[0][i].axis('off')
-
-    for i in range(0, 5):
-        # 绘制影响力最大的前5个样本
-        im = ax[1][i].imshow(np.transpose(explanation_df.iloc[i]['train_feature']), cmap='coolwarm',
-                             interpolation='nearest', norm=norm)
-        fig.colorbar(im, ax=ax[1][i])
-        ax[1][i].set_title(
-            f'id:{explanation_df.iloc[i]["sample_id_original"]}, influence: {explanation_df.iloc[i]["influence"]:.3f} ')
-        ax[1][i].set_xticks(np.arange(0, 13, 2))
-        ax[1][i].set_yticks(np.arange(0, 27, 2))
-        ax[1][i].set_xlabel('feature')
-        ax[1][i].set_ylabel('timestep')
-        ax[1][i].text(x=6, y=-4,
-                      s=f'label: {np.argmax(explanation_df.iloc[i]["train_label"])}, predict: {explanation_df.iloc[i]["predicted label"]}',
+        ax[0][0].set_title('Test Sample')
+        ax[0][0].set_xticks(np.arange(0, 13, 2))
+        ax[0][0].set_yticks(np.arange(0, 27, 2))
+        ax[0][0].set_xlabel('feature')
+        ax[0][0].set_ylabel('timestep')
+        ax[0][0].text(x=6, y=-4,
+                      s=f'true label: {np.argmax(test_label)}, predicted label: {np.argmax(model.predict(test_fea))}',
                       ha='center', va='center')
 
-        # 绘制影响力最小的前5个样本
-        im = ax[2][i].imshow(np.transpose(explanation_df.iloc[-i - 1]['train_feature']), cmap='coolwarm',
-                             interpolation='nearest', norm=norm)
-        fig.colorbar(im, ax=ax[2][i])
-        ax[2][i].set_title(
-            f'id:{explanation_df.iloc[-i - 1]["sample_id_original"]}, influence: {explanation_df.iloc[-i - 1]["influence"]:.3f} ')
-        ax[2][i].set_xticks(np.arange(0, 13, 2))
-        ax[2][i].set_yticks(np.arange(0, 27, 2))
-        ax[2][i].set_xlabel('feature')
-        ax[2][i].set_ylabel('timestep')
-        ax[2][i].text(x=6, y=-4,
-                      s=f'label: {np.argmax(explanation_df.iloc[-i - 1]["train_label"])}, predict: {explanation_df.iloc[-i - 1]["predicted label"]}',
-                      ha='center', va='center')
+        for i in range(1, 5):
+            ax[0][i].axis('off')
 
-        # 绘制影响力居中的5个样本
-        im = ax[3][i].imshow(np.transpose(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']),
-                             cmap='coolwarm', interpolation='nearest', norm=norm)
-        fig.colorbar(im, ax=ax[3][i])
-        ax[3][i].set_title(
-            f'id:{explanation_df.iloc[int(X_train.shape[0] / 2) + i]["sample_id_original"]}, influence: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["influence"]:.3f} ')
-        ax[3][i].set_xticks(np.arange(0, 13, 2))
-        ax[3][i].set_yticks(np.arange(0, 27, 2))
-        ax[3][i].set_xlabel('feature')
-        ax[3][i].set_ylabel('timestep')
-        ax[3][i].text(x=6, y=-4,
-                      s=f'label: {np.argmax(explanation_df.iloc[int(X_train.shape[0] / 2) + i]["train_label"])}, predict: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["predicted label"]}',
-                      ha='center', va='center')
+        for i in range(0, 5):
+            # 绘制影响力最大的前5个样本
+            im = ax[1][i].imshow(np.transpose(explanation_df.iloc[i]['train_feature']), cmap='coolwarm',
+                                 interpolation='nearest', norm=norm)
+            fig.colorbar(im, ax=ax[1][i])
+            ax[1][i].set_title(
+                f'id:{explanation_df.iloc[i]["sample_id_original"]}, influence: {explanation_df.iloc[i]["influence"]:.3f} ')
+            ax[1][i].set_xticks(np.arange(0, 13, 2))
+            ax[1][i].set_yticks(np.arange(0, 27, 2))
+            ax[1][i].set_xlabel('feature')
+            ax[1][i].set_ylabel('timestep')
+            ax[1][i].text(x=6, y=-4,
+                          s=f'label: {np.argmax(explanation_df.iloc[i]["train_label"])}, predict: {explanation_df.iloc[i]["predicted label"]}',
+                          ha='center', va='center')
 
-    plt.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.4)
-    plt.savefig(path_project + 'outputs/top 5 influence.png')
-    plt.show()
+            # 绘制影响力最小的前5个样本
+            im = ax[2][i].imshow(np.transpose(explanation_df.iloc[-i - 1]['train_feature']), cmap='coolwarm',
+                                 interpolation='nearest', norm=norm)
+            fig.colorbar(im, ax=ax[2][i])
+            ax[2][i].set_title(
+                f'id:{explanation_df.iloc[-i - 1]["sample_id_original"]}, influence: {explanation_df.iloc[-i - 1]["influence"]:.3f} ')
+            ax[2][i].set_xticks(np.arange(0, 13, 2))
+            ax[2][i].set_yticks(np.arange(0, 27, 2))
+            ax[2][i].set_xlabel('feature')
+            ax[2][i].set_ylabel('timestep')
+            ax[2][i].text(x=6, y=-4,
+                          s=f'label: {np.argmax(explanation_df.iloc[-i - 1]["train_label"])}, predict: {explanation_df.iloc[-i - 1]["predicted label"]}',
+                          ha='center', va='center')
+
+            # 绘制影响力居中的5个样本
+            im = ax[3][i].imshow(np.transpose(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']),
+                                 cmap='coolwarm', interpolation='nearest', norm=norm)
+            fig.colorbar(im, ax=ax[3][i])
+            ax[3][i].set_title(
+                f'id:{explanation_df.iloc[int(X_train.shape[0] / 2) + i]["sample_id_original"]}, influence: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["influence"]:.3f} ')
+            ax[3][i].set_xticks(np.arange(0, 13, 2))
+            ax[3][i].set_yticks(np.arange(0, 27, 2))
+            ax[3][i].set_xlabel('feature')
+            ax[3][i].set_ylabel('timestep')
+            ax[3][i].text(x=6, y=-4,
+                          s=f'label: {np.argmax(explanation_df.iloc[int(X_train.shape[0] / 2) + i]["train_label"])}, predict: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["predicted label"]}',
+                          ha='center', va='center')
+
+        plt.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.4)
+        plt.savefig(path_project + f'trac/seed={seed}/outputs/top 5 influence.png')
+        plt.show()
 

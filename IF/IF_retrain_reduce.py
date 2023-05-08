@@ -28,7 +28,7 @@ from deel_modified.influenciae.common import InfluenceModel
 from tensorflow.keras.optimizers import Adam
 
 path_project = '/home/yukina/Missile_Fault_Detection/project/'
-
+sub_path = 'IF/seed=0/2797_reduce/'
 
 def data_preprocess(path1):
     rty = scio.loadmat(path1)
@@ -604,7 +604,7 @@ if __name__ == "__main__":
     learning_rate = 0.001  # initial learning rate
     epochs = 100  # number of training epochs
     batch = 64  # batch size
-    percentage = 0  # percentage of harmful training data to be removed
+    percentage = 25  # percentage of harmful training data to be removed
     unreduced_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False,
                                                            reduction=tf.keras.losses.Reduction.NONE)
 
@@ -644,12 +644,12 @@ if __name__ == "__main__":
     ID_test = np.load(path_project + f'data_seed={seed}/ID_test.npy')
 
     # load the influence of each training sample on the test set
-    explanation_dict = pickle.load(open(path_project + f'data_seed={seed}/explanation_dict.pkl', 'rb'))
+    explanation_dict = pickle.load(open(path_project + f'IF/seed={seed}/explanation_dict.pkl', 'rb'))
     explanation_df = pd.DataFrame(explanation_dict)
     df = explanation_df.sort_values(by='influence', ascending=True)
 
     # 去除影响力小于0的样本
-    negative_influence_df = df[df['influence'] <= 0]
+    negative_influence_df = df[df['influence'] < 0]
     count_negative_influence = negative_influence_df.shape[0]
     count_remove = int(count_negative_influence * percentage / 100)
     print(
@@ -697,7 +697,7 @@ if __name__ == "__main__":
         history['accuracy'].append(status.history['accuracy'][0])
         history['val_loss'].append(status.history['val_loss'][0])
         history['val_accuracy'].append(status.history['val_accuracy'][0])
-    model.save(path_project + f'trac/output/model-remove-{percentage}%.h5')
+    model.save(path_project + sub_path + f'model-remove-{percentage}%.h5')
     # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'wb') as file_pi:
     #     pickle.dump(history.history, file_pi)
     # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'rb') as file_pi:
@@ -763,6 +763,6 @@ if __name__ == "__main__":
         'recall': r,
         'loss': l
     })
-    result.to_csv(path_project + f'trac/output/model-remove-{percentage}%-performance.csv', index=False)
-    pickle.dump(history, open(path_project + f'trac/output/model-remove-{percentage}%-history.pkl', 'wb'))
+    result.to_csv(path_project + sub_path + f'model-remove-{percentage}%-performance.csv', index=False)
+    pickle.dump(history, open(path_project + sub_path + f'model-remove-{percentage}%-history.pkl', 'wb'))
 

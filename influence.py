@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import tensorflow as tf
 import scipy.io as scio
@@ -22,7 +23,7 @@ import pandas as pd
 import time
 import matplotlib.ticker as mtick
 
-path_project = '/home/yukina/Missle_Fault_Detection/project/'
+path_project = '/home/yukina/Missile_Fault_Detection/project/'
 
 
 def data_preprocess(path1):
@@ -615,40 +616,45 @@ if __name__ == "__main__":
     # np.save(path_project + 'data/X_test.npy', X_test)
     # np.save(path_project + 'data/Y_train.npy', Y_train)
     # np.save(path_project + 'data/Y_test.npy', Y_test)
+    ################################################################
+    import time
 
+    timestamp = time.time()
+    print('Start calculate influence...')
     # Load the training set and test set
     seed = 0
-    X_train = np.load(f'data_seed={seed}/X_train.npy')
-    X_test = np.load(f'data_seed={seed}/X_test.npy')
-    Y_train = np.load(f'data_seed={seed}/Y_train.npy')
-    Y_test = np.load(f'data_seed={seed}/Y_test.npy')
-    ID_train = np.load(f'data_seed={seed}/ID_train.npy')
-    ID_test = np.load(f'data_seed={seed}/ID_test.npy')
+
+    X_train = np.load(path_project + f'data_seed={seed}/X_train.npy')
+    X_test = np.load(path_project + f'data_seed={seed}/X_test.npy')
+    Y_train = np.load(path_project + f'data_seed={seed}/Y_train.npy')
+    Y_test = np.load(path_project + f'data_seed={seed}/Y_test.npy')
+    ID_train = np.load(path_project + f'data_seed={seed}/ID_train.npy')
+    ID_test = np.load(path_project + f'data_seed={seed}/ID_test.npy')
 
     train_ds = tf.data.Dataset.from_tensor_slices((X_train, Y_train)).map(
         lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
 
     # load the model
-    # if os.path.exists(f'data_seed={seed}/lstm-fcn-{seed}.h5'):
-    #     model = load_model(f'data_seed={seed}/lstm-fcn-{seed}.h5')
-    if os.path.exists(f'models/lstm-fcn-withoutCNN.h5'):
-        model = load_model(f'models/lstm-fcn-withoutCNN.h5')
-    else:
-        assert False, 'No model found!'
 
-    if os.path.exists(f'data_seed={seed}/Prediction_train.npy'):
-        Prediction_train = np.load(f'data_seed={seed}/Prediction_train.npy')
+    model1 = load_model(path_project + f'IF/seed={seed}/model1.h5')
+    model2 = load_model(path_project + f'IF/seed={seed}/model2.h5')
+
+    if os.path.exists(path_project + f'data_seed={seed}/Prediction_train.npy'):
+        Prediction_train = np.load(path_project + f'data_seed={seed}/Prediction_train.npy')
     else:
-        Prediction_train = model.predict(X_train)
-        np.save(f'data_seed={seed}/Prediction_train.npy', Prediction_train)
+        Prediction_train = model1.predict(X_train)
+        np.save(path_project + f'data_seed={seed}/Prediction_train.npy', Prediction_train)
 
     # 找出测试集中预测错误的样本
-    test_pred = model.predict(X_test)
-    test_pred = np.argmax(test_pred, axis=1)
+    test_pred1 = model1.predict(X_test)
+    test_pred1 = np.argmax(test_pred1, axis=1)
+    test_pred2 = model2.predict(X_test)
+    test_pred2 = np.argmax(test_pred2, axis=1)
     label_test = np.argmax(Y_test, axis=1)
-    wrong_id = np.where(test_pred != label_test)[0]
+    wrong_id = np.intersect1d(np.where(test_pred1 != label_test)[0], np.where(test_pred2 != label_test)[0])
     test_ds = tf.data.Dataset.from_tensor_slices((X_test[wrong_id], Y_test[wrong_id])).map(
         lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
+    ID_test_wrong = ID_test[wrong_id] # 分类错误的样本的id
 
     from deel_modified.influenciae.common import InfluenceModel, ExactIHVP, ConjugateGradientDescentIHVP
     from tensorflow.keras.losses import BinaryCrossentropy, Reduction
@@ -658,20 +664,20 @@ if __name__ == "__main__":
     #     sequential_model.add(layer)
 
     influence_model = InfluenceModel(
-        model,
+        model1,
         start_layer=-1,
-        last_layer=len(model.layers) - 1,
+        last_layer=len(model1.layers) - 1,
         loss_function=tf.keras.losses.BinaryCrossentropy(from_logits=False,
                                                          reduction=Reduction.NONE))
     print(f'weights list: {len(influence_model.weights)}')
-    model.summary()
+    model1.summary()
     from deel_modified.influenciae.influence import FirstOrderInfluenceCalculator
 
-    # ihvp_calculator = ExactIHVP(model=influence_model, train_dataset=train_ds.batch(1))
-    identity_model = Sequential([
-        Input(shape=(13, 27))
-    ])
-    ihvp_calculator = ConjugateGradientDescentIHVP(model=influence_model, extractor_layer=0, train_dataset=train_ds.batch(1), feature_extractor=identity_model)
+    ihvp_calculator = ExactIHVP(model=influence_model, train_dataset=train_ds.batch(1))
+    # identity_model = Sequential([
+    #     Input(shape=(13, 27))
+    # ])
+    # ihvp_calculator = ConjugateGradientDescentIHVP(model=influence_model, extractor_layer=0, train_dataset=train_ds.batch(1), feature_extractor=identity_model)
     influence_calculator = FirstOrderInfluenceCalculator(model=influence_model, dataset=train_ds,
                                                          ihvp_calculator=ihvp_calculator)
     tesk_point = test_ds.take(1).batch(1)
@@ -685,6 +691,9 @@ if __name__ == "__main__":
 
         # 收集样本的影响力数据
         explanation_dict = {
+            'test_id_original': ID_test_wrong[0],
+            'sample_id_original': [],
+            'test_id': wrong_id[0],
             'sample_id': [],
             'train_feature': [],
             'train_label': [],
@@ -695,7 +704,8 @@ if __name__ == "__main__":
             # 确保经过影响力计算后训练样本的id没有发生改变
             assert np.argmax(np.squeeze(train_label.numpy())) == np.argmax(Y_train[id])
 
-            explanation_dict['sample_id'].append(int(ID_train[id]))
+            explanation_dict['sample_id_original'].append(int(ID_train[id]))
+            explanation_dict['sample_id'].append(id)
             explanation_dict['train_feature'].append(np.squeeze(train_fea.numpy()))
             explanation_dict['train_label'].append(np.squeeze(train_label.numpy()))
             explanation_dict['predicted label'].append(np.argmax(Prediction_train[id]))
@@ -704,6 +714,9 @@ if __name__ == "__main__":
         explanation_df = pd.DataFrame(explanation_dict)
         # 将影响力数据按照影响力大小排序
         explanation_df = explanation_df.sort_values(by='influence', ascending=False)
+        print(f'Time usage: {time.time() - timestamp}')
+        # 保存到本地
+        pickle.dump(explanation_dict, open(path_project + f'IF/seed={seed}/explanation_dict.pkl', 'wb'))
 
         # 收集所有绘图数据的最小值和最大值，以画出colorbar
         min_list = [np.min(test_fea)]
@@ -730,7 +743,7 @@ if __name__ == "__main__":
         ax[0][0].set_xlabel('feature')
         ax[0][0].set_ylabel('timestep')
         ax[0][0].text(x=6, y=-4,
-                      s=f'true label: {np.argmax(test_label)}, predicted label: {np.argmax(model.predict(test_fea))}',
+                      s=f'true label: {np.argmax(test_label)}, predicted label: {np.argmax(model1.predict(test_fea))}',
                       ha='center', va='center')
 
         for i in range(1, 5):
@@ -738,47 +751,47 @@ if __name__ == "__main__":
 
         for i in range(0, 5):
             # 绘制影响力最大的前5个样本
-            im = ax[1][i].imshow(np.transpose(explanation_df.iloc[i]['train_feature']), cmap='coolwarm', interpolation='nearest', norm=norm)
+            im = ax[1][i].imshow(np.transpose(explanation_df.iloc[i]['train_feature']), cmap='coolwarm',
+                                 interpolation='nearest', norm=norm)
             fig.colorbar(im, ax=ax[1][i])
             ax[1][i].set_title(
-                f'id:{explanation_df.iloc[i]["sample_id"]}, influence: {explanation_df.iloc[i]["influence"]:.3f} ')
+                f'id:{explanation_df.iloc[i]["sample_id_original"]}, influence: {explanation_df.iloc[i]["influence"]:.3f} ')
             ax[1][i].set_xticks(np.arange(0, 13, 2))
             ax[1][i].set_yticks(np.arange(0, 27, 2))
             ax[1][i].set_xlabel('feature')
             ax[1][i].set_ylabel('timestep')
             ax[1][i].text(x=6, y=-4,
-                          s=f'label: {np.argmax(explanation_df.iloc[i]["train_label"])}, predict: {explanation_df.iloc[i]["predicted label"]}, impact:{-explanation_df.iloc[i]["influence"]/X_train.shape[0]:.3f}',
+                          s=f'label: {np.argmax(explanation_df.iloc[i]["train_label"])}, predict: {explanation_df.iloc[i]["predicted label"]}',
                           ha='center', va='center')
 
             # 绘制影响力最小的前5个样本
-            im = ax[2][i].imshow(np.transpose(explanation_df.iloc[-i - 1]['train_feature']), cmap='coolwarm', interpolation='nearest', norm=norm)
+            im = ax[2][i].imshow(np.transpose(explanation_df.iloc[-i - 1]['train_feature']), cmap='coolwarm',
+                                 interpolation='nearest', norm=norm)
             fig.colorbar(im, ax=ax[2][i])
             ax[2][i].set_title(
-                f'id:{explanation_df.iloc[-i - 1]["sample_id"]}, influence: {explanation_df.iloc[-i - 1]["influence"]:.3f} ')
+                f'id:{explanation_df.iloc[-i - 1]["sample_id_original"]}, influence: {explanation_df.iloc[-i - 1]["influence"]:.3f} ')
             ax[2][i].set_xticks(np.arange(0, 13, 2))
             ax[2][i].set_yticks(np.arange(0, 27, 2))
             ax[2][i].set_xlabel('feature')
             ax[2][i].set_ylabel('timestep')
             ax[2][i].text(x=6, y=-4,
-                          s=f'label: {np.argmax(explanation_df.iloc[-i - 1]["train_label"])}, predict: {explanation_df.iloc[-i - 1]["predicted label"]}, impact:{-explanation_df.iloc[-i - 1]["influence"]/X_train.shape[0]:.3f}',
+                          s=f'label: {np.argmax(explanation_df.iloc[-i - 1]["train_label"])}, predict: {explanation_df.iloc[-i - 1]["predicted label"]}',
                           ha='center', va='center')
 
-
             # 绘制影响力居中的5个样本
-            im = ax[3][i].imshow(np.transpose(explanation_df.iloc[int(X_train.shape[0]/2) + i]['train_feature']), cmap='coolwarm', interpolation='nearest', norm=norm)
+            im = ax[3][i].imshow(np.transpose(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']),
+                                 cmap='coolwarm', interpolation='nearest', norm=norm)
             fig.colorbar(im, ax=ax[3][i])
             ax[3][i].set_title(
-                f'id:{explanation_df.iloc[int(X_train.shape[0]/2) + i]["sample_id"]}, influence: {explanation_df.iloc[int(X_train.shape[0]/2) + i]["influence"]:.3f} ')
+                f'id:{explanation_df.iloc[int(X_train.shape[0] / 2) + i]["sample_id_original"]}, influence: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["influence"]:.3f} ')
             ax[3][i].set_xticks(np.arange(0, 13, 2))
             ax[3][i].set_yticks(np.arange(0, 27, 2))
             ax[3][i].set_xlabel('feature')
             ax[3][i].set_ylabel('timestep')
             ax[3][i].text(x=6, y=-4,
-                          s=f'label: {np.argmax(explanation_df.iloc[int(X_train.shape[0]/2) + i]["train_label"])}, predict: {explanation_df.iloc[int(X_train.shape[0]/2) + i]["predicted label"]}, impact:{-explanation_df.iloc[int(X_train.shape[0]/2) + i]["influence"] / X_train.shape[0]:.3f}',
+                          s=f'label: {np.argmax(explanation_df.iloc[int(X_train.shape[0] / 2) + i]["train_label"])}, predict: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["predicted label"]}',
                           ha='center', va='center')
 
-
-
         plt.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.4)
-        plt.savefig('outputs/top 5 influence.png')
+        plt.savefig(path_project + f'IF/seed={seed}/outputs/top 5 influence.png')
         plt.show()

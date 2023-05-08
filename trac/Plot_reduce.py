@@ -6,7 +6,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 path_project = '/home/yukina/Missile_Fault_Detection/project/'
-sub_path = 'trac/seed=0/reduction_2797'
+sub_path = 'trac/seed=0/reduction_2797/'
 seed = 0
 
 explanation_dict = pickle.load(open(path_project + f'data_seed={seed}/explanation_dict.pkl', 'rb'))
@@ -16,7 +16,7 @@ df = explanation_df.sort_values(by='sample_id')
 # 绘制直方图
 plt.scatter(df['sample_id'], df['influence'])
 plt.axhline(y=-0, color='black', linestyle='-')
-plt.axhline(y=-0.02, color='r', linestyle='--')
+# plt.axhline(y=-400, color='r', linestyle='--')
 plt.xlabel('sample_id')
 plt.ylabel('influence')
 test_id = df.iloc[0]['test_id_original']
