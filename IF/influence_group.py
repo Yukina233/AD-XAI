@@ -619,7 +619,6 @@ if __name__ == "__main__":
     ################################################################
     import time
 
-    timestamp = time.time()
     print('Start calculate influence...')
     # Load the training set and test set
     seed = 0
@@ -651,10 +650,8 @@ if __name__ == "__main__":
     test_pred2 = model2.predict(X_test)
     test_pred2 = np.argmax(test_pred2, axis=1)
     label_test = np.argmax(Y_test, axis=1)
-    wrong_id = np.intersect1d(np.where(test_pred1 != label_test)[0], np.where(test_pred2 != label_test)[0])
-    test_ds = tf.data.Dataset.from_tensor_slices((X_test[wrong_id], Y_test[wrong_id])).map(
+    test_ds = tf.data.Dataset.from_tensor_slices((X_test, Y_test)).map(
         lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
-    ID_test_wrong = ID_test[wrong_id] # 分类错误的样本的id
 
     from deel_modified.influenciae.common import InfluenceModel, ExactIHVP, ConjugateGradientDescentIHVP
     from tensorflow.keras.losses import BinaryCrossentropy, Reduction
@@ -680,20 +677,22 @@ if __name__ == "__main__":
     # ihvp_calculator = ConjugateGradientDescentIHVP(model=influence_model, extractor_layer=0, train_dataset=train_ds.batch(1), feature_extractor=identity_model)
     influence_calculator = FirstOrderInfluenceCalculator(model=influence_model, dataset=train_ds,
                                                          ihvp_calculator=ihvp_calculator)
-    tesk_point = test_ds.take(1).batch(1)
-    explanations = influence_calculator.estimate_influence_values_in_batches(tesk_point, train_ds.batch(1))
+    tesk_points = test_ds.batch(1)
+    explanations = influence_calculator.estimate_influence_values_in_batches(tesk_points, train_ds.batch(1))
     # explanations = influence_calculator.top_k(tesk_point, train_ds.take(10).batch(1), k=5)
+    i = 0
     for (test_fea, test_label), explanation in explanations:
+        print(f'Calculating the influence of {i+1}th test sample,{X_test.shape[0]-i-1} samples left...')
+        timestamp = time.time()
         fea = test_fea.numpy()
         # fea的维度为(1, 13, 27), 绘制test_fea为表格数据, 并在图上标出真实标签和预测标签
         fea = fea.reshape((fea.shape[1], fea.shape[2]))
         fea = np.transpose(fea)
-
         # 收集样本的影响力数据
         explanation_dict = {
-            'test_id_original': ID_test_wrong[0],
+            'test_id_original': ID_test[i],
             'sample_id_original': [],
-            'test_id': wrong_id[0],
+            'test_id': i,
             'sample_id': [],
             'train_feature': [],
             'train_label': [],
@@ -711,87 +710,9 @@ if __name__ == "__main__":
             explanation_dict['predicted label'].append(np.argmax(Prediction_train[id]))
             explanation_dict['influence'].append(np.squeeze(influence.numpy()))
         # 将影响力数据转换为DataFrame
-        explanation_df = pd.DataFrame(explanation_dict)
-        # 将影响力数据按照影响力大小排序
-        explanation_df = explanation_df.sort_values(by='influence', ascending=False)
+        print(f'Calculating the influence of {i+1}th test sample is done!')
         print(f'Time usage: {time.time() - timestamp}')
         # 保存到本地
-        pickle.dump(explanation_dict, open(path_project + f'IF/seed={seed}/explanation_dict.pkl', 'wb'))
+        pickle.dump(explanation_dict, open(path_project + f'IF/seed={seed}/group_reduce/explanation_dict-test_id={i}.pkl', 'wb'))
+        i = i + 1
 
-        # 收集所有绘图数据的最小值和最大值，以画出colorbar
-        min_list = [np.min(test_fea)]
-        max_list = [np.max(test_fea)]
-        for i in range(0, 5):
-            min_list.append(np.min(explanation_df.iloc[i]['train_feature']))
-            min_list.append(np.min(explanation_df.iloc[-i - 1]['train_feature']))
-            min_list.append(np.min(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']))
-            max_list.append(np.max(explanation_df.iloc[i]['train_feature']))
-            max_list.append(np.max(explanation_df.iloc[-i - 1]['train_feature']))
-            max_list.append(np.max(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']))
-        print(f'min_list: {min_list}')
-        print(f'max_list: {max_list}')
-
-        # 创建统一的colorbar
-        norm = colors.Normalize(vmin=min(min_list), vmax=max(max_list))
-        fig, ax = plt.subplots(4, 5, figsize=(15, 16))
-        im = ax[0][0].imshow(fea, cmap='coolwarm', interpolation='nearest', norm=norm)
-        fig.colorbar(im, ax=ax[0][0])
-
-        ax[0][0].set_title('Test Sample')
-        ax[0][0].set_xticks(np.arange(0, 13, 2))
-        ax[0][0].set_yticks(np.arange(0, 27, 2))
-        ax[0][0].set_xlabel('feature')
-        ax[0][0].set_ylabel('timestep')
-        ax[0][0].text(x=6, y=-4,
-                      s=f'true label: {np.argmax(test_label)}, predicted label: {np.argmax(model1.predict(test_fea))}',
-                      ha='center', va='center')
-
-        for i in range(1, 5):
-            ax[0][i].axis('off')
-
-        for i in range(0, 5):
-            # 绘制影响力最大的前5个样本
-            im = ax[1][i].imshow(np.transpose(explanation_df.iloc[i]['train_feature']), cmap='coolwarm',
-                                 interpolation='nearest', norm=norm)
-            fig.colorbar(im, ax=ax[1][i])
-            ax[1][i].set_title(
-                f'id:{explanation_df.iloc[i]["sample_id_original"]}, influence: {explanation_df.iloc[i]["influence"]:.3f} ')
-            ax[1][i].set_xticks(np.arange(0, 13, 2))
-            ax[1][i].set_yticks(np.arange(0, 27, 2))
-            ax[1][i].set_xlabel('feature')
-            ax[1][i].set_ylabel('timestep')
-            ax[1][i].text(x=6, y=-4,
-                          s=f'label: {np.argmax(explanation_df.iloc[i]["train_label"])}, predict: {explanation_df.iloc[i]["predicted label"]}',
-                          ha='center', va='center')
-
-            # 绘制影响力最小的前5个样本
-            im = ax[2][i].imshow(np.transpose(explanation_df.iloc[-i - 1]['train_feature']), cmap='coolwarm',
-                                 interpolation='nearest', norm=norm)
-            fig.colorbar(im, ax=ax[2][i])
-            ax[2][i].set_title(
-                f'id:{explanation_df.iloc[-i - 1]["sample_id_original"]}, influence: {explanation_df.iloc[-i - 1]["influence"]:.3f} ')
-            ax[2][i].set_xticks(np.arange(0, 13, 2))
-            ax[2][i].set_yticks(np.arange(0, 27, 2))
-            ax[2][i].set_xlabel('feature')
-            ax[2][i].set_ylabel('timestep')
-            ax[2][i].text(x=6, y=-4,
-                          s=f'label: {np.argmax(explanation_df.iloc[-i - 1]["train_label"])}, predict: {explanation_df.iloc[-i - 1]["predicted label"]}',
-                          ha='center', va='center')
-
-            # 绘制影响力居中的5个样本
-            im = ax[3][i].imshow(np.transpose(explanation_df.iloc[int(X_train.shape[0] / 2) + i]['train_feature']),
-                                 cmap='coolwarm', interpolation='nearest', norm=norm)
-            fig.colorbar(im, ax=ax[3][i])
-            ax[3][i].set_title(
-                f'id:{explanation_df.iloc[int(X_train.shape[0] / 2) + i]["sample_id_original"]}, influence: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["influence"]:.3f} ')
-            ax[3][i].set_xticks(np.arange(0, 13, 2))
-            ax[3][i].set_yticks(np.arange(0, 27, 2))
-            ax[3][i].set_xlabel('feature')
-            ax[3][i].set_ylabel('timestep')
-            ax[3][i].text(x=6, y=-4,
-                          s=f'label: {np.argmax(explanation_df.iloc[int(X_train.shape[0] / 2) + i]["train_label"])}, predict: {explanation_df.iloc[int(X_train.shape[0] / 2) + i]["predicted label"]}',
-                          ha='center', va='center')
-
-        plt.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.4)
-        plt.savefig(path_project + f'IF/seed={seed}/outputs/top 5 influence.png')
-        plt.show()

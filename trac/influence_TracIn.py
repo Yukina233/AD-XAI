@@ -600,7 +600,7 @@ def get_processed_data():
 
 if __name__ == "__main__":
     seed = 0  # random seed
-    start_layer = 0  # start layer of weights to be calculated for influence function
+    start_layer = -1  # start layer of weights to be calculated for influence function
     last_layer = -1  # last layer of weights to be calculated for influence function
     learning_rate = 0.001  # initial learning rate
     epochs = 100  # number of training epochs
@@ -662,7 +662,7 @@ if __name__ == "__main__":
         for i in range(0, 10):
             model = load_model(path_project + f'trac/checkpoints/model-{i*10}.h5')
             model_list.append(
-                InfluenceModel(model, start_layer=-1, last_layer=last_layer, loss_function=unreduced_loss_fn))
+                InfluenceModel(model, start_layer=start_layer, last_layer=last_layer, loss_function=unreduced_loss_fn))
         print('Model loaded successfully.')
     else:
         model = generate_model(fea.shape[1], 5, fea.shape[2])

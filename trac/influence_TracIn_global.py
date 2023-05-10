@@ -600,7 +600,7 @@ def get_processed_data():
 
 if __name__ == "__main__":
     seed = 0  # random seed
-    start_layer = 0  # start layer of weights to be calculated for influence function
+    start_layer = -1  # start layer of weights to be calculated for influence function
     last_layer = -1  # last layer of weights to be calculated for influence function
     learning_rate = 0.001  # initial learning rate
     epochs = 100  # number of training epochs
@@ -835,12 +835,12 @@ if __name__ == "__main__":
         'influence': []
     }
     # explanations = influence_calculator.top_k(tesk_point, train_ds.take(10).batch(1), k=5)
+    i = 0
     for (test_fea, test_label), explanation in explanations:
         fea = test_fea.numpy()
         # fea的维度为(1, 13, 27), 绘制test_fea为表格数据, 并在图上标出真实标签和预测标签
         fea = fea.reshape((fea.shape[1], fea.shape[2]))
         fea = np.transpose(fea)
-        i = 0
         start_time = time.time()
         for id, ((train_fea, train_label), influence) in enumerate(explanation):
             # 确保经过影响力计算后训练样本的id没有发生改变

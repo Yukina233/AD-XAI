@@ -604,8 +604,8 @@ if __name__ == "__main__":
     learning_rate = 0.001  # initial learning rate
     epochs = 100  # number of training epochs
     batch = 64  # batch size
-    percentage = 5  # percentage of harmful training data to be removed
-    repeat_times = 7  # number of times to repeat the increase
+    percentage = 10  # percentage of harmful training data to be removed
+    repeat_times = 4 # number of times to repeat the increase
     unreduced_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False,
                                                            reduction=tf.keras.losses.Reduction.NONE)
 
