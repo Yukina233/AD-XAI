@@ -598,7 +598,7 @@ def get_processed_data():
 
 
 if __name__ == "__main__":
-    seed = 0  # random seed
+    data_seed = 0  # random data split seed
     start_layer = 0  # start layer of weights to be calculated for influence function
     last_layer = -1  # last layer of weights to be calculated for influence function
     learning_rate = 0.001  # initial learning rate

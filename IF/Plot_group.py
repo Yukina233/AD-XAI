@@ -11,11 +11,11 @@ from tensorflow.keras.models import load_model
 
 
 path_project = '/home/yukina/Missile_Fault_Detection/project/'
-sub_path = 'IF/seed=0/2797_reduce'
+sub_path = 'IF/seed=0/compare/'
 seed = 0
 
 
-explanation_dict = pickle.load(open(path_project + f'IF/seed=0/explanation_dict.pkl', 'rb'))
+explanation_dict = pickle.load(open(path_project + f'IF/seed=0/group_explanation/group_explanation_dict.pkl', 'rb'))
 explanation_df = pd.DataFrame(explanation_dict)
 df = explanation_df.sort_values(by='sample_id')
 
@@ -25,8 +25,7 @@ plt.axhline(y=-0, color='black', linestyle='-')
 # plt.axhline(y=-400, color='r', linestyle='--')
 plt.xlabel('sample_id')
 plt.ylabel('influence')
-test_id = df.iloc[0]['test_id_original']
-plt.title(f'Influence of training samples to Test sample {int(test_id)}')
+plt.title(f'Influence of training samples to all test samples')
 plt.show()
 
 # Load the training set and test set
@@ -71,13 +70,6 @@ all_pickle_files = load_all_pickle_files(directory)
 # 输出加载的模型
 for model_name, model in all_models.items():
     print(f'Model {model_name} is loaded.')
-# print
-print(f'test_id: {explanation_dict["test_id_original"]}')
-print(f'label: {np.argmax(Y_test[explanation_dict["test_id"]])}')
-
-for model_name, model in all_models.items():
-    prediction = np.argmax(model.predict(np.expand_dims(X_test[explanation_dict['test_id']], axis=0), verbose=0))
-    print(f'{model_name} prediction: {prediction}')
 
 
 # 绘制验证集的损失函数

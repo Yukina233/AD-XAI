@@ -1,9 +1,11 @@
 import os
 import pickle
+import random
 
 import tensorflow as tf
 import scipy.io as scio
 import numpy as np
+import tensorflow.python.keras.initializers.initializers_v2
 from matplotlib import colors, colorbar, cm
 
 from tensorflow.keras.models import Model
@@ -14,6 +16,7 @@ from tensorflow.keras.layers import Conv1D, BatchNormalization, GlobalAveragePoo
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import RobustScaler
 from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.initializers import he_uniform
 
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -28,7 +31,7 @@ from deel_modified.influenciae.common import InfluenceModel
 from tensorflow.keras.optimizers import Adam
 
 path_project = '/home/yukina/Missile_Fault_Detection/project/'
-sub_path = 'IF/seed=0/2797_reduce/'
+sub_path = 'IF/seed=0/group_reduce_pos/'
 
 def data_preprocess(path1):
     rty = scio.loadmat(path1)
@@ -386,21 +389,21 @@ def generate_lstmfcn(MAX_SEQUENCE_LENGTH, NB_CLASS, NUM_CELLS):
     return model
 
 
-def generate_model(MAX_NB_VARIABLES, NB_CLASS, MAX_TIMESTEPS):
+def generate_model(MAX_NB_VARIABLES, NB_CLASS, MAX_TIMESTEPS, train_seed=0):
     ip = Input(shape=(MAX_NB_VARIABLES, MAX_TIMESTEPS))
     x = Masking()(ip)
     x = LSTM(64)(x)
-    x = Dropout(0.8)(x)
+    x = Dropout(0.8, seed=train_seed)(x)
     y = Permute((2, 1))(ip)
-    y = Conv1D(128, 8, padding='same', kernel_initializer='he_uniform')(y)
+    y = Conv1D(128, 8, padding='same', kernel_initializer=he_uniform(seed=train_seed))(y)
     y = BatchNormalization()(y)
     y = Activation('relu')(y)
     y = squeeze_excite_block(y)
-    y = Conv1D(256, 5, padding='same', kernel_initializer='he_uniform')(y)
+    y = Conv1D(256, 5, padding='same', kernel_initializer=he_uniform(seed=train_seed))(y)
     y = BatchNormalization()(y)
     y = Activation('relu')(y)
     y = squeeze_excite_block(y)
-    y = Conv1D(128, 3, padding='same', kernel_initializer='he_uniform')(y)
+    y = Conv1D(128, 3, padding='same', kernel_initializer=he_uniform(seed=train_seed))(y)
     y = BatchNormalization()(y)
     y = Activation('relu')(y)
     y = GlobalAveragePooling1D()(y)
@@ -597,16 +600,22 @@ def get_processed_data():
     return fea, label
 
 
-if __name__ == "__main__":
-    seed = 0  # random seed
+def retrain(percentage = 100, train_seed = 0):
+    # percentage: percentage of harmful training data to be removed
+    # train_seed: random seed for training
+
+    data_seed = 0  # random data split seed
     start_layer = 0  # start layer of weights to be calculated for influence function
     last_layer = -1  # last layer of weights to be calculated for influence function
     learning_rate = 0.001  # initial learning rate
     epochs = 100  # number of training epochs
     batch = 64  # batch size
-    percentage = 100  # percentage of harmful training data to be removed
     unreduced_loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False,
                                                            reduction=tf.keras.losses.Reduction.NONE)
+    random.seed(train_seed)
+    np.random.seed(train_seed)
+    os.environ['PYTHONHASHSEED'] = str(train_seed)
+    tf.random.set_seed(train_seed)
 
     plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
     plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
@@ -636,15 +645,15 @@ if __name__ == "__main__":
     # mode = np.concatenate((mode, new_col), axis=1)
 
     # Load the training set and test set
-    X_train = np.load(path_project + f'data_seed={seed}/X_train.npy')
-    X_test = np.load(path_project + f'data_seed={seed}/X_test.npy')
-    Y_train = np.load(path_project + f'data_seed={seed}/Y_train.npy')
-    Y_test = np.load(path_project + f'data_seed={seed}/Y_test.npy')
-    ID_train = np.load(path_project + f'data_seed={seed}/ID_train.npy')
-    ID_test = np.load(path_project + f'data_seed={seed}/ID_test.npy')
+    X_train = np.load(path_project + f'data_seed={data_seed}/X_train.npy')
+    X_test = np.load(path_project + f'data_seed={data_seed}/X_test.npy')
+    Y_train = np.load(path_project + f'data_seed={data_seed}/Y_train.npy')
+    Y_test = np.load(path_project + f'data_seed={data_seed}/Y_test.npy')
+    ID_train = np.load(path_project + f'data_seed={data_seed}/ID_train.npy')
+    ID_test = np.load(path_project + f'data_seed={data_seed}/ID_test.npy')
 
     # load the influence of each training sample on the test set
-    explanation_dict = pickle.load(open(path_project + f'IF/seed={seed}/explanation_dict.pkl', 'rb'))
+    explanation_dict = pickle.load(open(path_project + f'IF/seed={data_seed}/group_explanation/group_explanation_dict.pkl', 'rb'))
     explanation_df = pd.DataFrame(explanation_dict)
     df = explanation_df.sort_values(by='influence', ascending=True)
 
@@ -692,12 +701,12 @@ if __name__ == "__main__":
     )
     for i in range(epochs):
         status = model.fit(X_train, Y_train, epochs=1, validation_data=(X_test, Y_test), batch_size=batch,
-                           verbose=2)
+                           verbose=2, shuffle=False)
         history['loss'].append(status.history['loss'][0])
         history['accuracy'].append(status.history['accuracy'][0])
         history['val_loss'].append(status.history['val_loss'][0])
         history['val_accuracy'].append(status.history['val_accuracy'][0])
-    model.save(path_project + sub_path + f'model-remove-{percentage}%.h5')
+    model.save(path_project + sub_path + f'model-remove-{percentage}%-train_seed={train_seed}-pos.h5')
     # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'wb') as file_pi:
     #     pickle.dump(history.history, file_pi)
     # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'rb') as file_pi:
@@ -763,6 +772,14 @@ if __name__ == "__main__":
         'recall': r,
         'loss': l
     })
-    result.to_csv(path_project + sub_path + f'model-remove-{percentage}%-performance.csv', index=False)
-    pickle.dump(history, open(path_project + sub_path + f'model-remove-{percentage}%-history.pkl', 'wb'))
+    result.to_csv(path_project + sub_path + f'model-remove-{percentage}%-train_seed={train_seed}-pos-performance.csv', index=False)
+    pickle.dump(history, open(path_project + sub_path + f'model-remove-{percentage}%-train_seed={train_seed}-pos-history.pkl', 'wb'))
 
+if __name__ == '__main__':
+    percentage = [30, 40]
+    train_seed = [0, 1, 2]
+    for i in percentage:
+        for j in train_seed:
+            print(f'Retraining...... percentage: {i}, train seed: {j}')
+            retrain(percentage=i, train_seed=j)
+    print('All retrains Done!')

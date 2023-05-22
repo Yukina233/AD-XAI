@@ -713,6 +713,6 @@ if __name__ == "__main__":
         print(f'Calculating the influence of {i+1}th test sample is done!')
         print(f'Time usage: {time.time() - timestamp}')
         # 保存到本地
-        pickle.dump(explanation_dict, open(path_project + f'IF/seed={seed}/group_reduce/explanation_dict-test_id={i}.pkl', 'wb'))
+        pickle.dump(explanation_dict, open(path_project + f'IF/seed={seed}/group_explanation/explanation_dict-test_id={i}.pkl', 'wb'))
         i = i + 1
 

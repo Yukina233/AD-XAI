@@ -622,28 +622,28 @@ if __name__ == "__main__":
     timestamp = time.time()
     print('Start calculate influence...')
     # Load the training set and test set
-    seed = 0
+    data_seed = 0  # random data split seed
 
-    X_train = np.load(path_project + f'data_seed={seed}/X_train.npy')
-    X_test = np.load(path_project + f'data_seed={seed}/X_test.npy')
-    Y_train = np.load(path_project + f'data_seed={seed}/Y_train.npy')
-    Y_test = np.load(path_project + f'data_seed={seed}/Y_test.npy')
-    ID_train = np.load(path_project + f'data_seed={seed}/ID_train.npy')
-    ID_test = np.load(path_project + f'data_seed={seed}/ID_test.npy')
+    X_train = np.load(path_project + f'data_seed={data_seed}/X_train.npy')
+    X_test = np.load(path_project + f'data_seed={data_seed}/X_test.npy')
+    Y_train = np.load(path_project + f'data_seed={data_seed}/Y_train.npy')
+    Y_test = np.load(path_project + f'data_seed={data_seed}/Y_test.npy')
+    ID_train = np.load(path_project + f'data_seed={data_seed}/ID_train.npy')
+    ID_test = np.load(path_project + f'data_seed={data_seed}/ID_test.npy')
 
     train_ds = tf.data.Dataset.from_tensor_slices((X_train, Y_train)).map(
         lambda x, y: (tf.cast(x, tf.float32), tf.cast(y, tf.float32)))
 
     # load the model
 
-    model1 = load_model(path_project + f'IF/seed={seed}/model1.h5')
-    model2 = load_model(path_project + f'IF/seed={seed}/model2.h5')
+    model1 = load_model(path_project + f'IF/seed={data_seed}/model1.h5')
+    model2 = load_model(path_project + f'IF/seed={data_seed}/model2.h5')
 
-    if os.path.exists(path_project + f'data_seed={seed}/Prediction_train.npy'):
-        Prediction_train = np.load(path_project + f'data_seed={seed}/Prediction_train.npy')
+    if os.path.exists(path_project + f'data_seed={data_seed}/Prediction_train.npy'):
+        Prediction_train = np.load(path_project + f'data_seed={data_seed}/Prediction_train.npy')
     else:
         Prediction_train = model1.predict(X_train)
-        np.save(path_project + f'data_seed={seed}/Prediction_train.npy', Prediction_train)
+        np.save(path_project + f'data_seed={data_seed}/Prediction_train.npy', Prediction_train)
 
     # 找出测试集中预测错误的样本
     test_pred1 = model1.predict(X_test)
@@ -716,7 +716,7 @@ if __name__ == "__main__":
         explanation_df = explanation_df.sort_values(by='influence', ascending=False)
         print(f'Time usage: {time.time() - timestamp}')
         # 保存到本地
-        pickle.dump(explanation_dict, open(path_project + f'IF/seed={seed}/explanation_dict.pkl', 'wb'))
+        pickle.dump(explanation_dict, open(path_project + f'IF/seed={data_seed}/explanation_dict.pkl', 'wb'))
 
         # 收集所有绘图数据的最小值和最大值，以画出colorbar
         min_list = [np.min(test_fea)]
@@ -793,6 +793,6 @@ if __name__ == "__main__":
                           ha='center', va='center')
 
         plt.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.3, hspace=0.4)
-        plt.savefig(path_project + f'IF/seed={seed}/outputs/top 5 influence.png')
+        plt.savefig(path_project + f'IF/seed={data_seed}/outputs/top 5 influence.png')
         plt.show()
 

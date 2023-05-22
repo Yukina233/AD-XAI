@@ -11,11 +11,11 @@ from tensorflow.keras.models import load_model
 
 
 path_project = '/home/yukina/Missile_Fault_Detection/project/'
-sub_path = 'IF/seed=0/2797_reduce'
+sub_path = 'IF/seed=0/2797_reduce_pos/'
 seed = 0
 
 
-explanation_dict = pickle.load(open(path_project + f'IF/seed=0/explanation_dict.pkl', 'rb'))
+explanation_dict = pickle.load(open(path_project + f'IF/seed=0/2797_reduce_neg/explanation_dict.pkl', 'rb'))
 explanation_df = pd.DataFrame(explanation_dict)
 df = explanation_df.sort_values(by='sample_id')
 
