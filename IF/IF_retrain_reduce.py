@@ -776,7 +776,7 @@ def retrain(percentage = 100, train_seed = 0):
     pickle.dump(history, open(path_project + sub_path + f'model-remove-{percentage}%-train_seed={train_seed}-pos-history.pkl', 'wb'))
 
 if __name__ == '__main__':
-    percentage = [30, 40]
+    percentage = [5, 10, 15, 20, 25]
     train_seed = [0, 1, 2]
     for i in percentage:
         for j in train_seed:

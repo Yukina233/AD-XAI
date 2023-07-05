@@ -9,11 +9,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from tensorflow.keras.models import load_model
 
-
 path_project = '/home/yukina/Missile_Fault_Detection/project/'
 sub_path = 'IF/seed=0/compare/'
 seed = 0
-
 
 explanation_dict = pickle.load(open(path_project + f'IF/seed=0/group_explanation/group_explanation_dict.pkl', 'rb'))
 explanation_df = pd.DataFrame(explanation_dict)
@@ -50,6 +48,7 @@ def load_all_h5_models(directory):
 
     return models
 
+
 def load_all_pickle_files(directory):
     # 使用glob找到目录中所有的.h5文件
     pickle_files = glob.glob(os.path.join(directory, '*.pkl'))
@@ -62,6 +61,7 @@ def load_all_pickle_files(directory):
 
     return files
 
+
 # 使用函数加载目录下所有的.h5模型
 directory = path_project + sub_path
 all_models = load_all_h5_models(directory)
@@ -71,11 +71,13 @@ all_pickle_files = load_all_pickle_files(directory)
 for model_name, model in all_models.items():
     print(f'Model {model_name} is loaded.')
 
-
 # 绘制验证集的损失函数
 plt.figure(figsize=(10, 10))
 for file_name, history in all_pickle_files.items():
-    plt.plot(history['val_loss'], label=file_name)
+    plt.plot(history['mean_val_loss'], label=file_name)
+    plt.fill_between(range(len(history['mean_val_loss'])),
+                     history['mean_val_loss'] - history['std_val_loss'],
+                     history['mean_val_loss'] + history['std_val_loss'], alpha=0.2)
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Validation Loss')
@@ -85,10 +87,32 @@ plt.show()
 # 绘制验证集的准确率
 plt.figure(figsize=(10, 10))
 for file_name, history in all_pickle_files.items():
-    plt.plot(history['val_accuracy'], label=file_name)
+    plt.plot(history['mean_val_accuracy'], label=file_name)
+    plt.fill_between(range(len(history['mean_val_accuracy'])),
+                     history['mean_val_accuracy'] - history['std_val_accuracy'],
+                     history['mean_val_accuracy'] + history['std_val_accuracy'], alpha=0.2)
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.title('Validation Accuracy')
 plt.legend()
 plt.show()
 
+# 绘制验证集的损失函数的log值
+plt.figure(figsize=(10, 10))
+for file_name, history in all_pickle_files.items():
+    plt.plot(np.log10(history['mean_val_loss']), label=file_name)
+plt.xlabel('Epoch')
+plt.ylabel('Log Loss')
+plt.title('Validation Loss')
+plt.legend()
+plt.show()
+
+# 绘制验证集的准确率的log值
+plt.figure(figsize=(10, 10))
+for file_name, history in all_pickle_files.items():
+    plt.plot(np.log10(history['mean_val_accuracy']), label=file_name)
+plt.xlabel('Epoch')
+plt.ylabel('Log Accuracy')
+plt.title('Validation Accuracy')
+plt.legend()
+plt.show()
