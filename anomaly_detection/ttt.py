@@ -1,3 +1,4 @@
+path_project = '/home/yukina/Missile_Fault_Detection/project/'
 from spot import dSPOT
 import scipy.io as scio
 import numpy as np
@@ -187,7 +188,7 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
         alarm = results['alarms']
         plt.plot(cl)
         plt.plot(test_distance)
-        # plt.show()
+        plt.show()
         print(np.shape(cl),np.shape(test_distance))
         th_d = test_distance - cl
         id_high = np.where(th_d > 0)[0]   # 检测出故障故障
@@ -211,7 +212,7 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
         plt.xlabel('时间/s', fontdict={'family': ['SimSun'], 'size': 12})
         plt.ylabel('故障检测指标值', fontdict={'family': ['SimSun'], 'size': 12})
         plt.legend(loc='best', prop={'family': ['SimSun'], 'size': 12})
-        # plt.show()
+        plt.show()
         return fp_rate,pf_rate
 def km_cluster(lle_train_data, test_new, x_train_new):
     # 降维数据
@@ -386,7 +387,7 @@ def data_flatten(X):
 
 if __name__ == '__main__':
     zongfp,zongpf = [],[]
-    path1 = 'zc1.dat'
+    path1 = path_project + 'anomaly_detection/data/zc1.dat'
     nor_data = get_dat(path1)
     # plot_data(nor_data)
     xtrain = nor_data[2000:, :]
@@ -398,18 +399,18 @@ if __name__ == '__main__':
     t_std = np.std(nor_t)
     th1 = t_mean + 3 * t_std   # 阈值1 平均值加三倍标准差
 
-    A = np.load('projection.npy')
-    train_distance = np.load('train_distance.npy')
-    center = np.load('center.npy')
+    A = np.load(path_project + 'anomaly_detection/model/projection.npy')
+    train_distance = np.load(path_project + 'anomaly_detection/model/train_distance.npy')
+    center = np.load(path_project + 'anomaly_detection/model/center.npy')
 
     # path2 = 'D:\share\新建文件夹\T\T0.6.dat'
-    path2 = 'ks2_7.dat'
-    ka_data = get_dat(path2)
+    path2 = path_project + 'anomaly_detection/data/ks2_7.dat'
+    ka_data = get_dat(path1)
     train_end = 2000  # 2000
     fault_start = 5000
     window_length = 100
-    model = load_model('location.h5')
-    model_classify = load_model('lstm-fcn.h5')
+    # model = load_model('location.h5')
+    # model_classify = load_model('lstm-fcn.h5')
     a1 = time.time()
     a,b = [],[]
     ff = 0
@@ -429,7 +430,7 @@ if __name__ == '__main__':
         #     print(i)
         #     print(c)
         #     print(cl)
-        #     print(test_distance)
+        #     print(test_distance)9
         #     break
         fp, pf = detect_accurate(train_distance, test_distance, window_length, train_end, fault_start, mode='auto')
 
