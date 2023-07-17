@@ -81,7 +81,7 @@ from pythae.models.nn.benchmarks.mnist.resnets import Encoder_ResNet_VQVAE_MNIST
 #%%
 config = BaseTrainerConfig(
     output_dir=path_project + 'anomaly_detection/model/my_model',
-    learning_rate=1e-3,
+    # learning_rate=1e-3,
     per_device_train_batch_size=64,
     per_device_eval_batch_size=64,
     num_epochs=10, # Change this to train the model a bit more

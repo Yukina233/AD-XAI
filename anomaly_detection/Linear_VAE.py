@@ -4,11 +4,9 @@ import torchvision.datasets as datasets
 import pythae
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, precision_score
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler, MaxAbsScaler, KBinsDiscretizer
-from pythae_modified.models.nn import BaseEncoder, BaseDecoder
-from pythae_modified.models.base.base_utils import ModelOutput
-from modified_model import Encoder_ResNet_VAE_Missile, Decoder_ResNet_AE_Missle
+from pythae.models.nn import BaseEncoder, BaseDecoder
+from pythae.models.base.base_utils import ModelOutput
 
 
 def get_dat(path):
@@ -29,6 +27,12 @@ def create_window_dataset(dataset, k):
     return np.array(dataX), np.array(dataY)
 
 
+def vae_loss(recon_x, x, mu, log_var):
+    recon_loss = nn.functional.binary_cross_entropy(recon_x, x, reduction='sum')
+    # 高斯分布KL散度计算
+    kl_divergence = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    return recon_loss + kl_divergence
+
 class Encoder_Linear_VAE_Missile(BaseEncoder):
     def __init__(self, args):
         BaseEncoder.__init__(self)
@@ -39,6 +43,10 @@ class Encoder_Linear_VAE_Missile(BaseEncoder):
 
         self.layers = nn.Sequential(
             nn.Linear(self.input_dim, self.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.ReLU(),
             nn.Linear(self.hidden_dim, self.latent_dim * 2)
         )
@@ -64,6 +72,10 @@ class Decoder_Linear_VAE_Missile(BaseDecoder):
         self.layers = nn.Sequential(
             nn.Linear(self.latent_dim, self.hidden_dim),
             nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.ReLU(),
             nn.Linear(self.hidden_dim, self.input_dim),
             nn.Sigmoid()
         )
@@ -80,53 +92,43 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # load data
 # mnist_trainset = datasets.MNIST(root='../../data', train=True, download=True, transform=None)
+
 path1 = path_project + 'anomaly_detection/data/zc1.dat'
 normal_data = get_dat(path1)
 path2 = path_project + 'anomaly_detection/data/ks2_7.dat'
 ka_data = get_dat(path2)
 path3 = path_project + 'raw/normal/zc3.dat'
 new_data = get_dat(path3)
-filenames = [path_project + 'anomaly_detection/data/train_loss.csv',
-             path_project + 'anomaly_detection/data/eval_loss.csv']
-# 清空文件
-for filename in filenames:
-    with open(filename, 'w') as file:
-        pass
+scaler = RobustScaler().fit(normal_data)
 
-scaler = MinMaxScaler().fit(normal_data)
+window_size = 5
+train_dataset = scaler.transform(normal_data[:6000])
+eval_dataset = scaler.transform(normal_data[:6000])
+anomaly_dataset = scaler.transform(ka_data[5000:])
 
-window_size = 8
-train_dataset, _ = create_window_dataset(scaler.transform(normal_data[:5000]), window_size)
-train_dataset = train_dataset.reshape(-1, 1, window_size, 13)
-val_dataset, _ = create_window_dataset(scaler.transform(ka_data[5000:]), window_size)
-val_dataset = val_dataset.reshape(-1, 1, window_size, 13)
-eval_dataset, _ = create_window_dataset(scaler.transform(ka_data), window_size)
-eval_dataset = eval_dataset.reshape(-1, 1, window_size, 13)
-
-from pythae_modified.models import VAE, VAEConfig
-from pythae_modified.trainers import BaseTrainerConfig
-from pythae_modified.pipelines.training import TrainingPipeline
-from pythae_modified.models.nn.benchmarks.mnist import Encoder_ResNet_VAE_MNIST, Decoder_ResNet_AE_MNIST
+from pythae.models import VAE, VAEConfig
+from pythae.trainers import BaseTrainerConfig
+from pythae.pipelines.training import TrainingPipeline
+from pythae.models.nn.benchmarks.mnist import Encoder_ResNet_VAE_MNIST, Decoder_ResNet_AE_MNIST
 
 config = BaseTrainerConfig(
     output_dir=path_project + 'anomaly_detection/model/my_model',
-    learning_rate=1e-3,
-    per_device_train_batch_size=64,
-    per_device_eval_batch_size=64,
-    num_epochs=1,  # Change this to train the model a bit more
-    optimizer_cls="AdamW",
-    optimizer_params={"weight_decay": 0.05, "betas": (0.91, 0.99)}
+    # learning_rate=1e-3,
+    per_device_train_batch_size=2,
+    per_device_eval_batch_size=2,
+    num_epochs=10,  # Change this to train the model a bit more
+    optimizer_cls="RMSprop",
 )
 
 model_config = VAEConfig(
-    input_dim=(1, window_size, 13),
-    latent_dim=64
+    input_dim=(1, 13),
+    latent_dim=9
 )
 
 model = VAE(
     model_config=model_config,
-    encoder=Encoder_ResNet_VAE_Missile(model_config),
-    decoder=Decoder_ResNet_AE_Missle(model_config)
+    encoder=Encoder_Linear_VAE_Missile(model_config),
+    decoder=Decoder_Linear_VAE_Missile(model_config)
 )
 # %%
 pipeline = TrainingPipeline(
@@ -136,19 +138,18 @@ pipeline = TrainingPipeline(
 # %%
 pipeline(
     train_data=train_dataset,
-    eval_data=val_dataset
+    eval_data=eval_dataset
 )
 # %%
 import os
-from pythae_modified.models import AutoModel
+from pythae.models import AutoModel
 
 # %%
 last_training = sorted(os.listdir(path_project + 'anomaly_detection/model/my_model'))[-1]
 trained_model = AutoModel.load_from_folder(
     os.path.join(path_project + 'anomaly_detection/model/my_model', last_training, 'final_model'))
-
 # %%
-from pythae_modified.samplers import NormalSampler
+from pythae.samplers import NormalSampler
 
 # %%
 # create normal sampler
@@ -168,27 +169,10 @@ import matplotlib.pyplot as plt
 fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 10))
 for i in range(5):
     for j in range(5):
-        img = axes[i][j].imshow(gen_data.cpu().detach().numpy()[i * 5 + j].squeeze(0))
-        fig.colorbar(img, ax=axes[i][j])
+        axes[i][j].plot(gen_data.cpu().detach().numpy()[i * 5 + j])
 fig.suptitle('normal sampler')
 plt.tight_layout()
 plt.show()
-
-# 异常检测
-ground_truth = np.concatenate((np.zeros(5000 - window_size), np.ones(eval_dataset.shape[0] - 5000 + window_size)))
-predict = np.zeros(eval_dataset.shape[0])
-inputs = dict(data=torch.tensor(eval_dataset, dtype=torch.float).to(device))
-model_output = trained_model.calculate_elementwise_loss(inputs)
-losses = model_output.loss.cpu().detach().numpy()
-threshold = 20
-i = 0
-for loss in losses:
-    if loss > threshold:
-        predict[i] = 1
-    i += 1
-print('data length: ', eval_dataset.shape[0])
-print('threshold:   ', threshold)
-print('accuracy:    ', accuracy_score(ground_truth, predict))
 
 from pythae.samplers import GaussianMixtureSampler, GaussianMixtureSamplerConfig
 
@@ -229,16 +213,15 @@ from pythae.samplers import GaussianMixtureSampler, GaussianMixtureSamplerConfig
 # %% md
 ## Visualizing reconstructions
 # %%
-reconstructions = trained_model.reconstruct(torch.tensor(train_dataset, dtype=torch.float).to(device)).detach().cpu()
+reconstructions = trained_model.reconstruct(torch.tensor(anomaly_dataset, dtype=torch.float).to(device)).detach().cpu()
 # %%
 # show reconstructions
-fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 10))
+fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(10, 10))
 fig.suptitle('reconstructions')
 for i in range(5):
     for j in range(5):
-        img = axes[i][j].imshow(reconstructions.cpu().detach().numpy()[i * 5 + j].squeeze(0), vmin=-10, vmax=40)
-        fig.colorbar(img, ax=axes[i][j])
-plt.tight_layout()
+        axes[i][j].plot(reconstructions.cpu().detach().numpy()[i * 5 + j])
+
 plt.show()
 # fig, axes = plt.subplots(nrows=3, ncols=5, figsize=(20, 10))
 # count = 0
@@ -254,16 +237,13 @@ plt.show()
 # plt.show()
 # %%
 # show the true data
-fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 10))
+fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(10, 10))
 fig.suptitle('true data')
 for i in range(5):
     for j in range(5):
-        img = axes[i][j].imshow(train_dataset[i * 5 + j].squeeze(0), vmin=-10, vmax=40)
-        fig.colorbar(img, ax=axes[i][j])
-plt.tight_layout()
+        axes[i][j].plot(anomaly_dataset[i * 5 + j])
+
 plt.show()
-
-
 # fig, axes = plt.subplots(nrows=3, ncols=5, figsize=(20, 10))
 # count = 0
 # for i in range(3):
@@ -277,6 +257,8 @@ plt.show()
 # plt.tight_layout()
 # plt.show()
 
+reconstructions_x = trained_model.reconstruct(torch.tensor(eval_dataset[:6000], dtype=torch.float).to(device)).detach().cpu()
+loss = vae_loss(reconstructions_x, eval_dataset[:6000])
 
 # #%% md
 # ## Visualizing interpolations
@@ -322,11 +304,7 @@ plt.show()
 #         z = self.reparameterize(mu, log_var)
 #         return self.decoder(z), mu, log_var
 #
-#     def vae_loss(self, recon_x, x, mu, log_var):
-#         recon_loss = nn.functional.binary_cross_entropy(recon_x, x, reduction='sum')
-#         # 高斯分布KL散度计算
-#         kl_divergence = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-#         return recon_loss + kl_divergence
+
 #
 #
 # model = VAE(input_dim=784, hidden_dim=400, latent_dim=20)
@@ -340,5 +318,3 @@ plt.show()
 #         loss.backward()
 #         optimizer.step()
 # print('Finished!')
-
-import csv
