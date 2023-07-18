@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 import torchvision.datasets as datasets
-import pythae
+from sklearn.metrics import accuracy_score
+
+import pythae_modified
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler, MaxAbsScaler, KBinsDiscretizer
-from pythae.models.nn import BaseEncoder, BaseDecoder
-from pythae.models.base.base_utils import ModelOutput
+from pythae_modified.models.nn import BaseEncoder, BaseDecoder
+from pythae_modified.models.base.base_utils import ModelOutput
 
 
 def get_dat(path):
@@ -99,24 +101,24 @@ path2 = path_project + 'anomaly_detection/data/ks2_7.dat'
 ka_data = get_dat(path2)
 path3 = path_project + 'raw/normal/zc3.dat'
 new_data = get_dat(path3)
-scaler = RobustScaler().fit(normal_data)
+scaler = MinMaxScaler().fit(normal_data)
 
-window_size = 5
-train_dataset = scaler.transform(normal_data[:6000])
-eval_dataset = scaler.transform(normal_data[:6000])
-anomaly_dataset = scaler.transform(ka_data[5000:])
+window_size = 1
+train_dataset = scaler.transform(normal_data[:5000])
+val_dataset = scaler.transform(ka_data[5000:])
+test_dataset = scaler.transform(ka_data)
 
-from pythae.models import VAE, VAEConfig
-from pythae.trainers import BaseTrainerConfig
-from pythae.pipelines.training import TrainingPipeline
-from pythae.models.nn.benchmarks.mnist import Encoder_ResNet_VAE_MNIST, Decoder_ResNet_AE_MNIST
+from pythae_modified.models import VAE, VAEConfig
+from pythae_modified.trainers import BaseTrainerConfig
+from pythae_modified.pipelines.training import TrainingPipeline
+from pythae_modified.models.nn.benchmarks.mnist import Encoder_ResNet_VAE_MNIST, Decoder_ResNet_AE_MNIST
 
 config = BaseTrainerConfig(
     output_dir=path_project + 'anomaly_detection/model/my_model',
     # learning_rate=1e-3,
-    per_device_train_batch_size=2,
-    per_device_eval_batch_size=2,
-    num_epochs=10,  # Change this to train the model a bit more
+    per_device_train_batch_size=64,
+    per_device_eval_batch_size=64,
+    num_epochs=1,  # Change this to train the model a bit more
     optimizer_cls="RMSprop",
 )
 
@@ -138,18 +140,18 @@ pipeline = TrainingPipeline(
 # %%
 pipeline(
     train_data=train_dataset,
-    eval_data=eval_dataset
+    eval_data=val_dataset
 )
 # %%
 import os
-from pythae.models import AutoModel
+from pythae_modified.models import AutoModel
 
 # %%
 last_training = sorted(os.listdir(path_project + 'anomaly_detection/model/my_model'))[-1]
 trained_model = AutoModel.load_from_folder(
     os.path.join(path_project + 'anomaly_detection/model/my_model', last_training, 'final_model'))
 # %%
-from pythae.samplers import NormalSampler
+from pythae_modified.samplers import NormalSampler
 
 # %%
 # create normal sampler
@@ -164,17 +166,36 @@ gen_data = normal_samper.sample(
 # %%
 import matplotlib.pyplot as plt
 
+ymin = -260
+ymax = 250
 # %%
 # show results with normal sampler
 fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 10))
 for i in range(5):
     for j in range(5):
         axes[i][j].plot(gen_data.cpu().detach().numpy()[i * 5 + j])
+        axes[i][j].set_ylim(ymin, ymax)
 fig.suptitle('normal sampler')
 plt.tight_layout()
 plt.show()
 
-from pythae.samplers import GaussianMixtureSampler, GaussianMixtureSamplerConfig
+# 异常检测
+ground_truth = np.concatenate((np.zeros(5000 - window_size), np.ones(test_dataset.shape[0] - 5000 + window_size)))
+predict = np.zeros(test_dataset.shape[0])
+inputs = dict(data=torch.tensor(test_dataset, dtype=torch.float).to(device))
+model_output = trained_model.calculate_elementwise_loss(inputs)
+losses = model_output.loss.cpu().detach().numpy()
+threshold = 20
+i = 0
+for loss in losses:
+    if loss > threshold:
+        predict[i] = 1
+    i += 1
+print('data length: ', test_dataset.shape[0])
+print('threshold:   ', threshold)
+print('accuracy:    ', accuracy_score(ground_truth, predict))
+
+from pythae_modified.samplers import GaussianMixtureSampler, GaussianMixtureSamplerConfig
 
 # # set up GMM sampler config
 # gmm_sampler_config = GaussianMixtureSamplerConfig(
@@ -213,15 +234,16 @@ from pythae.samplers import GaussianMixtureSampler, GaussianMixtureSamplerConfig
 # %% md
 ## Visualizing reconstructions
 # %%
-reconstructions = trained_model.reconstruct(torch.tensor(anomaly_dataset, dtype=torch.float).to(device)).detach().cpu()
+reconstructions = trained_model.reconstruct(torch.tensor(test_dataset[5500:], dtype=torch.float).to(device)).detach().cpu()
 # %%
 # show reconstructions
-fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(10, 10))
+fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 10))
 fig.suptitle('reconstructions')
 for i in range(5):
     for j in range(5):
         axes[i][j].plot(reconstructions.cpu().detach().numpy()[i * 5 + j])
-
+        axes[i][j].set_ylim(ymin, ymax)
+plt.tight_layout()
 plt.show()
 # fig, axes = plt.subplots(nrows=3, ncols=5, figsize=(20, 10))
 # count = 0
@@ -237,12 +259,14 @@ plt.show()
 # plt.show()
 # %%
 # show the true data
-fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(10, 10))
+data_to_plot = test_dataset[5500:]
+fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 10))
 fig.suptitle('true data')
 for i in range(5):
     for j in range(5):
-        axes[i][j].plot(anomaly_dataset[i * 5 + j])
-
+        axes[i][j].plot(data_to_plot[i * 5 + j])
+        axes[i][j].set_ylim(ymin, ymax)
+plt.tight_layout()
 plt.show()
 # fig, axes = plt.subplots(nrows=3, ncols=5, figsize=(20, 10))
 # count = 0
@@ -257,8 +281,7 @@ plt.show()
 # plt.tight_layout()
 # plt.show()
 
-reconstructions_x = trained_model.reconstruct(torch.tensor(eval_dataset[:6000], dtype=torch.float).to(device)).detach().cpu()
-loss = vae_loss(reconstructions_x, eval_dataset[:6000])
+
 
 # #%% md
 # ## Visualizing interpolations

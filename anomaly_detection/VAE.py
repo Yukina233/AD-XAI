@@ -100,8 +100,8 @@ train_dataset, _ = create_window_dataset(scaler.transform(normal_data[:5000]), w
 train_dataset = train_dataset.reshape(-1, 1, window_size, 13)
 val_dataset, _ = create_window_dataset(scaler.transform(ka_data[5000:]), window_size)
 val_dataset = val_dataset.reshape(-1, 1, window_size, 13)
-eval_dataset, _ = create_window_dataset(scaler.transform(ka_data), window_size)
-eval_dataset = eval_dataset.reshape(-1, 1, window_size, 13)
+test_dataset, _ = create_window_dataset(scaler.transform(ka_data), window_size)
+test_dataset = test_dataset.reshape(-1, 1, window_size, 13)
 
 from pythae_modified.models import VAE, VAEConfig
 from pythae_modified.trainers import BaseTrainerConfig
@@ -175,9 +175,9 @@ plt.tight_layout()
 plt.show()
 
 # 异常检测
-ground_truth = np.concatenate((np.zeros(5000 - window_size), np.ones(eval_dataset.shape[0] - 5000 + window_size)))
-predict = np.zeros(eval_dataset.shape[0])
-inputs = dict(data=torch.tensor(eval_dataset, dtype=torch.float).to(device))
+ground_truth = np.concatenate((np.zeros(5000 - window_size), np.ones(test_dataset.shape[0] - 5000 + window_size)))
+predict = np.zeros(test_dataset.shape[0])
+inputs = dict(data=torch.tensor(test_dataset, dtype=torch.float).to(device))
 model_output = trained_model.calculate_elementwise_loss(inputs)
 losses = model_output.loss.cpu().detach().numpy()
 threshold = 20
@@ -186,7 +186,7 @@ for loss in losses:
     if loss > threshold:
         predict[i] = 1
     i += 1
-print('data length: ', eval_dataset.shape[0])
+print('data length: ', test_dataset.shape[0])
 print('threshold:   ', threshold)
 print('accuracy:    ', accuracy_score(ground_truth, predict))
 
@@ -232,11 +232,13 @@ from pythae.samplers import GaussianMixtureSampler, GaussianMixtureSamplerConfig
 reconstructions = trained_model.reconstruct(torch.tensor(train_dataset, dtype=torch.float).to(device)).detach().cpu()
 # %%
 # show reconstructions
+vmin = 0
+vmax = 1
 fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 10))
 fig.suptitle('reconstructions')
 for i in range(5):
     for j in range(5):
-        img = axes[i][j].imshow(reconstructions.cpu().detach().numpy()[i * 5 + j].squeeze(0), vmin=-10, vmax=40)
+        img = axes[i][j].imshow(reconstructions.cpu().detach().numpy()[i * 5 + j].squeeze(0), vmin=vmin, vmax=vmax)
         fig.colorbar(img, ax=axes[i][j])
 plt.tight_layout()
 plt.show()
@@ -258,7 +260,7 @@ fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 10))
 fig.suptitle('true data')
 for i in range(5):
     for j in range(5):
-        img = axes[i][j].imshow(train_dataset[i * 5 + j].squeeze(0), vmin=-10, vmax=40)
+        img = axes[i][j].imshow(train_dataset[i * 5 + j].squeeze(0), vmin=vmin, vmax=vmax)
         fig.colorbar(img, ax=axes[i][j])
 plt.tight_layout()
 plt.show()
