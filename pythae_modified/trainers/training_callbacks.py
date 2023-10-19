@@ -323,7 +323,7 @@ class WandbCallback(TrainingCallback):  # pragma: no cover
 
         else:
             import wandb
-
+            self.is_initialized = False
             self._wandb = wandb
 
     def setup(

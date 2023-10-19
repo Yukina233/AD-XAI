@@ -13,7 +13,7 @@ Normalizing flows sampler to come.
     :nosignatures:
 """
 
-from .vq_vae_config import VQVAEConfig
-from .vq_vae_model import VQVAE
+from .vq_vae_config import VQVAEConfig, Simplified_VQVAEConfig
+from .vq_vae_model import VQVAE, Simplified_VQVAE
 
-__all__ = ["VQVAE", "VQVAEConfig"]
+__all__ = ["VQVAE", "Simplified_VQVAE", "VQVAEConfig", "Simplified_VQVAEConfig"]

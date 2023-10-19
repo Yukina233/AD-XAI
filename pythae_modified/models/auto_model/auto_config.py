@@ -125,6 +125,11 @@ class AutoConfig(BaseConfig):
 
             model_config = VQVAEConfig.from_json_file(json_path)
 
+        elif config_name == "Simplified_VQVAEConfig":
+            from ..vq_vae import Simplified_VQVAEConfig
+
+            model_config = Simplified_VQVAEConfig.from_json_file(json_path)
+
         elif config_name == "WAE_MMD_Config":
             from ..wae_mmd import WAE_MMD_Config
 

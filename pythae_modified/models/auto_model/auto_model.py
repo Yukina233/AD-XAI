@@ -139,6 +139,11 @@ class AutoModel(nn.Module):
 
             model = VQVAE.load_from_folder(dir_path=dir_path)
 
+        elif model_name == "Simplified_VQVAEConfig":
+            from ..vq_vae import Simplified_VQVAE
+
+            model = Simplified_VQVAE.load_from_folder(dir_path=dir_path)
+
         elif model_name == "WAE_MMD_Config":
             from ..wae_mmd import WAE_MMD
 

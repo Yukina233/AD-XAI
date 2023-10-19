@@ -107,11 +107,20 @@ class VAE(BaseAE):
                 reduction="none",
             ).sum(dim=-1)
 
-        elif self.model_config.reconstruction_loss == "bce":
+        # elif self.model_config.reconstruction_loss == "bce":
+        #
+        #     recon_loss = F.binary_cross_entropy(
+        #         recon_x.reshape(x.shape[0], -1),
+        #         x.reshape(x.shape[0], -1),
+        #         reduction="none",
+        #     ).sum(dim=-1)
 
+        elif self.model_config.reconstruction_loss == "bce":
+            x = (x * 255.).long()
+            one_hot_x = F.one_hot(x, num_classes=256).squeeze(1).permute(0, 3, 1, 2).float()
             recon_loss = F.binary_cross_entropy(
                 recon_x.reshape(x.shape[0], -1),
-                x.reshape(x.shape[0], -1),
+                one_hot_x.reshape(x.shape[0], -1),
                 reduction="none",
             ).sum(dim=-1)
 
@@ -163,11 +172,20 @@ class VAE(BaseAE):
                 reduction="none",
             ).sum(dim=-1)
 
-        elif self.model_config.reconstruction_loss == "bce":
+        # elif self.model_config.reconstruction_loss == "bce":
+        #
+        #     recon_loss = F.binary_cross_entropy(
+        #         recon_x.reshape(x.shape[0], -1),
+        #         x.reshape(x.shape[0], -1),
+        #         reduction="none",
+        #     ).sum(dim=-1)
 
+        elif self.model_config.reconstruction_loss == "bce":
+            x = (x * 255.).long()
+            one_hot_x = F.one_hot(x, num_classes=256).squeeze(1).permute(0, 3, 1, 2).float()
             recon_loss = F.binary_cross_entropy(
                 recon_x.reshape(x.shape[0], -1),
-                x.reshape(x.shape[0], -1),
+                one_hot_x.reshape(x.shape[0], -1),
                 reduction="none",
             ).sum(dim=-1)
 

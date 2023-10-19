@@ -46,10 +46,6 @@ class Encoder_Linear_VAE_Missile(BaseEncoder):
         self.layers = nn.Sequential(
             nn.Linear(self.input_dim, self.hidden_dim),
             nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.ReLU(),
             nn.Linear(self.hidden_dim, self.latent_dim * 2)
         )
 
@@ -73,10 +69,6 @@ class Decoder_Linear_VAE_Missile(BaseDecoder):
 
         self.layers = nn.Sequential(
             nn.Linear(self.latent_dim, self.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.ReLU(),
             nn.Linear(self.hidden_dim, self.input_dim),
             nn.Sigmoid()
