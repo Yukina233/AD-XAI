@@ -44,7 +44,7 @@ config = BaseTrainerConfig(
     learning_rate=1e-3,
     per_device_train_batch_size=64,
     per_device_eval_batch_size=64,
-    num_epochs=1, # Change this to train the model a bit more
+    num_epochs=10, # Change this to train the model a bit more
 )
 
 model_config = VQVAEConfig(
