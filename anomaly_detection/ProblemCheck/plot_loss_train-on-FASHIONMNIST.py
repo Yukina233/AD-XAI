@@ -20,7 +20,7 @@ fashion_testset = datasets.FashionMNIST(root=path_file + 'data', train=False, do
 from pythae_modified.models import AutoModel
 
 VAE = AutoModel.load_from_folder(
-    path_file + 'model_to_check/FASHIONMNIST_VQVAE_training_2023-10-16_16-19-42/final_model')
+    path_file + 'my_model/VAE_training_2023-11-08_16-47-35/final_model')
 print('VAE_fashion-minist loaded')
 
 def calculate_losses(dataset, model, batch_size=10000):

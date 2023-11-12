@@ -22,7 +22,7 @@ from pythae_modified.models import AutoModel
 # VAE = AutoModel.load_from_folder(path2load)
 # print('Load model in ' + path2load)
 VAE = AutoModel.load_from_folder(
-    path_file + 'my_model/VQVAE_training_2023-10-08_11-28-39/final_model')
+    path_file + 'my_model/VAE_training_2023-11-08_16-36-28/final_model')
 print('VAE_CIFAR10 loaded')
 # VAE = AutoModel.load_from_folder(
 #     path_file + 'model_to_check/SVHN_VAE_training_2023-09-20_21-51-15/final_model')
