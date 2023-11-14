@@ -26,7 +26,7 @@ def run(config=None):
     parser.add_argument('--net_name', type=str, default='cifar10_LeNet',
                         help='Name of the neural network to use.{mnist_LeNet, fmnist_LeNet, cifar10_LeNet, '
                              'arrhythmia_mlp, cardio_mlp, satellite_mlp, satimage-2_mlp, shuttle_mlp, thyroid_mlp}')
-    parser.add_argument('--xp_path', type=str, default=path_project + '/log/log_' + time.strftime('%Y-%m-%d_%H-%M-%S'),
+    parser.add_argument('--xp_path', type=str, default=path_project + '/log/test/log_' + time.strftime('%Y-%m-%d_%H-%M-%S'),
                         help='Export path for logging the experiment.')
     parser.add_argument('--data_path', type=str, default=path_project + '/data', help='Root path of data.')
 
@@ -34,10 +34,10 @@ def run(config=None):
     parser.add_argument('--load_model', type=str, default=None, help='Model file path (default: None).')
 
     parser.add_argument('--eta', type=float, default=1.0, help='Deep SAD hyperparameter eta (must be 0 < eta).')
-    parser.add_argument('--ratio_known_normal', type=float, default=0.0,
-                        help='Ratio of known (labeled) normal training examples.')
-    parser.add_argument('--ratio_known_outlier', type=float, default=0.0,
-                        help='Ratio of known (labeled) anomalous training examples.')
+    parser.add_argument('--ratio_known_normal', type=float, default=0.2,
+                        help='Ratio of known (labeled) normal training examples in all train examples.')
+    parser.add_argument('--ratio_known_outlier', type=float, default=0.2,
+                        help='Ratio of known (labeled) anomalous training examples in all train examples.')
     parser.add_argument('--ratio_pollution', type=float, default=0.0,
                         help='Pollution ratio of unlabeled training data with unknown (unlabeled) anomalies.')
     parser.add_argument('--device', type=str, default='cuda',
@@ -61,7 +61,7 @@ def run(config=None):
                         help='Name of the optimizer to use for autoencoder pretraining.')
     parser.add_argument('--ae_lr', type=float, default=0.001,
                         help='Initial learning rate for autoencoder pretraining. Default=0.001')
-    parser.add_argument('--ae_n_epochs', type=int, default=50, help='Number of epochs to train autoencoder.')
+    parser.add_argument('--ae_n_epochs', type=int, default=100, help='Number of epochs to train autoencoder.')
     parser.add_argument('--ae_lr_milestone', type=tuple, default=(50,),
                         help='Lr scheduler milestones at which lr is multiplied by 0.1. Can be multiple and must be increasing.')
     parser.add_argument('--ae_batch_size', type=int, default=128,
@@ -73,11 +73,11 @@ def run(config=None):
                         help='Number of threads used for parallelizing CPU operations. 0 means that all resources are used.')
     parser.add_argument('--n_jobs_dataloader', type=int, default=0,
                         help='Number of workers for data loading. 0 means that the data will be loaded in the main process.')
-    parser.add_argument('--normal_class', type=int, default=1,
+    parser.add_argument('--normal_class', type=int, default=0,
                         help='Specify the normal class of the dataset (all other classes are considered anomalous).')
-    parser.add_argument('--known_outlier_class', type=int, default=2,
+    parser.add_argument('--known_outlier_class', type=int, default=1,
                         help='Specify the known outlier class of the dataset for semi-supervised anomaly detection.')
-    parser.add_argument('--n_known_outlier_classes', type=int, default=0,
+    parser.add_argument('--n_known_outlier_classes', type=int, default=1,
                         help='Number of known outlier classes.'
                              'If 0, no anomalies are known.'
                              'If 1, outlier class as specified in --known_outlier_class option.'

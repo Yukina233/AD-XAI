@@ -2,18 +2,18 @@ import multiprocessing
 from new_main import run
 
 def main():
-    path_project = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper'
+    path_project = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/cifar10/'
     seed_num = 3
     config = {
-        'dataset_name': 'mnist',
-        'net_name': 'mnist_LeNet',
+        'dataset_name': 'cifar10',
+        'net_name': 'cifar10_LeNet',
         'xp_path': None,
         'seed': None,
         'normal_class': None,
         'known_outlier_class': None,
-        'n_known_outlier_classes': 1,
-        'ratio_known_normal': 0.01,
-        'ratio_known_outlier': 0.01,
+        'n_known_outlier_classes': 0,
+        'ratio_known_normal': 0.,
+        'ratio_known_outlier': 0.,
     }
     experiment_configs = []
     # 10 * 9 * 3 = 270 configs
@@ -26,14 +26,14 @@ def main():
                     config['seed'] = k
                     # Generate xp_path with the required format
                     config[
-                        'xp_path'] = path_project + "/log/" + \
+                        'xp_path'] = path_project + \
                                      f"dataset={config['dataset_name']},normal={config['normal_class']}," \
                                      f"outlier={config['known_outlier_class']},ratioNormal={config['ratio_known_normal']}," \
                                      f"ratioOutlier={config['ratio_known_outlier']},seed={config['seed']}"
                     experiment_configs.append(config.copy())
 
     # 创建一个工作池，大小为可用CPU核心数
-    with multiprocessing.Pool(processes=5) as pool:
+    with multiprocessing.Pool(processes=4) as pool:
         # 将 run_experiment 函数映射到配置上
         pool.map(run, experiment_configs)
 
