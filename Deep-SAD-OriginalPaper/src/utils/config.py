@@ -20,4 +20,4 @@ class Config(object):
         """Save settings dict to export_json (path/filename.json) JSON-file."""
 
         with open(export_json, 'w') as fp:
-            json.dump(self.settings, fp)
+            json.dump(self.settings, fp, indent=4)

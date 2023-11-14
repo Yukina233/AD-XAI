@@ -48,7 +48,7 @@ def run(config=None):
                         help='Name of the optimizer to use for Deep SAD network training.')
     parser.add_argument('--lr', type=float, default=0.001,
                         help='Initial learning rate for Deep SAD network training. Default=0.001')
-    parser.add_argument('--n_epochs', type=int, default=50, help='Number of epochs to train.')
+    parser.add_argument('--n_epochs', type=int, default=1, help='Number of epochs to train.')
     parser.add_argument('--lr_milestone', type=tuple, default=(50,),
                         help='Lr scheduler milestones at which lr is multiplied by 0.1. Can be multiple and must be increasing.')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size for mini-batch training.')
@@ -61,7 +61,7 @@ def run(config=None):
                         help='Name of the optimizer to use for autoencoder pretraining.')
     parser.add_argument('--ae_lr', type=float, default=0.001,
                         help='Initial learning rate for autoencoder pretraining. Default=0.001')
-    parser.add_argument('--ae_n_epochs', type=int, default=100, help='Number of epochs to train autoencoder.')
+    parser.add_argument('--ae_n_epochs', type=int, default=1, help='Number of epochs to train autoencoder.')
     parser.add_argument('--ae_lr_milestone', type=tuple, default=(50,),
                         help='Lr scheduler milestones at which lr is multiplied by 0.1. Can be multiple and must be increasing.')
     parser.add_argument('--ae_batch_size', type=int, default=128,
@@ -105,6 +105,9 @@ def run_experiment(args):
     xp_path = args.xp_path
     if not os.path.exists(xp_path):
         os.makedirs(xp_path)
+    else:
+        # 如果已经进行了实验，则不继续
+        return
     data_path = args.data_path
 
     load_config = args.load_config
@@ -258,6 +261,8 @@ def run_experiment(args):
 
     # Test model
     deepSAD.test(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
+    # Test model on train set, if desired
+    deepSAD.test_on_trainset(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
 
     # Save results, model, and configuration
     deepSAD.save_results(export_json=xp_path + '/results.json')

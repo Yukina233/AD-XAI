@@ -2,11 +2,11 @@ import multiprocessing
 from new_main import run
 
 def main():
-    path_project = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/cifar10/'
+    path_project = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/mnist/'
     seed_num = 3
     config = {
-        'dataset_name': 'cifar10',
-        'net_name': 'cifar10_LeNet',
+        'dataset_name': 'mnist',
+        'net_name': 'mnist_LeNet',
         'xp_path': None,
         'seed': None,
         'normal_class': None,
@@ -14,6 +14,8 @@ def main():
         'n_known_outlier_classes': 0,
         'ratio_known_normal': 0.,
         'ratio_known_outlier': 0.,
+        'n_epochs': 50,
+        'ae_n_epochs': 50,
     }
     experiment_configs = []
     # 10 * 9 * 3 = 270 configs

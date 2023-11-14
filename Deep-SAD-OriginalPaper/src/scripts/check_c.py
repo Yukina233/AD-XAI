@@ -51,7 +51,7 @@ def reconstruction_C(exp_path):
 
 if __name__ == '__main__':
     project_path = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/'
-    base_path = project_path + 'mnist'
+    base_path = project_path + 'cifar10'
     for folder_name in os.listdir(base_path):
         # if "ratioNormal=0.0" not in folder_name:
         #     continue

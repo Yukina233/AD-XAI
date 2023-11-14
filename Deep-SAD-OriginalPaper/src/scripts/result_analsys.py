@@ -13,7 +13,7 @@ auc_values = []
 # 遍历file_path目录下的每个文件夹
 for folder_name in os.listdir(file_path):
     # 如果文件夹名中包含"ratioNormal=0.1"，则跳过
-    if "ratioNormal=0.0" not in folder_name:
+    if "ratioNormal=0.2" not in folder_name:
         continue
 
     folder_path = os.path.join(file_path, folder_name)
@@ -41,7 +41,7 @@ auc_values.sort(key=lambda x: x[1])
 # 计算均值和范围
 auc_array = np.array([auc for _, auc in auc_values])
 mean_auc = np.mean(auc_array)
-var_auc = np.var(auc_array)
+st_auc = np.std(auc_array)
 range_auc = np.ptp(auc_array)  # ptp (peak to peak) function calculates the range
 
 # 假设我们想要最低的5个AUC值
@@ -49,8 +49,13 @@ lowest_auc_values = auc_values[:10]
 
 # 打印结果
 print(f"所有test_auc的均值：{mean_auc:.4f}")
-print(f"所有test_auc的方差：{var_auc:.4f}")
+print(f"所有test_auc的标准差：{st_auc:.4f}")
 print(f"所有test_auc的范围：{range_auc:.4f}")
 print("\n最低的10个test_auc值：")
 for folder_name, test_auc in lowest_auc_values:
+    print(f"Folder: {folder_name}, Test AUC: {test_auc}")
+
+highest_auc_values = auc_values[-10:][::-1]
+print("\n最高的10个test_auc值：")
+for folder_name, test_auc in highest_auc_values:
     print(f"Folder: {folder_name}, Test AUC: {test_auc}")

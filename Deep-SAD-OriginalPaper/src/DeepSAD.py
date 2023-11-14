@@ -81,9 +81,25 @@ class DeepSAD(object):
         self.trainer.test(dataset, self.net)
 
         # Get results
-        self.results['test_auc'] = self.trainer.test_auc
+        # self.results['test_auc'] = self.trainer.test_auc
+        # self.results['test_time'] = self.trainer.test_time
+        # self.results['test_scores'] = self.trainer.test_scores
+
+    def test_on_trainset(self, dataset: BaseADDataset, device: str = 'cuda', n_jobs_dataloader: int = 0):
+        """Tests the Deep SAD model on the train data."""
+
+        if self.trainer is None:
+            self.trainer = DeepSADTrainer(self.c, self.eta, device=device, n_jobs_dataloader=n_jobs_dataloader)
+
+        self.trainer.test_on_trainset(dataset, self.net)
+
+        # Get results
         self.results['test_time'] = self.trainer.test_time
+        self.results['train_auc'] = self.trainer.train_auc
+        self.results['test_auc'] = self.trainer.test_auc
+        self.results['train_scores'] = self.trainer.train_scores
         self.results['test_scores'] = self.trainer.test_scores
+
 
     def pretrain(self, dataset: BaseADDataset, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 100,
                  lr_milestones: tuple = (), batch_size: int = 128, weight_decay: float = 1e-6, device: str = 'cuda',
@@ -158,4 +174,4 @@ class DeepSAD(object):
     def save_ae_results(self, export_json):
         """Save autoencoder results dict to a JSON-file."""
         with open(export_json, 'w') as fp:
-            json.dump(self.ae_results, fp)
+            json.dump(self.ae_results, fp, indent=4)

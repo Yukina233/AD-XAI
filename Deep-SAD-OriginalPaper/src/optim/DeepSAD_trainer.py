@@ -31,6 +31,8 @@ class DeepSADTrainer(BaseTrainer):
         self.test_auc = None
         self.test_time = None
         self.test_scores = None
+        self.train_auc = None
+        self.train_scores = None
 
     def train(self, dataset: BaseADDataset, net: BaseNet):
         logger = logging.getLogger()
@@ -148,6 +150,58 @@ class DeepSADTrainer(BaseTrainer):
         logger.info('Test AUC: {:.2f}%'.format(100. * self.test_auc))
         logger.info('Test Time: {:.3f}s'.format(self.test_time))
         logger.info('Finished testing.')
+
+    def test_on_trainset(self, dataset: BaseADDataset, net: BaseNet):
+        logger = logging.getLogger()
+
+        # Get test data loader
+        train_loader, _ = dataset.loaders(batch_size=self.batch_size, num_workers=self.n_jobs_dataloader)
+
+        # Set device for network
+        net = net.to(self.device)
+
+        # Testing
+        logger.info('Starting testing on train set...')
+        epoch_loss = 0.0
+        n_batches = 0
+        idx_label_semi_target_score = []
+        net.eval()
+        with torch.no_grad():
+            for data in train_loader:
+                inputs, labels, semi_targets, idx = data
+
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
+                semi_targets = semi_targets.to(self.device)
+                idx = idx.to(self.device)
+
+                outputs = net(inputs)
+                dist = torch.sum((outputs - self.c) ** 2, dim=1)
+                losses = torch.where(semi_targets == 0, dist, self.eta * ((dist + self.eps) ** semi_targets.float()))
+                loss = torch.mean(losses)
+                scores = dist
+
+                # Save triples of (idx, label, score) in a list
+                idx_label_semi_target_score += list(zip(idx.cpu().data.numpy().tolist(),
+                                                        labels.cpu().data.numpy().tolist(),
+                                                        semi_targets.cpu().data.numpy().tolist(),
+                                                        scores.cpu().data.numpy().tolist()))
+
+                epoch_loss += loss.item()
+                n_batches += 1
+
+        self.train_scores = idx_label_semi_target_score
+
+        # Compute AUC
+        _, labels, _, scores = zip(*idx_label_semi_target_score)
+        labels = np.array(labels)
+        scores = np.array(scores)
+        self.train_auc = roc_auc_score(labels, scores)
+
+        # Log results
+        logger.info('Test on Trainset Loss: {:.6f}'.format(epoch_loss / n_batches))
+        logger.info('Trainset AUC: {:.2f}%'.format(100. * self.train_auc))
+        logger.info('Finished testing on train set.')
 
     def init_center_c(self, train_loader: DataLoader, net: BaseNet, eps=0.1):
         """Initialize hypersphere center c as the mean from an initial forward pass on the data."""
