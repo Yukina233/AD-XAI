@@ -192,15 +192,9 @@ class DeepSADTrainer(BaseTrainer):
 
         self.train_scores = idx_label_semi_target_score
 
-        # Compute AUC
-        _, labels, _, scores = zip(*idx_label_semi_target_score)
-        labels = np.array(labels)
-        scores = np.array(scores)
-        self.train_auc = roc_auc_score(labels, scores)
 
         # Log results
         logger.info('Test on Trainset Loss: {:.6f}'.format(epoch_loss / n_batches))
-        logger.info('Trainset AUC: {:.2f}%'.format(100. * self.train_auc))
         logger.info('Finished testing on train set.')
 
     def init_center_c(self, train_loader: DataLoader, net: BaseNet, eps=0.1):

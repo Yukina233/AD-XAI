@@ -1,3 +1,7 @@
+import argparse
+import os
+import time
+
 import click
 import torch
 import logging
@@ -13,49 +17,98 @@ from datasets.main import load_dataset
 ################################################################################
 # Settings
 ################################################################################
-@click.command()
-@click.argument('dataset_name', type=click.Choice(['mnist', 'fmnist', 'cifar10', 'arrhythmia', 'cardio', 'satellite',
-                                                   'satimage-2', 'shuttle', 'thyroid']))
-@click.argument('xp_path', type=click.Path(exists=True))
-@click.argument('data_path', type=click.Path(exists=True))
-@click.option('--load_config', type=click.Path(exists=True), default=None,
-              help='Config JSON-file path (default: None).')
-@click.option('--load_model', type=click.Path(exists=True), default=None,
-              help='Model file path (default: None).')
-@click.option('--ratio_known_normal', type=float, default=0.0,
-              help='Ratio of known (labeled) normal training examples.')
-@click.option('--ratio_known_outlier', type=float, default=0.0,
-              help='Ratio of known (labeled) anomalous training examples.')
-@click.option('--ratio_pollution', type=float, default=0.0,
-              help='Pollution ratio of unlabeled training data with unknown (unlabeled) anomalies.')
-@click.option('--seed', type=int, default=-1, help='Set seed. If -1, use randomization.')
-@click.option('--kernel', type=click.Choice(['rbf', 'linear', 'poly']), default='rbf', help='Kernel for the OC-SVM')
-@click.option('--nu', type=float, default=0.1, help='OC-SVM hyperparameter nu (must be 0 < nu <= 1).')
-@click.option('--hybrid', type=bool, default=False,
-              help='Train OC-SVM on features extracted from an autoencoder. If True, load_ae must be specified.')
-@click.option('--load_ae', type=click.Path(exists=True), default=None,
-              help='Model file path to load autoencoder weights (default: None).')
-@click.option('--n_jobs_dataloader', type=int, default=0,
-              help='Number of workers for data loading. 0 means that the data will be loaded in the main process.')
-@click.option('--normal_class', type=int, default=0,
-              help='Specify the normal class of the dataset (all other classes are considered anomalous).')
-@click.option('--known_outlier_class', type=int, default=1,
-              help='Specify the known outlier class of the dataset for semi-supervised anomaly detection.')
-@click.option('--n_known_outlier_classes', type=int, default=0,
-              help='Number of known outlier classes.'
-                   'If 0, no anomalies are known.'
-                   'If 1, outlier class as specified in --known_outlier_class option.'
-                   'If > 1, the specified number of outlier classes will be sampled at random.')
-def main(dataset_name, xp_path, data_path, load_config, load_model, ratio_known_normal, ratio_known_outlier,
-         ratio_pollution, seed, kernel, nu, hybrid, load_ae, n_jobs_dataloader, normal_class, known_outlier_class,
-         n_known_outlier_classes):
-    """
-    (Hybrid) One-Class SVM for anomaly detection.
+def run(config=None):
+    path_project = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper'
+    parser = argparse.ArgumentParser(description="Run Deep SAD experiments with specified parameters.")
 
-    :arg DATASET_NAME: Name of the dataset to load.
-    :arg XP_PATH: Export path for logging the experiment.
-    :arg DATA_PATH: Root path of data.
-    """
+    # Add arguments to the parser
+    parser.add_argument('--dataset_name', type=str, default='cifar10',
+                        help='Name of the dataset to load.{mnist, fmnist, cifar10, arrhythmia, cardio, satellite,'
+                             ' satimage-2, shuttle, thyroid}')
+    parser.add_argument('--xp_path', type=str,
+                        default=path_project + '/log/test/log_' + time.strftime('%Y-%m-%d_%H-%M-%S'),
+                        help='Export path for logging the experiment.')
+    parser.add_argument('--data_path', type=str, default=path_project + '/data', help='Root path of data.')
+
+    parser.add_argument('--load_config', type=str, default=None, help='Config JSON-file path (default: None).')
+    parser.add_argument('--load_model', type=str, default=None, help='Model file path (default: None).')
+    parser.add_argument('--ratio_known_normal', type=float, default=0,
+                        help='Ratio of known (labeled) normal training examples in all train examples.')
+    parser.add_argument('--ratio_known_outlier', type=float, default=0,
+                        help='Ratio of known (labeled) anomalous training examples in all train examples.')
+    parser.add_argument('--ratio_pollution', type=float, default=0.0,
+                        help='Pollution ratio of unlabeled training data with unknown (unlabeled) anomalies.')
+    parser.add_argument('--device', type=str, default='cuda',
+                        help='Computation device to use ("cpu", "cuda", "cuda:2", etc.).')
+    parser.add_argument('--seed', type=int, default=42, help='Set seed. If -1, use randomization.')
+    # Add the --kernel argument
+    parser.add_argument('--kernel', type=str, choices=['rbf', 'linear', 'poly'], default='rbf',
+                        help='Kernel for the OC-SVM, choose from {rbf, linear, poly}.')
+    # Add the --nu argument
+    parser.add_argument('--nu', type=float, default=0.1,
+                        help='OC-SVM hyperparameter nu (must be 0 < nu <= 1).')
+    # Add the --hybrid argument
+    parser.add_argument('--hybrid', type=bool, default=False,
+                        help='Train OC-SVM on features extracted from an autoencoder. If True, load_ae must be specified.')
+    parser.add_argument('--load_ae', type=str, default=None,
+                        help='Path to autoencoder weights file. Default: None.')
+    parser.add_argument('--n_jobs_dataloader', type=int, default=0,
+                        help='Number of workers for data loading. 0 means that the data will be loaded in the main process.')
+    parser.add_argument('--normal_class', type=int, default=0,
+                        help='Specify the normal class of the dataset (all other classes are considered anomalous).')
+    parser.add_argument('--known_outlier_class', type=int, default=1,
+                        help='Specify the known outlier class of the dataset for semi-supervised anomaly detection.')
+    parser.add_argument('--n_known_outlier_classes', type=int, default=1,
+                        help='Number of known outlier classes.'
+                             'If 0, no anomalies are known.'
+                             'If 1, outlier class as specified in --known_outlier_class option.'
+                             'If > 1, the specified number of outlier classes will be sampled at random.')
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Load experiment config
+    if config is not None:
+        print(f"Running experiment with config: {config}")
+        for key, value in config.items():
+            setattr(args, key, value)
+    del config
+
+    # Run experiment with parsed arguments
+    run_experiment(args)
+
+
+def run_experiment(args):
+    print(f"Running experiment with: {args}")
+    # Get script arguments
+    dataset_name = args.dataset_name
+    xp_path = args.xp_path
+    if not os.path.exists(xp_path):
+        os.makedirs(xp_path)
+    else:
+        # 如果已经进行了实验，则不继续
+        return
+    data_path = args.data_path
+
+    load_config = args.load_config
+    load_model = args.load_model
+
+    ratio_known_normal = args.ratio_known_normal
+    ratio_known_outlier = args.ratio_known_outlier
+    ratio_pollution = args.ratio_pollution
+    device = args.device
+
+    seed = args.seed
+    kernel = args.kernel
+    nu = args.nu
+    hybrid = args.hybrid
+    load_ae = args.load_ae
+
+    n_jobs_dataloader = args.n_jobs_dataloader
+    normal_class = args.normal_class
+    known_outlier_class = args.known_outlier_class
+    n_known_outlier_classes = args.n_known_outlier_classes
+    del args
 
     # Get configuration
     cfg = Config(locals().copy())
@@ -171,4 +224,4 @@ def main(dataset_name, xp_path, data_path, load_config, load_model, ratio_known_
 
 
 if __name__ == '__main__':
-    main()
+    run()

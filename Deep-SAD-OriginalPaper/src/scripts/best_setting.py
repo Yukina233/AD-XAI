@@ -4,7 +4,7 @@ import numpy as np
 
 # 假设所有的文件夹都在一个名为"data_folders"的目录下
 project_path = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/'
-file_path = project_path + 'cifar10,group'
+file_path = project_path + 'cifar10/ae_epochs=100/ratio=0.2,group'
 
 
 # 存储文件夹名称和对应test_auc值的列表
@@ -13,8 +13,8 @@ auc_values = []
 # 遍历file_path目录下的每个文件夹
 for folder_name in os.listdir(file_path):
     # 如果文件夹名中包含"ratioNormal=0.1"，则跳过
-    if "ratioNormal=0.2" not in folder_name:
-        continue
+    # if "ratioNormal=0.2" not in folder_name:
+    #     continue
 
     folder_path = os.path.join(file_path, folder_name)
 

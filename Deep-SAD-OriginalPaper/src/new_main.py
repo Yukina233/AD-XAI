@@ -34,9 +34,9 @@ def run(config=None):
     parser.add_argument('--load_model', type=str, default=None, help='Model file path (default: None).')
 
     parser.add_argument('--eta', type=float, default=1.0, help='Deep SAD hyperparameter eta (must be 0 < eta).')
-    parser.add_argument('--ratio_known_normal', type=float, default=0.2,
+    parser.add_argument('--ratio_known_normal', type=float, default=0,
                         help='Ratio of known (labeled) normal training examples in all train examples.')
-    parser.add_argument('--ratio_known_outlier', type=float, default=0.2,
+    parser.add_argument('--ratio_known_outlier', type=float, default=0,
                         help='Ratio of known (labeled) anomalous training examples in all train examples.')
     parser.add_argument('--ratio_pollution', type=float, default=0.0,
                         help='Pollution ratio of unlabeled training data with unknown (unlabeled) anomalies.')
