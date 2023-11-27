@@ -26,7 +26,8 @@ def run(config=None):
     parser.add_argument('--net_name', type=str, default='cifar10_LeNet',
                         help='Name of the neural network to use.{mnist_LeNet, fmnist_LeNet, cifar10_LeNet, '
                              'arrhythmia_mlp, cardio_mlp, satellite_mlp, satimage-2_mlp, shuttle_mlp, thyroid_mlp}')
-    parser.add_argument('--xp_path', type=str, default=path_project + '/log/test/log_' + time.strftime('%Y-%m-%d_%H-%M-%S'),
+    parser.add_argument('--xp_path', type=str,
+                        default=path_project + '/log/test/log_' + time.strftime('%Y-%m-%d_%H-%M-%S'),
                         help='Export path for logging the experiment.')
     parser.add_argument('--data_path', type=str, default=path_project + '/data', help='Root path of data.')
 
@@ -34,9 +35,9 @@ def run(config=None):
     parser.add_argument('--load_model', type=str, default=None, help='Model file path (default: None).')
 
     parser.add_argument('--eta', type=float, default=1.0, help='Deep SAD hyperparameter eta (must be 0 < eta).')
-    parser.add_argument('--ratio_known_normal', type=float, default=0,
+    parser.add_argument('--ratio_known_normal', type=float, default=0.2,
                         help='Ratio of known (labeled) normal training examples in all train examples.')
-    parser.add_argument('--ratio_known_outlier', type=float, default=0,
+    parser.add_argument('--ratio_known_outlier', type=float, default=0.2,
                         help='Ratio of known (labeled) anomalous training examples in all train examples.')
     parser.add_argument('--ratio_pollution', type=float, default=0.0,
                         help='Pollution ratio of unlabeled training data with unknown (unlabeled) anomalies.')
@@ -54,6 +55,9 @@ def run(config=None):
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size for mini-batch training.')
     parser.add_argument('--weight_decay', type=float, default=1e-6,
                         help='Weight decay (L2 penalty) hyperparameter for Deep SAD objective.')
+
+    parser.add_argument('--pretrain_ae_anomaly', type=bool, default=True,
+                        help='Pretrain neural network parameters via autoencoder for labeled anomaly.')
 
     parser.add_argument('--pretrain', type=bool, default=True,
                         help='Pretrain neural network parameters via autoencoder.')
@@ -82,6 +86,8 @@ def run(config=None):
                              'If 0, no anomalies are known.'
                              'If 1, outlier class as specified in --known_outlier_class option.'
                              'If > 1, the specified number of outlier classes will be sampled at random.')
+
+    parser.add_argument('--remove_threshold', type=float, default=0.05)
 
     # Parse arguments
     args = parser.parse_args()
@@ -127,6 +133,8 @@ def run_experiment(args):
     batch_size = args.batch_size
     weight_decay = args.weight_decay
 
+    pretrain_ae_anomaly = args.pretrain_ae_anomaly
+
     pretrain = args.pretrain
     ae_optimizer_name = args.ae_optimizer_name
     ae_lr = args.ae_lr
@@ -140,6 +148,8 @@ def run_experiment(args):
     normal_class = args.normal_class
     known_outlier_class = args.known_outlier_class
     n_known_outlier_classes = args.n_known_outlier_classes
+
+    remove_threshold = args.remove_threshold
     del args
 
     # Get configuration
@@ -240,6 +250,24 @@ def run_experiment(args):
         # Save pretraining results
         deepSAD.save_ae_results(export_json=xp_path + '/ae_results.json')
 
+    # 如果需要预训练异常分布并删除正常样本中的边界样本
+    if pretrain_ae_anomaly and ratio_known_outlier > 0.0:
+        deepSAD.pretrain_ae_anomaly(dataset,
+                                    optimizer_name=cfg.settings['ae_optimizer_name'],
+                                    lr=cfg.settings['ae_lr'],
+                                    n_epochs=cfg.settings['ae_n_epochs'],
+                                    lr_milestones=cfg.settings['ae_lr_milestone'],
+                                    batch_size=cfg.settings['ae_batch_size'],
+                                    weight_decay=cfg.settings['ae_weight_decay'],
+                                    device=device,
+                                    n_jobs_dataloader=n_jobs_dataloader)
+
+    deepSAD.test_on_trainset_at_start(dataset, device=device, n_jobs_dataloader=n_jobs_dataloader)
+     # 对异常表示聚类并删去在表示空间与异常点接近的正常点
+    deepSAD.remove_anomaly_in_normal(dataset, remove_threshold=remove_threshold, seed=seed,
+                                     batch_size=cfg.settings['batch_size'], device=device,
+                                     n_jobs_dataloader=n_jobs_dataloader, xp_path=xp_path)
+
     # Log training details
     logger.info('Training optimizer: %s' % cfg.settings['optimizer_name'])
     logger.info('Training learning rate: %g' % cfg.settings['lr'])
@@ -294,7 +322,6 @@ def run_experiment(args):
         plot_images_grid(X_all_high, export_img=xp_path + '/all_high', padding=2)
         plot_images_grid(X_normal_low, export_img=xp_path + '/normals_low', padding=2)
         plot_images_grid(X_normal_high, export_img=xp_path + '/normals_high', padding=2)
-
 
 
 if __name__ == '__main__':

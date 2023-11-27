@@ -51,8 +51,10 @@ class DeepSADTrainer(BaseTrainer):
 
         # Initialize hypersphere center c (if c not loaded)
         if self.c is None:
+            # 不使用标记为异常的样本数据
+            train_normal_loader = dataset.normal_data_loader(batch_size=self.batch_size, num_workers=self.n_jobs_dataloader)
             logger.info('Initializing center c...')
-            self.c = self.init_center_c(train_loader, net)
+            self.c = self.init_center_c(train_normal_loader, net)
             logger.info('Center c initialized.')
 
         # Training
@@ -159,6 +161,12 @@ class DeepSADTrainer(BaseTrainer):
 
         # Set device for network
         net = net.to(self.device)
+
+        # Initialize hypersphere center c (if c not loaded)
+        if self.c is None:
+            logger.info('Initializing center c...')
+            self.c = self.init_center_c(train_loader, net)
+            logger.info('Center c initialized.')
 
         # Testing
         logger.info('Starting testing on train set...')

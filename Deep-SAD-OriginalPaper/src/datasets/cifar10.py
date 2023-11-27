@@ -1,4 +1,4 @@
-from torch.utils.data import Subset
+from torch.utils.data import Subset, DataLoader
 from PIL import Image
 from torchvision.datasets import CIFAR10
 from base.torchvision_dataset import TorchvisionDataset
@@ -51,6 +51,27 @@ class CIFAR10_Dataset(TorchvisionDataset):
         self.test_set = MyCIFAR10(root=self.root, train=False, transform=transform, target_transform=target_transform,
                                   download=True)
 
+        # Get semi-supervised anomaly train set
+        anomaly_idx = [idx[index] for index, value in enumerate(semi_targets) if value == -1]
+
+        self.train_set_anomaly = Subset(train_set, anomaly_idx)
+
+        # Get semi-supervised normal train set
+        normal_idx = [idx[index] for index, value in enumerate(semi_targets) if value != -1]
+
+        self.train_set_normal = Subset(train_set, normal_idx)
+
+    def normal_data_loader(self, batch_size: int, shuffle_train=True, num_workers: int = 0) -> (
+            DataLoader, DataLoader):
+        train_normal_loader = DataLoader(dataset=self.train_set_normal, batch_size=batch_size, shuffle=shuffle_train,
+                                          num_workers=num_workers, drop_last=True)
+        return train_normal_loader
+
+    def anomaly_data_loader(self, batch_size: int, shuffle_train=True, num_workers: int = 0) -> (
+            DataLoader, DataLoader):
+        train_anomaly_loader = DataLoader(dataset=self.train_set_anomaly, batch_size=batch_size, shuffle=shuffle_train,
+                                          num_workers=num_workers, drop_last=True)
+        return train_anomaly_loader
 
 class MyCIFAR10(CIFAR10):
     """

@@ -73,7 +73,7 @@ def save_data(averaged_results, save_path):
             json.dump(data, file, indent=4)
 
 
-base_path = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/baseline/ocsvm/hybrid=False/ratio=0'  # Replace with the path to your dataset directories
+base_path = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/remove/seperate_normal, remove_threshold=15/cifar10/ae_epochs=100/ratio=0.2'  # Replace with the path to your dataset directories
 save_path = base_path + ',group'  # Replace with the path where you want to save the averaged results
 
 # Collect data from all folders

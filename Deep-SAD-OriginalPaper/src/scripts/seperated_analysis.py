@@ -12,8 +12,10 @@ from torchvision.datasets import CIFAR10, MNIST
 import matplotlib.pyplot as plt
 
 from adbench_modified.baseline.DeepSAD.src.utils import plot_images_grid
+
 sys.path.append('..')
 from DeepSAD import DeepSAD
+
 
 def plot_roc(fpr, tpr, roc_auc):
     # 画出ROC曲线
@@ -44,7 +46,7 @@ def plot_pr(recall, precision, pr_auc):
     plt.savefig(file_path + '/test PR curve')
 
 
-def plot_distribution(trainset=False, threshold=0, scores_list=None, label_list=None, outlier=None):
+def plot_distribution(trainset=1, threshold=0, scores_list=None, label_list=None, outlier=None):
     # 画出正常和异常数据得分的分布图
     plt.cla()
     plt.figure()
@@ -55,17 +57,46 @@ def plot_distribution(trainset=False, threshold=0, scores_list=None, label_list=
     plt.hist([item[1] for item in enumerate(scores_list) if label_list[item[0]] == 0], bins=100, alpha=0.5,
              label='Normal',
              color=matplotlib.colors.TABLEAU_COLORS['tab:blue'])
-    plt.axvline(threshold, color='r', linestyle='dashed', linewidth=1, label='Threshold tpr=95')
+    if not trainset == 2:
+        plt.axvline(threshold, color='r', linestyle='dashed', linewidth=1, label='Threshold')
     plt.xlabel('Score')
     plt.ylabel('Frequency')
     plt.legend(loc='upper right')
-    if trainset:
+    if trainset == 1:
         set_name = 'train set'
-    else:
+    elif trainset == 0:
         set_name = 'test set'
         plt.title('Distribution of train set')
+    else:
+        set_name = 'train set at start'
+        plt.title('Distribution of train set at start')
     plt.title('Distribution of ' + set_name)
     plt.savefig(file_path + '/Distribution of ' + set_name)
+
+
+def plot_removal_distribution(config=None, scores_list=None, label_list=None):
+    # 画出正常和异常数据得分的分布图
+    plt.cla()
+    plt.figure()
+    threshold = config['remove_threshold']
+    if 1 in label_list:
+        plt.hist([item[1] for item in enumerate(scores_list) if label_list[item[0]] == 1], bins=100, alpha=0.5,
+                 label='Anomalies',
+                 color=matplotlib.colors.TABLEAU_COLORS['tab:orange'])
+    plt.hist([item[1] for item in enumerate(scores_list)
+              if label_list[item[0]] == 0], bins=100, alpha=0.5,
+             label='Normal',
+             color=matplotlib.colors.TABLEAU_COLORS['tab:blue'])
+    # plt.hist([item[1] for item in enumerate(scores_list)
+    #           if label_list[item[0]] == 0 and scores_list[item[0]] < threshold], bins=100, alpha=0.5,
+    #          label='Normal to remove',
+    #          color=matplotlib.colors.TABLEAU_COLORS['tab:red'])
+    plt.axvline(threshold, color='r', linestyle='dashed', linewidth=1, label=f'Threshold={threshold}')
+    plt.xlabel('Distance to anomaly centers')
+    plt.ylabel('Frequency')
+    plt.legend(loc='upper right')
+    plt.title('Distribution of train data to remove')
+    plt.savefig(file_path + '/Distribution of train data to remove')
 
 
 def show_test_samples_around_threshold(threshold=0, config=None, indices_list=None, labels_list=None, scores_list=None):
@@ -118,7 +149,8 @@ def show_train_samples(config=None, exp_path=None, indices_list=None, labels_lis
                                 download=True)
             train_X_all_low = torch.tensor(np.transpose(train_set.data[train_idx_all_sorted[:32], ...], (0, 3, 1, 2)))
             train_X_all_high = torch.tensor(np.transpose(train_set.data[train_idx_all_sorted[-32:], ...], (0, 3, 1, 2)))
-            train_X_normal_low = torch.tensor(np.transpose(train_set.data[train_idx_normal_sorted[:32], ...], (0, 3, 1, 2)))
+            train_X_normal_low = torch.tensor(
+                np.transpose(train_set.data[train_idx_normal_sorted[:32], ...], (0, 3, 1, 2)))
             train_X_normal_high = torch.tensor(
                 np.transpose(train_set.data[train_idx_normal_sorted[-32:], ...], (0, 3, 1, 2)))
 
@@ -133,6 +165,7 @@ def show_train_samples(config=None, exp_path=None, indices_list=None, labels_lis
         plot_images_grid(train_X_all_high, export_img=exp_path + '/train_all_high', padding=2)
         plot_images_grid(train_X_normal_low, export_img=exp_path + '/train_normal_low', padding=2)
         plot_images_grid(train_X_normal_high, export_img=exp_path + '/train_normal_high', padding=2)
+
 
 def reconstruction_C(exp_path):
     # load Deep SAD model (center c, network weights, and possibly autoencoder weights)
@@ -175,10 +208,11 @@ def reconstruction_C(exp_path):
         json.dump(data, file, ensure_ascii=False, indent=4)
     print('c = ', c)
 
+
 if __name__ == '__main__':
     # 假设您的JSON数据保存在名为'data.json'的文件中
     project_path = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/'
-    file_path = project_path + 'cifar10/ae_epochs=100/ratio=0/dataset=cifar10,normal=5,outlier=3,ratioNormal=0,ratioOutlier=0,seed=0/'  # 文件路径
+    file_path = project_path + 'remove/seperate_normal, remove_threshold=15/cifar10/ae_epochs=100/ratio=0.2/dataset=cifar10,normal=3,outlier=5,ratioNormal=0.2,ratioOutlier=0.2,seed=0/'  # 文件路径
 
     # 从文件中读取JSON数据
     with open(file_path + 'config.json', 'r') as file:
@@ -187,20 +221,27 @@ if __name__ == '__main__':
     with open(file_path + 'results.json', 'r') as file:
         results = json.load(file)
 
-    train_scores = results['train_scores']
     test_scores = results['test_scores']
 
     # 分离出真实标签和预测得分
+    train_indices_0, train_labels_0, train_semi_targets_0, train_y_scores_0 = zip(*results['train_scores_0'])
+    train_indices_0, train_labels_0, train_semi_targets_0, train_y_scores_0 = np.array(train_indices_0), np.array(
+        train_labels_0), np.array(train_semi_targets_0), np.array(train_y_scores_0)
+
     train_indices, train_labels, train_semi_targets, train_y_scores = zip(*results['train_scores'])
     train_indices, train_labels, train_semi_targets, train_y_scores = np.array(train_indices), np.array(
-        train_labels), np.array(train_semi_targets), np.array(
-        train_y_scores)
+        train_labels), np.array(train_semi_targets), np.array(train_y_scores)
 
     test_indices = [score[0] for score in test_scores]  # 样本索引
     test_labels = [score[1] for score in test_scores]  # 真实标签
     test_y_scores = [score[2] for score in test_scores]  # 预测得分
     test_indices, test_labels, test_y_scores = np.array(test_indices), np.array(test_labels), np.array(test_y_scores)
 
+    origin_train_indices, origin_train_labels, origin_train_semi_targets, train_dis_to_anomaly = zip(
+        *results['train_normal_dis_to_anomaly'])
+    origin_train_indices, origin_train_labels, origin_train_semi_targets, train_dis_to_anomaly = np.array(
+        origin_train_indices), np.array(origin_train_labels), np.array(origin_train_semi_targets), np.array(
+        train_dis_to_anomaly)
     # 计算ROC曲线
     fpr_list, tpr_list, thresholds = roc_curve(test_labels, test_y_scores)
     roc_auc = auc(fpr_list, tpr_list)
@@ -222,11 +263,15 @@ if __name__ == '__main__':
 
     plot_roc(fpr_list, tpr_list, roc_auc)
     plot_pr(recall_list, precision_list, pr_auc)
-    plot_distribution(trainset=True, threshold=thresholds_95, scores_list=train_y_scores, label_list=train_labels)
-    plot_distribution(trainset=False, threshold=thresholds_95, scores_list=test_y_scores, label_list=test_labels)
+    plot_distribution(trainset=2, threshold=config['remove_threshold'], scores_list=train_y_scores_0,
+                      label_list=train_labels_0)
+    plot_distribution(trainset=1, threshold=thresholds_95, scores_list=train_y_scores, label_list=train_labels)
+    plot_distribution(trainset=0, threshold=thresholds_95, scores_list=test_y_scores, label_list=test_labels)
+    plot_removal_distribution(config=config, scores_list=train_dis_to_anomaly, label_list=origin_train_labels)
     show_test_samples_around_threshold(threshold=thresholds_95, config=config, indices_list=test_indices,
                                        labels_list=test_labels, scores_list=test_y_scores)
     show_train_samples(config=config, exp_path=file_path, indices_list=train_indices, labels_list=train_labels,
                        scores_list=train_y_scores)
     reconstruction_C(exp_path=file_path)
+
     print('Analysis finished.')
