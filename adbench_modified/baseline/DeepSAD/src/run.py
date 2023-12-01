@@ -8,7 +8,7 @@ from .utils.config import Config
 from .utils.visualization.plot_images_grid import plot_images_grid
 from .deepsad import deepsad
 from .datasets.main import load_dataset
-from adbench.myutils import Utils
+from adbench_modified.myutils import Utils
 
 class DeepSAD():
     def __init__(self, seed, model_name='DeepSAD'):
@@ -24,14 +24,14 @@ class DeepSAD():
         self.optimizer_name = 'adam'
         self.lr = 0.001
         self.n_epochs = 50
-        self.lr_milestone = [0]
+        self.lr_milestone = [50,]
         self.batch_size = 128
         self.weight_decay = 1e-6
         self.pretrain = True # whether to use auto-encoder for pretraining
         self.ae_optimizer_name = 'adam'
         self.ae_lr = 0.001
         self.ae_n_epochs = 100
-        self.ae_lr_milestone = [0]
+        self.ae_lr_milestone = [100,]
         self.ae_batch_size = 128
         self.ae_weight_decay = 1e-6
         self.num_threads = 0

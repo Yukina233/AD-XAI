@@ -1,4 +1,6 @@
-import logging; logging.basicConfig(level=logging.WARNING)
+import logging
+
+
 import numpy as np
 import pandas as pd
 import itertools
@@ -9,15 +11,19 @@ import gc
 import os
 from keras import backend as K
 
-from adbench.datasets.data_generator import DataGenerator
-from adbench.myutils import Utils
+from adbench_modified.datasets.data_generator import DataGenerator
+from adbench_modified.myutils import Utils
+
 path_project = '/home/yukina/Missile_Fault_Detection/project/test'
-class RunPipeline():
-    def __init__(self, suffix:str=None, mode:str='rla', parallel:str=None,
+
+
+class RunPipeline:
+    def __init__(self, suffix: str = None, mode: str = 'rla', parallel: str = None,
                  generate_duplicates=True, n_samples_threshold=1000,
-                 realistic_synthetic_mode:str=None,
-                 noise_type=None):
-        '''
+                 realistic_synthetic_mode: str = None,
+                 noise_type=None,
+                 path_result='./results'):
+        """
         :param suffix: saved file suffix (including the model performance result and model weights)
         :param mode: rla or nla —— ratio of labeled anomalies or number of labeled anomalies
         :param parallel: unsupervise, semi-supervise or supervise, choosing to parallelly run the code
@@ -25,7 +31,7 @@ class RunPipeline():
         :param n_samples_threshold: threshold for generating the above duplicates, if generate_duplicates is False, then datasets with sample size smaller than n_samples_threshold will be dropped
         :param realistic_synthetic_mode: local, global, dependency or cluster —— whether to generate the realistic synthetic anomalies to test different algorithms
         :param noise_type: duplicated_anomalies, irrelevant_features or label_contamination —— whether to test the model robustness
-        '''
+        """
 
         # utils function
         self.utils = Utils()
@@ -40,8 +46,10 @@ class RunPipeline():
         self.realistic_synthetic_mode = realistic_synthetic_mode
         self.noise_type = noise_type
 
+        self.path_result = path_result
+
         # the suffix of all saved files
-        self.suffix = suffix + '_' + 'type(' + str(realistic_synthetic_mode) + ')_' + 'noise(' + str(noise_type) + ')_'\
+        self.suffix = suffix + '_' + 'type(' + str(realistic_synthetic_mode) + ')_' + 'noise(' + str(noise_type) + ')_' \
                       + self.parallel
 
         # data generator instantiation
@@ -57,7 +65,7 @@ class RunPipeline():
         # number of labeled anomalies
         self.nla_list = [0, 1, 5, 10, 25, 50, 75, 100]
         # seed list
-        self.seed_list = list(np.arange(3) + 1)
+        self.seed_list = list(np.arange(5) + 1)
 
         if self.noise_type is None:
             pass
@@ -79,8 +87,9 @@ class RunPipeline():
 
         # unsupervised algorithms
         if self.parallel == 'unsupervise':
-            from adbench.baseline.PyOD import PYOD
-            from adbench.baseline.DAGMM.run import DAGMM
+            from adbench_modified.baseline.PyOD import PYOD
+            from adbench_modified.baseline.DAGMM.run import DAGMM
+            from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
 
             # from pyod
             for _ in ['IForest', 'OCSVM', 'CBLOF', 'COF', 'COPOD', 'ECOD', 'FeatureBagging', 'HBOS', 'KNN', 'LODA',
@@ -89,16 +98,18 @@ class RunPipeline():
 
             # DAGMM
             self.model_dict['DAGMM'] = DAGMM
+            # 测试DeepSAD方法
+            self.model_dict['DeepSAD'] = DeepSAD
 
         # semi-supervised algorithms
         elif self.parallel == 'semi-supervise':
-            from adbench.baseline.PyOD import PYOD
-            from adbench.baseline.GANomaly.run import GANomaly
-            from adbench.baseline.DeepSAD.src.run import DeepSAD
-            from adbench.baseline.REPEN.run import REPEN
-            from adbench.baseline.DevNet.run import DevNet
-            from adbench.baseline.PReNet.run import PReNet
-            from adbench.baseline.FEAWAD.run import FEAWAD
+            from adbench_modified.baseline.PyOD import PYOD
+            from adbench_modified.baseline.GANomaly.run import GANomaly
+            from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
+            from adbench_modified.baseline.REPEN.run import REPEN
+            from adbench_modified.baseline.DevNet.run import DevNet
+            from adbench_modified.baseline.PReNet.run import PReNet
+            from adbench_modified.baseline.FEAWAD.run import FEAWAD
 
             self.model_dict = {'GANomaly': GANomaly,
                                'DeepSAD': DeepSAD,
@@ -110,8 +121,8 @@ class RunPipeline():
 
         # fully-supervised algorithms
         elif self.parallel == 'supervise':
-            from adbench.baseline.Supervised import supervised
-            from adbench.baseline.FTTransformer.run import FTTransformer
+            from adbench_modified.baseline.Supervised import supervised
+            from adbench_modified.baseline.FTTransformer.run import FTTransformer
 
             # from sklearn
             for _ in ['LR', 'NB', 'SVM', 'MLP', 'RF', 'LGB', 'XGB', 'CatB']:
@@ -145,7 +156,8 @@ class RunPipeline():
                 self.data_generator.dataset = dataset
                 data = self.data_generator.generator(la=1.00, at_least_one_labeled=True)
 
-                if not self.generate_duplicates and len(data['y_train']) + len(data['y_test']) < self.n_samples_threshold:
+                if not self.generate_duplicates and len(data['y_train']) + len(
+                        data['y_test']) < self.n_samples_threshold:
                     add = False
 
                 else:
@@ -157,7 +169,6 @@ class RunPipeline():
 
                     else:
                         add = False
-
 
             # remove high-dimensional CV and NLP datasets if generating synthetic anomalies or robustness test
             if self.realistic_synthetic_mode is not None or self.noise_type is not None:
@@ -179,7 +190,7 @@ class RunPipeline():
         if dataset is None:
             return True
         else:
-            CV_list = ['MNIST-C', 'FashionMNIST', 'CIFAR10']
+            CV_list = ['MVTec-AD']
 
             return not any([_ in dataset for _ in CV_list])
 
@@ -211,7 +222,8 @@ class RunPipeline():
             # fitting
             start_time = time.time()
             self.clf = self.clf.fit(X_train=self.data['X_train'], y_train=self.data['y_train'])
-            end_time = time.time(); time_fit = end_time - start_time
+            end_time = time.time()
+            time_fit = end_time - start_time
 
             # predicting score (inference)
             start_time = time.time()
@@ -219,7 +231,8 @@ class RunPipeline():
                 score_test = self.clf.predict_score(self.data['X_train'], self.data['X_test'])
             else:
                 score_test = self.clf.predict_score(self.data['X_test'])
-            end_time = time.time(); time_inference = end_time - start_time
+            end_time = time.time()
+            time_inference = end_time - start_time
 
             # performance
             result = self.utils.metric(y_true=self.data['y_test'], y_score=score_test, pos_label=1)
@@ -238,7 +251,7 @@ class RunPipeline():
 
         return time_fit, time_inference, result
 
-    # run the experiments in ADBench
+    # run the experiments in ADBench_modified
     def run(self, dataset=None, clf=None):
         if dataset is None:
             #  filteting dataset that does not meet the experimental requirements
@@ -247,7 +260,8 @@ class RunPipeline():
         else:
             isinstance(dataset, dict)
             dataset_list = [None]
-            X = dataset['X']; y = dataset['y']
+            X = dataset['X']
+            y = dataset['y']
 
         # experimental parameters
         if self.mode == 'nla':
@@ -264,8 +278,8 @@ class RunPipeline():
         print(f'{len(dataset_list)} datasets, {len(self.model_dict.keys())} models')
 
         # save the results
-        print(f"Experiment results are saved at: {os.path.join(path_project, 'result')}")
-        os.makedirs(os.path.join(path_project, 'result'), exist_ok=True)
+        print(f"Experiment results are saved at: {self.path_result}")
+        os.makedirs(self.path_result, exist_ok=True)
         columns = list(self.model_dict.keys()) if clf is None else ['Customized']
         df_AUCROC = pd.DataFrame(data=None, index=experiment_params, columns=columns)
         df_AUCPR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
@@ -280,7 +294,7 @@ class RunPipeline():
                 dataset, la, self.seed = params
 
             if self.parallel == 'unsupervise' and la != 0.0 and self.noise_type is None:
-            # if self.parallel == 'unsupervise' and self.noise_type is None:
+                # if self.parallel == 'unsupervise' and self.noise_type is None:
                 continue
 
             # We only run one time on CV / NLP datasets for considering computational cost
@@ -331,17 +345,15 @@ class RunPipeline():
                     df_time_fit[model_name].iloc[i] = time_fit
                     df_time_inference[model_name].iloc[i] = time_inference
 
-                    df_AUCROC.to_csv(os.path.join(path_project,
-                                                  'result', 'AUCROC_' + self.suffix + '.csv'), index=True)
-                    df_AUCPR.to_csv(os.path.join(path_project,
-                                                 'result', 'AUCPR_' + self.suffix + '.csv'), index=True)
-                    df_time_fit.to_csv(os.path.join(path_project,
-                                                    'result', 'Time(fit)_' + self.suffix + '.csv'), index=True)
-                    df_time_inference.to_csv(os.path.join(path_project,
-                                                          'result', 'Time(inference)_' + self.suffix + '.csv'), index=True)
+                    df_AUCROC.to_csv(os.path.join(self.path_result, 'AUCROC_' + self.suffix + '.csv'), index=True)
+                    df_AUCPR.to_csv(os.path.join(self.path_result, 'AUCPR_' + self.suffix + '.csv'), index=True)
+                    df_time_fit.to_csv(os.path.join(self.path_result, 'Time(fit)_' + self.suffix + '.csv'), index=True)
+                    df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'),
+                                             index=True)
 
             else:
-                self.clf = clf; self.model_name = 'Customized'
+                self.clf = clf
+                self.model_name = 'Customized'
                 # fit and test model
                 time_fit, time_inference, metrics = self.model_fit()
                 results.append([params, self.model_name, metrics, time_fit, time_inference])
@@ -354,13 +366,9 @@ class RunPipeline():
                 df_time_fit[self.model_name].iloc[i] = time_fit
                 df_time_inference[self.model_name].iloc[i] = time_inference
 
-                df_AUCROC.to_csv(os.path.join(path_project,
-                                              'result', 'AUCROC_' + self.suffix + '.csv'), index=True)
-                df_AUCPR.to_csv(os.path.join(path_project,
-                                             'result', 'AUCPR_' + self.suffix + '.csv'), index=True)
-                df_time_fit.to_csv(os.path.join(path_project,
-                                                'result', 'Time(fit)_' + self.suffix + '.csv'), index=True)
-                df_time_inference.to_csv(os.path.join(path_project,
-                                                      'result', 'Time(inference)_' + self.suffix + '.csv'), index=True)
+                df_AUCROC.to_csv(os.path.join(self.path_result, 'AUCROC_' + self.suffix + '.csv'), index=True)
+                df_AUCPR.to_csv(os.path.join(self.path_result, 'AUCPR_' + self.suffix + '.csv'), index=True)
+                df_time_fit.to_csv(os.path.join(self.path_result, 'Time(fit)_' + self.suffix + '.csv'), index=True)
+                df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'), index=True)
 
         return results

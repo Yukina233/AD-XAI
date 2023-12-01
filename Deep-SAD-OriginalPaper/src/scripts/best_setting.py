@@ -4,7 +4,7 @@ import numpy as np
 
 # 假设所有的文件夹都在一个名为"data_folders"的目录下
 project_path = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/'
-file_path = project_path + 'cifar10/ae_epochs=100/ratio=0,group'
+file_path = project_path + 'remove/seperate_normal, remove_threshold=0/cifar10/ae_epochs=100/ratio=0.2,group'
 
 
 # 存储文件夹名称和对应test_auc值的列表

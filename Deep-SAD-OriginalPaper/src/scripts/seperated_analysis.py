@@ -212,7 +212,7 @@ def reconstruction_C(exp_path):
 if __name__ == '__main__':
     # 假设您的JSON数据保存在名为'data.json'的文件中
     project_path = '/home/yukina/Missile_Fault_Detection/project/Deep-SAD-OriginalPaper/log/'
-    file_path = project_path + 'remove/seperate_normal, remove_threshold=15/cifar10/ae_epochs=100/ratio=0.2/dataset=cifar10,normal=3,outlier=5,ratioNormal=0.2,ratioOutlier=0.2,seed=0/'  # 文件路径
+    file_path = project_path + 'remove/seperate_normal, remove_threshold=10/cifar10/ae_epochs=100/ratio=0.2/dataset=cifar10,normal=3,outlier=5,ratioNormal=0.2,ratioOutlier=0.2,seed=0/'  # 文件路径
 
     # 从文件中读取JSON数据
     with open(file_path + 'config.json', 'r') as file:

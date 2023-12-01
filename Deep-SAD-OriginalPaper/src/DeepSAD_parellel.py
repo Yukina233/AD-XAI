@@ -10,14 +10,14 @@ def main():
         'net_name': 'cifar10_LeNet',
         'xp_path': None,
         'seed': None,
-        'normal_class': 3,
-        'known_outlier_class': 5,
+        'normal_class': None,
+        'known_outlier_class': None,
         'n_known_outlier_classes': 1,
         'ratio_known_normal': 0.2,
         'ratio_known_outlier': 0.2,
         'n_epochs': 50,
         'ae_n_epochs': 100,
-        'remove_threshold': 15,
+        'remove_threshold': 0,
     }
     experiment_configs = []
     # 10 * 9 * 3 = 270 configs
@@ -52,7 +52,7 @@ def main():
             experiment_configs.append(config.copy())
 
     # 创建一个工作池，大小为可用CPU核心数
-    with multiprocessing.Pool(processes=3) as pool:
+    with multiprocessing.Pool(processes=4) as pool:
         # 将 run_experiment 函数映射到配置上
         pool.map(run, experiment_configs)
 

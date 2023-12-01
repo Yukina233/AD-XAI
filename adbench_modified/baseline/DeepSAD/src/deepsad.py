@@ -1,10 +1,10 @@
 import json
 import torch
 
-from adbench.baseline.DeepSAD.src.base import BaseADDataset
-from adbench.baseline.DeepSAD.src.networks import build_network, build_autoencoder
-from adbench.baseline.DeepSAD.src.optim.DeepSAD_trainer import DeepSADTrainer
-from adbench.baseline.DeepSAD.src.optim import AETrainer
+from adbench_modified.baseline.DeepSAD.src.base import BaseADDataset
+from adbench_modified.baseline.DeepSAD.src.networks import build_network, build_autoencoder
+from adbench_modified.baseline.DeepSAD.src.optim.DeepSAD_trainer import DeepSADTrainer
+from adbench_modified.baseline.DeepSAD.src.optim import AETrainer
 
 
 class deepsad(object):
@@ -108,13 +108,13 @@ class deepsad(object):
         # Get train results
         self.ae_results['train_time'] = self.ae_trainer.train_time
 
-        # Test
-        self.ae_trainer.test(dataset, self.ae_net)
-
-        # Get test results
-        self.ae_results['test_aucroc'] = self.ae_trainer.test_aucroc
-        self.ae_results['test_aucpr'] = self.ae_trainer.test_aucpr
-        self.ae_results['test_time'] = self.ae_trainer.test_time
+        # # Test
+        # self.ae_trainer.test(dataset, self.ae_net)
+        #
+        # # Get test results
+        # self.ae_results['test_aucroc'] = self.ae_trainer.test_aucroc
+        # self.ae_results['test_aucpr'] = self.ae_trainer.test_aucpr
+        # self.ae_results['test_time'] = self.ae_trainer.test_time
 
         # Initialize Deep SAD network weights from pre-trained encoder
         self.init_network_weights_from_pretraining()
