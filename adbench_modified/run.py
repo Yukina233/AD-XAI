@@ -1,6 +1,5 @@
 import logging
 
-
 import numpy as np
 import pandas as pd
 import itertools
@@ -65,7 +64,7 @@ class RunPipeline:
         # number of labeled anomalies
         self.nla_list = [0, 1, 5, 10, 25, 50, 75, 100]
         # seed list
-        self.seed_list = list(np.arange(5) + 1)
+        self.seed_list = list(np.arange(3) + 1)
 
         if self.noise_type is None:
             pass
@@ -369,6 +368,147 @@ class RunPipeline:
                 df_AUCROC.to_csv(os.path.join(self.path_result, 'AUCROC_' + self.suffix + '.csv'), index=True)
                 df_AUCPR.to_csv(os.path.join(self.path_result, 'AUCPR_' + self.suffix + '.csv'), index=True)
                 df_time_fit.to_csv(os.path.join(self.path_result, 'Time(fit)_' + self.suffix + '.csv'), index=True)
-                df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'), index=True)
+                df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'),
+                                         index=True)
+
+        return results
+
+    def run_universum(self, target_dataset_name='MVTec-AD_bottle', path_datasets=None, clf=None, universum_params=None):
+
+        # 加载所有的数据集
+        datasets = {}
+        for filename in os.listdir(path_datasets):
+            if filename.endswith('.npz'):
+                data_name = filename.split('.')[0]
+                data = np.load(os.path.join(path_datasets, filename), allow_pickle=True)
+                datasets[data_name] = data
+
+        # 选择一个目标数据集
+        target_dataset = datasets[target_dataset_name]
+
+        # 划分训练集和测试集
+        # isinstance(target_dataset, dict)
+        dataset_list = [None]
+        X = target_dataset['X']
+        y = target_dataset['y']
+
+        # experimental parameters
+        if self.mode == 'nla':
+            if self.noise_type is not None:
+                experiment_params = list(product(dataset_list, self.nla_list, self.noise_params_list, self.seed_list))
+            else:
+                experiment_params = list(product(dataset_list, self.nla_list, self.seed_list))
+        else:
+            if self.noise_type is not None:
+                experiment_params = list(product(dataset_list, self.rla_list, self.noise_params_list, self.seed_list))
+            else:
+                experiment_params = list(product(dataset_list, self.rla_list, self.seed_list))
+
+        print(f'{len(dataset_list)} datasets, {len(self.model_dict.keys())} models')
+
+        # save the results
+        print(f"Experiment results are saved at: {self.path_result}")
+        os.makedirs(self.path_result, exist_ok=True)
+        columns = list(self.model_dict.keys()) if clf is None else ['Customized']
+        df_AUCROC = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_AUCPR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_time_fit = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_time_inference = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+
+        results = []
+        for i, params in tqdm(enumerate(experiment_params)):
+            if self.noise_type is not None:
+                dataset, la, noise_param, self.seed = params
+            else:
+                dataset, la, self.seed = params
+
+            if self.parallel == 'unsupervise' and la != 0.0 and self.noise_type is None:
+                # if self.parallel == 'unsupervise' and self.noise_type is None:
+                continue
+
+            # generate data
+            self.data_generator.seed = self.seed
+            self.data_generator.dataset = dataset
+
+            try:
+                if self.noise_type == 'duplicated_anomalies':
+                    self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              realistic_synthetic_mode=self.realistic_synthetic_mode,
+                                                              noise_type=self.noise_type, duplicate_times=noise_param)
+                elif self.noise_type == 'irrelevant_features':
+                    self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              realistic_synthetic_mode=self.realistic_synthetic_mode,
+                                                              noise_type=self.noise_type, noise_ratio=noise_param)
+                elif self.noise_type == 'label_contamination':
+                    self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              realistic_synthetic_mode=self.realistic_synthetic_mode,
+                                                              noise_type=self.noise_type, noise_ratio=noise_param)
+                else:
+                    self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              realistic_synthetic_mode=self.realistic_synthetic_mode)
+
+            except Exception as error:
+                print(f'Error when generating data: {error}')
+                pass
+                continue
+
+            # 假设npz文件中有 'train' 和 'test' 键
+            # 如果数据集结构不同，需要调整代码以匹配实际结构
+            X_train = self.data['X_train']
+            y_train = self.data['y_train']
+
+            # 对于训练集中的每个样本，从其他数据集中随机抽取一个样本
+            augmented_train_samples = {
+                'X': [],
+                'y': []
+            }
+            for sample in X_train:
+                for i in range(universum_params['aux_size']):
+                    # 从除了目标数据集之外的其他数据集中随机选择一个数据集
+                    other_datasets = [name for name in datasets if name != target_dataset_name]
+                    random_dataset_name = np.random.choice(other_datasets)
+                    random_dataset = datasets[random_dataset_name]
+
+                    # 首先找出所有 y == 0 的索引
+                    indices_of_y_equals_0 = np.where(random_dataset['y'] == 0)[0]
+                    # 然后只从这些索引对应的 X 中抽取一个样本
+                    sample_indices = np.random.choice(indices_of_y_equals_0, 1)
+                    random_sample = random_dataset['X'][sample_indices][0]
+
+                    # 将随机抽取的样本与目标样本结合
+                    from auxiliary_data_AD.universum_generate import get_universum
+                    augmented_sample = get_universum(sample, random_sample, universum_params['aug_type'],
+                                                     universum_params['lamda'])
+                    augmented_train_samples['X'].append(augmented_sample)
+                    augmented_train_samples['y'].append(1)
+
+            # 现在 'augmented_train_samples' 包含了原始训练样本和随机抽取的样本对
+            # 接下来可以根据实际需求使用这些样本对进行训练模型等操作
+            self.data['X_train'] = np.concatenate((self.data['X_train'], np.stack(augmented_train_samples['X'])))
+            self.data['y_train'] = np.concatenate((self.data['y_train'], np.stack(augmented_train_samples['y'])))
+
+            if clf is None:
+                print(f'Clf is None')
+                assert False
+
+            self.clf = clf
+            self.model_name = 'Customized'
+            # fit and test model
+            time_fit, time_inference, metrics = self.model_fit()
+            results.append([params, self.model_name, metrics, time_fit, time_inference])
+            print(f'Current experiment parameters: {params}, model: {self.model_name}, metrics: {metrics}, '
+                  f'fitting time: {time_fit}, inference time: {time_inference}')
+
+            # store and save the result (AUC-ROC, AUC-PR and runtime / inference time)
+            df_AUCROC[self.model_name].iloc[i] = metrics['aucroc']
+            df_AUCPR[self.model_name].iloc[i] = metrics['aucpr']
+            df_time_fit[self.model_name].iloc[i] = time_fit
+            df_time_inference[self.model_name].iloc[i] = time_inference
+
+            df_AUCROC.to_csv(os.path.join(self.path_result, 'AUCROC_' + self.suffix + '.csv'), index=True)
+            df_AUCPR.to_csv(os.path.join(self.path_result, 'AUCPR_' + self.suffix + '.csv'), index=True)
+            df_time_fit.to_csv(os.path.join(self.path_result, 'Time(fit)_' + self.suffix + '.csv'), index=True)
+            df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'),
+                                     index=True)
 
         return results

@@ -16,7 +16,8 @@ class DeepSAD():
         self.device = self.utils.get_device()  # get device
         self.seed = seed
 
-        self.net_name = 'dense'
+        self.net_name = 'cifar10_LeNet'
+        # self.net_name = 'dense'
         self.xp_path = None
         self.load_config = None
         self.load_model = None

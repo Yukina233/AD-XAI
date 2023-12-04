@@ -1,6 +1,6 @@
-# from .mnist_LeNet import MNIST_LeNet, MNIST_LeNet_Autoencoder
-# from .fmnist_LeNet import FashionMNIST_LeNet, FashionMNIST_LeNet_Autoencoder
-# from .cifar10_LeNet import CIFAR10_LeNet, CIFAR10_LeNet_Autoencoder
+from .mnist_LeNet import MNIST_LeNet, MNIST_LeNet_Autoencoder
+from .fmnist_LeNet import FashionMNIST_LeNet, FashionMNIST_LeNet_Autoencoder
+from .cifar10_LeNet import CIFAR10_LeNet, CIFAR10_LeNet_Autoencoder
 from .mlp import MLP, MLP_Autoencoder
 from .vae import VariationalAutoencoder
 from .dgm import DeepGenerativeModel, StackedDeepGenerativeModel

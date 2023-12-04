@@ -331,8 +331,8 @@ class DataGenerator():
         elif noise_type == 'label_contamination':
             X_train, y_train = self.add_label_contamination(X_train, y_train, noise_ratio=noise_ratio)
 
-        # minmax scaling
-        if minmax:
+        # minmax scaling when input dim <= 2
+        if minmax and X_train.ndim <= 2:
             scaler = MinMaxScaler().fit(X_train)
             X_train = scaler.transform(X_train)
             X_test = scaler.transform(X_test)
