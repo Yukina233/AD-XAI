@@ -37,15 +37,18 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 #     df_output.to_csv(os.path.join(result_path, 'AUCROC_grouped.csv'), index=False)
 
 # 合并输出每个类的结果
-base_dir = os.path.join(path_project, 'auxiliary_data_AD/log', 'DeepSAD_mixup,lamda=0.6')
+base_dir = os.path.join(path_project, 'auxiliary_data_AD/log', 'unsupervise')
 result_names = os.listdir(base_dir)
 
-seed_num = 3
+
+group_seed_num = 3
 classes_output = []
 aucroc_output = []
 for result_name in result_names:
+    if 'MVTec-AD' not in result_name:
+        continue
     result_path = os.path.join(base_dir, result_name)
-    csv_path = os.path.join(result_path, 'AUCROC_DeepSAD_type(None)_noise(None)_unsupervise.csv')
+    csv_path = os.path.join(result_path, 'AUCROC_unsupervise_type(None)_noise(None)_unsupervise.csv')
     df = pd.read_csv(csv_path)
     count = 0
     values = []
@@ -55,7 +58,7 @@ for result_name in result_names:
             continue
         count += 1
         values.append(aucroc)
-        if count == seed_num:
+        if count == group_seed_num:
             classes_output.append(result_name)
             aucroc_output.append(np.mean(values))
             count = 0
@@ -64,6 +67,30 @@ for result_name in result_names:
 df_output = pd.DataFrame(data={'class': classes_output, 'aucroc': aucroc_output})
 df_output.to_csv(os.path.join(base_dir, 'AUCROC_grouped.csv'), index=False)
 
+classes_output = []
+aucroc_output = []
+for result_name in result_names:
+    if 'MVTec-AD' not in result_name:
+        continue
+    result_path = os.path.join(base_dir, result_name)
+    csv_path = os.path.join(result_path, 'AUCPR_unsupervise_type(None)_noise(None)_unsupervise.csv')
+    df = pd.read_csv(csv_path)
+    count = 0
+    values = []
+    for index, row in df.iterrows():
+        aucroc = row['Customized']
+        if math.isnan(aucroc):
+            continue
+        count += 1
+        values.append(aucroc)
+        if count == group_seed_num:
+            classes_output.append(result_name)
+            aucroc_output.append(np.mean(values))
+            count = 0
+            values = []
+
+df_output = pd.DataFrame(data={'class': classes_output, 'aucpr': aucroc_output})
+df_output.to_csv(os.path.join(base_dir, 'AUCRPR_grouped.csv'), index=False)
 
 print("Group results finished!")
 

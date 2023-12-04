@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 import itertools
 from itertools import product
+
+import torch
+from torch import nn
 from tqdm import tqdm
 import time
 import gc
@@ -18,7 +21,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project/test'
 
 class RunPipeline:
     def __init__(self, suffix: str = None, mode: str = 'rla', parallel: str = None,
-                 generate_duplicates=True, n_samples_threshold=1000,
+                 generate_duplicates=True, n_samples_threshold=1000, seed=3,
                  realistic_synthetic_mode: str = None,
                  noise_type=None,
                  path_result='./results'):
@@ -32,6 +35,7 @@ class RunPipeline:
         :param noise_type: duplicated_anomalies, irrelevant_features or label_contamination —— whether to test the model robustness
         """
 
+        self.seed = seed
         # utils function
         self.utils = Utils()
 
@@ -64,7 +68,7 @@ class RunPipeline:
         # number of labeled anomalies
         self.nla_list = [0, 1, 5, 10, 25, 50, 75, 100]
         # seed list
-        self.seed_list = list(np.arange(3) + 1)
+        self.seed_list = list(np.arange(self.seed) + 1)
 
         if self.noise_type is None:
             pass
@@ -373,7 +377,8 @@ class RunPipeline:
 
         return results
 
-    def run_universum(self, target_dataset_name='MVTec-AD_bottle', path_datasets=None, clf=None, universum_params=None):
+    def run_universum(self, target_dataset_name='MVTec-AD_bottle', path_datasets=None, clf=None, use_preprocess=False,
+                      universum_params=None):
 
         # 加载所有的数据集
         datasets = {}
@@ -463,7 +468,7 @@ class RunPipeline:
                 'y': []
             }
             for sample in X_train:
-                for i in range(universum_params['aux_size']):
+                for j in range(universum_params['aux_size']):
                     # 从除了目标数据集之外的其他数据集中随机选择一个数据集
                     other_datasets = [name for name in datasets if name != target_dataset_name]
                     random_dataset_name = np.random.choice(other_datasets)
@@ -486,6 +491,23 @@ class RunPipeline:
             # 接下来可以根据实际需求使用这些样本对进行训练模型等操作
             self.data['X_train'] = np.concatenate((self.data['X_train'], np.stack(augmented_train_samples['X'])))
             self.data['y_train'] = np.concatenate((self.data['y_train'], np.stack(augmented_train_samples['y'])))
+
+            if use_preprocess:
+                pretrain_encoder = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+                pretrain_encoder = nn.Sequential(*list(pretrain_encoder.children())[:-1])
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                pretrain_encoder.to(device)
+                pretrain_encoder.eval()
+                with torch.no_grad():
+                    X_t = self.data['X_train']
+                    X_t = torch.tensor(X_t).to(device)
+                    X_v = self.data['X_test']
+                    X_v = torch.tensor(X_v).to(device)
+                    X_t_e = pretrain_encoder(X_t).squeeze().cpu().numpy()
+                    X_v_e = pretrain_encoder(X_v).squeeze().cpu().numpy()
+
+                self.data['X_train'] = X_t_e
+                self.data['X_test'] = X_v_e
 
             if clf is None:
                 print(f'Clf is None')
@@ -512,3 +534,29 @@ class RunPipeline:
                                      index=True)
 
         return results
+
+if __name__ == '__main__':
+    seed = 3
+    aug_type = 'mixup'
+    lamda = 0.5
+    aux_size = 1
+    use_preprocess = False
+
+    path_project = '/home/yukina/Missile_Fault_Detection/project'
+
+    category = 'MVTec-AD_pill'
+    dataset_path = os.path.join(path_project, f'data/mvtec_ad/{category}.npz')
+
+    path_save = os.path.join(path_project, 'auxiliary_data_AD/log/test',
+                                 f'DeepSAD_{aug_type},lamda={lamda},aux_size={aux_size}', category)
+    os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
+
+    # 实例化并运行pipeline
+    from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
+    pipeline = RunPipeline(suffix='DeepSAD', parallel='unsupervise', n_samples_threshold=200, seed=seed,
+                               realistic_synthetic_mode=None,
+                               noise_type=None, path_result=path_save)
+    results = pipeline.run_universum(clf=DeepSAD, target_dataset_name=category,
+                                         path_datasets=path_project + '/data/mvtec_ad',
+                                         use_preprocess=use_preprocess,
+                                         universum_params={'aug_type': aug_type, 'lamda': lamda, 'aux_size': aux_size})
