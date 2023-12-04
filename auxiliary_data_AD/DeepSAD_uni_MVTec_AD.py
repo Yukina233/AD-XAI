@@ -13,9 +13,11 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 dataset_files = glob.glob(os.path.join(path_project, 'data/mvtec_ad/MVTec-AD*.npz'))
 timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
+seed = 3
 aug_type = 'mixup'
-lamda = 0.5
+lamda = 0.6
 aux_size = 1
+use_preprocess = False
 
 # 遍历所有数据集文件
 for dataset_path in dataset_files:
@@ -23,15 +25,18 @@ for dataset_path in dataset_files:
     base_name = os.path.basename(dataset_path).replace('.npz', '')
     # 创建结果文件夹路径
 
-    path_save = os.path.join(path_project, 'auxiliary_data_AD/log', f'DeepSAD_{aug_type},lamda={lamda},aux_size={aux_size}', base_name)
+    path_save = os.path.join(path_project, 'auxiliary_data_AD/log',
+                             f'DeepSAD_{aug_type},lamda={lamda},aux_size={aux_size}',
+                             base_name)
     os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 
     # 实例化并运行pipeline
-    pipeline = RunPipeline(suffix='DeepSAD', parallel='unsupervise', n_samples_threshold=200,
+    pipeline = RunPipeline(suffix='DeepSAD', parallel='unsupervise', n_samples_threshold=200, seed=seed,
                            realistic_synthetic_mode=None,
                            noise_type=None, path_result=path_save)
     results = pipeline.run_universum(clf=DeepSAD, target_dataset_name=base_name,
                                      path_datasets=path_project + '/data/mvtec_ad',
+                                     use_preprocess=use_preprocess,
                                      universum_params={'aug_type': aug_type, 'lamda': lamda, 'aux_size': aux_size})
 
 print("All down!")
