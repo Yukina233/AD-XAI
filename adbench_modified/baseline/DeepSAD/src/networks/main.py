@@ -1,6 +1,6 @@
 from .mnist_LeNet import MNIST_LeNet, MNIST_LeNet_Autoencoder
 from .fmnist_LeNet import FashionMNIST_LeNet, FashionMNIST_LeNet_Autoencoder
-from .cifar10_LeNet import CIFAR10_LeNet, CIFAR10_LeNet_Autoencoder
+from .cifar10_LeNet import CIFAR10_LeNet, CIFAR10_LeNet_Autoencoder, CIFAR10_LeNet_1, CIFAR10_LeNet_1_Autoencoder
 from .mlp import MLP, MLP_Autoencoder
 from .vae import VariationalAutoencoder
 from .dgm import DeepGenerativeModel, StackedDeepGenerativeModel
@@ -22,6 +22,9 @@ def build_network(net_name, input_size ,ae_net=None):
     elif net_name == 'cifar10_LeNet':
         net = CIFAR10_LeNet()
 
+    elif net_name == 'cifar10_LeNet_1':
+        net = CIFAR10_LeNet_1()
+
     else:
         net = MLP(x_dim=input_size, h_dims=[100, 20], rep_dim=10, bias=False)
 
@@ -39,6 +42,9 @@ def build_autoencoder(net_name, input_size):
 
     elif net_name == 'cifar10_LeNet':
         ae_net = CIFAR10_LeNet_Autoencoder()
+
+    elif net_name == 'cifar10_LeNet_1':
+        ae_net = CIFAR10_LeNet_1_Autoencoder()
 
     else:
         ae_net = MLP_Autoencoder(x_dim=input_size, h_dims=[100, 20], rep_dim=10, bias=False)

@@ -10,29 +10,28 @@ from .deepsad import deepsad
 from .datasets.main import load_dataset
 from adbench_modified.myutils import Utils
 
+
 class DeepSAD():
     def __init__(self, seed, model_name='DeepSAD'):
         self.utils = Utils()
-        self.device = self.utils.get_device()  # get device
+        self.device = self.utils.get_device(gpu_specific=True)  # get device
         self.seed = seed
 
-        self.net_name = 'cifar10_LeNet'
-        # self.net_name = 'dense'
         self.xp_path = None
         self.load_config = None
         self.load_model = None
-        self.eta = 1.0 # eta in the loss function
+        self.eta = 1.0  # eta in the loss function
         self.optimizer_name = 'adam'
         self.lr = 0.001
         self.n_epochs = 50
-        self.lr_milestone = [50,]
+        self.lr_milestone = [50, ]
         self.batch_size = 128
         self.weight_decay = 1e-6
-        self.pretrain = True # whether to use auto-encoder for pretraining
+        self.pretrain = True  # whether to use auto-encoder for pretraining
         self.ae_optimizer_name = 'adam'
         self.ae_lr = 0.001
         self.ae_n_epochs = 100
-        self.ae_lr_milestone = [100,]
+        self.ae_lr_milestone = [100, ]
         self.ae_batch_size = 128
         self.ae_weight_decay = 1e-6
         self.num_threads = 0
@@ -60,10 +59,19 @@ class DeepSAD():
         # Load data
         data = {'X_train': X_train, 'y_train': y_train}
         dataset = load_dataset(data=data, train=True)
-        input_size = dataset.train_set.data.size(1) #input size
+        input_size = dataset.train_set.data.size(1)  # input size
 
         # Initialize DeepSAD model and set neural network phi
         self.deepSAD = deepsad(self.eta)
+
+        if X_train.ndim == 2:
+            # 对应use_preprocess==True时，即pretrain_encoder=ResNet18
+            self.net_name = 'dense'
+        else:
+            if X_train.shape[1] == 3:
+                self.net_name = 'cifar10_LeNet'
+            elif X_train.shape[1] == 1:
+                self.net_name = 'cifar10_LeNet_1'
         self.deepSAD.set_network(self.net_name, input_size)
 
         # If specified, load Deep SAD model (center c, network weights, and possibly autoencoder weights)
@@ -75,26 +83,26 @@ class DeepSAD():
         if self.pretrain:
             # Pretrain model on dataset (via autoencoder)
             self.deepSAD.pretrain(dataset,
-                             input_size,
-                             optimizer_name=self.ae_optimizer_name,
-                             lr=self.ae_lr,
-                             n_epochs=self.ae_n_epochs,
-                             lr_milestones=self.ae_lr_milestone,
-                             batch_size=self.ae_batch_size,
-                             weight_decay=self.ae_weight_decay,
-                             device=self.device,
-                             n_jobs_dataloader=self.n_jobs_dataloader)
+                                  input_size,
+                                  optimizer_name=self.ae_optimizer_name,
+                                  lr=self.ae_lr,
+                                  n_epochs=self.ae_n_epochs,
+                                  lr_milestones=self.ae_lr_milestone,
+                                  batch_size=self.ae_batch_size,
+                                  weight_decay=self.ae_weight_decay,
+                                  device=self.device,
+                                  n_jobs_dataloader=self.n_jobs_dataloader)
 
         # Train model on dataset
         self.deepSAD.train(dataset,
-                          optimizer_name=self.optimizer_name,
-                          lr=self.lr,
-                          n_epochs=self.n_epochs,
-                          lr_milestones=self.lr_milestone,
-                          batch_size=self.batch_size,
-                          weight_decay=self.weight_decay,
-                          device=self.device,
-                          n_jobs_dataloader=self.n_jobs_dataloader)
+                           optimizer_name=self.optimizer_name,
+                           lr=self.lr,
+                           n_epochs=self.n_epochs,
+                           lr_milestones=self.lr_milestone,
+                           batch_size=self.batch_size,
+                           weight_decay=self.weight_decay,
+                           device=self.device,
+                           n_jobs_dataloader=self.n_jobs_dataloader)
 
         # Save results, model, and configuration
         # deepSAD.save_results(export_json=xp_path + '/results.json')

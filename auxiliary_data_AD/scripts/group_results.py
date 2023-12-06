@@ -37,18 +37,18 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 #     df_output.to_csv(os.path.join(result_path, 'AUCROC_grouped.csv'), index=False)
 
 # 合并输出每个类的结果
-base_dir = os.path.join(path_project, 'auxiliary_data_AD/log', 'unsupervise')
+base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/channel=all', 'DeepSAD_mixup,lamda=0.8,aux_size=3')
 result_names = os.listdir(base_dir)
 
-
-group_seed_num = 3
+suffix = 'DeepSAD'
+group_seed_num = 5
 classes_output = []
 aucroc_output = []
 for result_name in result_names:
     if 'MVTec-AD' not in result_name:
         continue
     result_path = os.path.join(base_dir, result_name)
-    csv_path = os.path.join(result_path, 'AUCROC_unsupervise_type(None)_noise(None)_unsupervise.csv')
+    csv_path = os.path.join(result_path, f'AUCROC_{suffix}_type(None)_noise(None)_unsupervise.csv')
     df = pd.read_csv(csv_path)
     count = 0
     values = []
@@ -65,7 +65,7 @@ for result_name in result_names:
             values = []
 
 df_output = pd.DataFrame(data={'class': classes_output, 'aucroc': aucroc_output})
-df_output.to_csv(os.path.join(base_dir, 'AUCROC_grouped.csv'), index=False)
+df_output.to_csv(os.path.join(base_dir, f'AUCROC_{suffix}_grouped.csv'), index=False)
 
 classes_output = []
 aucroc_output = []
@@ -73,7 +73,7 @@ for result_name in result_names:
     if 'MVTec-AD' not in result_name:
         continue
     result_path = os.path.join(base_dir, result_name)
-    csv_path = os.path.join(result_path, 'AUCPR_unsupervise_type(None)_noise(None)_unsupervise.csv')
+    csv_path = os.path.join(result_path, f'AUCPR_{suffix}_type(None)_noise(None)_unsupervise.csv')
     df = pd.read_csv(csv_path)
     count = 0
     values = []
@@ -90,7 +90,7 @@ for result_name in result_names:
             values = []
 
 df_output = pd.DataFrame(data={'class': classes_output, 'aucpr': aucroc_output})
-df_output.to_csv(os.path.join(base_dir, 'AUCRPR_grouped.csv'), index=False)
+df_output.to_csv(os.path.join(base_dir, f'AUCRPR_{suffix}_grouped.csv'), index=False)
 
 print("Group results finished!")
 

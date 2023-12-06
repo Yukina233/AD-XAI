@@ -13,9 +13,9 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 dataset_files = glob.glob(os.path.join(path_project, 'data/mvtec_ad/MVTec-AD*.npz'))
 timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
-seed = 3
-aug_type = 'mixup'
-lamda = 0.6
+seed = 5
+aug_type = 'cutmix'
+lamda = 0.95
 aux_size = 1
 use_preprocess = False
 
@@ -25,7 +25,7 @@ for dataset_path in dataset_files:
     base_name = os.path.basename(dataset_path).replace('.npz', '')
     # 创建结果文件夹路径
 
-    path_save = os.path.join(path_project, 'auxiliary_data_AD/log',
+    path_save = os.path.join(path_project, 'auxiliary_data_AD/log/channel=all',
                              f'DeepSAD_{aug_type},lamda={lamda},aux_size={aux_size}',
                              base_name)
     os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹

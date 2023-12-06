@@ -6,6 +6,7 @@ import torch
 from matplotlib import pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from tqdm import tqdm
 
 
 class MVTecADDataset(Dataset):
@@ -87,9 +88,9 @@ transform = transforms.Compose([
 
 # Create the dataset
 root_dir = path_project + '/data/mvtec_ad_raw'
-category_list = ['bottle', 'cable', 'capsule', 'carpet', 'hazelnut', 'leather',
-                 'metal_nut', 'pill', 'tile', 'toothbrush', 'transistor', 'wood']
-for category in category_list:
+category_list = ['bottle', 'cable', 'capsule', 'carpet', 'grid', 'hazelnut', 'leather',
+                 'metal_nut', 'pill', 'screw', 'tile', 'toothbrush', 'transistor', 'wood', 'zipper']
+for category in tqdm(category_list):
     generate_dataset(root_dir, category, transform)
 
 print('Data generate complete.')

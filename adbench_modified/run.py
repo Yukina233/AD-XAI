@@ -495,7 +495,7 @@ class RunPipeline:
             if use_preprocess:
                 pretrain_encoder = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
                 pretrain_encoder = nn.Sequential(*list(pretrain_encoder.children())[:-1])
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
                 pretrain_encoder.to(device)
                 pretrain_encoder.eval()
                 with torch.no_grad():
@@ -503,11 +503,17 @@ class RunPipeline:
                     X_t = torch.tensor(X_t).to(device)
                     X_v = self.data['X_test']
                     X_v = torch.tensor(X_v).to(device)
+                    if X_t.shape[1] == 1:
+                        X_t = X_t.repeat(1, 3, 1, 1)
+                    if X_v.shape[1] == 1:
+                        X_v = X_v.repeat(1, 3, 1, 1)
                     X_t_e = pretrain_encoder(X_t).squeeze().cpu().numpy()
                     X_v_e = pretrain_encoder(X_v).squeeze().cpu().numpy()
 
                 self.data['X_train'] = X_t_e
                 self.data['X_test'] = X_v_e
+
+                del pretrain_encoder
 
             if clf is None:
                 print(f'Clf is None')
@@ -515,6 +521,7 @@ class RunPipeline:
 
             self.clf = clf
             self.model_name = 'Customized'
+
             # fit and test model
             time_fit, time_inference, metrics = self.model_fit()
             results.append([params, self.model_name, metrics, time_fit, time_inference])
@@ -535,28 +542,31 @@ class RunPipeline:
 
         return results
 
+
+# For test use
 if __name__ == '__main__':
     seed = 3
-    aug_type = 'mixup'
-    lamda = 0.5
+    aug_type = 'cutmix'
+    lamda = 0.95
     aux_size = 1
-    use_preprocess = False
+    use_preprocess = True
 
     path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-    category = 'MVTec-AD_pill'
+    category = 'MVTec-AD_grid'
     dataset_path = os.path.join(path_project, f'data/mvtec_ad/{category}.npz')
 
     path_save = os.path.join(path_project, 'auxiliary_data_AD/log/test',
-                                 f'DeepSAD_{aug_type},lamda={lamda},aux_size={aux_size}', category)
+                             f'DeepSAD_{aug_type},lamda={lamda},aux_size={aux_size}', category)
     os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 
     # 实例化并运行pipeline
     from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
+
     pipeline = RunPipeline(suffix='DeepSAD', parallel='unsupervise', n_samples_threshold=200, seed=seed,
-                               realistic_synthetic_mode=None,
-                               noise_type=None, path_result=path_save)
+                           realistic_synthetic_mode=None,
+                           noise_type=None, path_result=path_save)
     results = pipeline.run_universum(clf=DeepSAD, target_dataset_name=category,
-                                         path_datasets=path_project + '/data/mvtec_ad',
-                                         use_preprocess=use_preprocess,
-                                         universum_params={'aug_type': aug_type, 'lamda': lamda, 'aux_size': aux_size})
+                                     path_datasets=path_project + '/data/mvtec_ad',
+                                     use_preprocess=use_preprocess,
+                                     universum_params={'aug_type': aug_type, 'lamda': lamda, 'aux_size': aux_size})
