@@ -33,7 +33,6 @@ def get_universum(image1, image2, aug_type, lamda):
         elif image2.shape[0] == 3:
             image2 = 0.299 * image2[0, :, :] + 0.587 * image2[1, :, :] + 0.114 * image2[2, :, :]
             image2 = np.expand_dims(image2, axis=0)
-        # if_plot = True
     """Calculating Mixup-induced universum from a batch of images"""
     universum = image1.copy()
     if aug_type == 'mixup':

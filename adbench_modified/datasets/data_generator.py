@@ -319,8 +319,24 @@ class DataGenerator():
         # show the statistic
         self.utils.data_description(X=X, y=y)
 
+
+        # 分离出 y=0 的样本和其它样本
+        X_zero = X[y == 0]
+        y_zero = y[y == 0]
+        X_non_zero = X[y != 0]
+        y_non_zero = y[y != 0]
+        # 只对 y=0 的样本进行训练集和测试集的划分
+        X_zero_train, X_zero_test, y_zero_train, y_zero_test = train_test_split(
+            X_zero, y_zero, test_size=self.test_size, shuffle=True, stratify=y)
+        # 将 y=0 的训练集与 y 不为0的样本合并，形成最终的训练集
+        X_train = X_zero_train
+        y_train = y_zero_train
+        # y=0 的测试集就是您原本想要的测试集
+        X_test = np.concatenate(X_zero_test, X_non_zero)
+        y_test = np.concatenate(y_zero_test, y_non_zero)
+
         # spliting the current data to the training set and testing set
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_size, shuffle=True, stratify=y)
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_size, shuffle=True, stratify=y)
 
         # we respectively generate the duplicated anomalies for the training and testing set
         if noise_type == 'duplicated_anomalies':

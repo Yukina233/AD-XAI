@@ -37,10 +37,11 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 #     df_output.to_csv(os.path.join(result_path, 'AUCROC_grouped.csv'), index=False)
 
 # 合并输出每个类的结果
-base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/channel=all', 'DeepSAD_mixup,lamda=0.8,aux_size=3')
+base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/extra', 'DeepSAD_cutmix,lamda=0.85,aux_size=1')
 result_names = os.listdir(base_dir)
 
 suffix = 'DeepSAD'
+noise_type = None
 group_seed_num = 5
 classes_output = []
 aucroc_output = []
@@ -48,7 +49,7 @@ for result_name in result_names:
     if 'MVTec-AD' not in result_name:
         continue
     result_path = os.path.join(base_dir, result_name)
-    csv_path = os.path.join(result_path, f'AUCROC_{suffix}_type(None)_noise(None)_unsupervise.csv')
+    csv_path = os.path.join(result_path, f'AUCROC_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
     df = pd.read_csv(csv_path)
     count = 0
     values = []
@@ -73,7 +74,7 @@ for result_name in result_names:
     if 'MVTec-AD' not in result_name:
         continue
     result_path = os.path.join(base_dir, result_name)
-    csv_path = os.path.join(result_path, f'AUCPR_{suffix}_type(None)_noise(None)_unsupervise.csv')
+    csv_path = os.path.join(result_path, f'AUCPR_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
     df = pd.read_csv(csv_path)
     count = 0
     values = []

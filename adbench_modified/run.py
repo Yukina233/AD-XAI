@@ -61,7 +61,7 @@ class RunPipeline:
 
         # ratio of labeled anomalies
         if self.noise_type is not None:
-            self.rla_list = [1.00]
+            self.rla_list = [0.00]
         else:
             self.rla_list = [0.00, 0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 1.00]
 
@@ -545,7 +545,7 @@ class RunPipeline:
 
 # For test use
 if __name__ == '__main__':
-    seed = 3
+    seed = 1
     aug_type = 'cutmix'
     lamda = 0.95
     aux_size = 1

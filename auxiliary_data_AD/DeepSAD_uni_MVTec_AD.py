@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 from adbench_modified.run import RunPipeline
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
 
@@ -15,17 +17,18 @@ timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
 seed = 5
 aug_type = 'cutmix'
-lamda = 0.95
+lamda = 0.85
 aux_size = 1
 use_preprocess = False
+noise_type = 'label_contamination'
 
 # 遍历所有数据集文件
-for dataset_path in dataset_files:
+for dataset_path in tqdm(dataset_files):
     # 获取数据集的基本名称，例如：MVTec_AD_transistor
     base_name = os.path.basename(dataset_path).replace('.npz', '')
     # 创建结果文件夹路径
 
-    path_save = os.path.join(path_project, 'auxiliary_data_AD/log/channel=all',
+    path_save = os.path.join(path_project, 'auxiliary_data_AD/log/extra',
                              f'DeepSAD_{aug_type},lamda={lamda},aux_size={aux_size}',
                              base_name)
     os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
@@ -33,7 +36,7 @@ for dataset_path in dataset_files:
     # 实例化并运行pipeline
     pipeline = RunPipeline(suffix='DeepSAD', parallel='unsupervise', n_samples_threshold=200, seed=seed,
                            realistic_synthetic_mode=None,
-                           noise_type=None, path_result=path_save)
+                           noise_type=noise_type, path_result=path_save)
     results = pipeline.run_universum(clf=DeepSAD, target_dataset_name=base_name,
                                      path_datasets=path_project + '/data/mvtec_ad',
                                      use_preprocess=use_preprocess,
