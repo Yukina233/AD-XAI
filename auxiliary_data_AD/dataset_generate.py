@@ -42,7 +42,7 @@ class MVTecADDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = self.img_paths[idx]
-        image = Image.open(img_path)
+        image = Image.open(img_path).convert("RGB")
         label = self.labels[idx]
 
         if self.transform:
@@ -51,7 +51,7 @@ class MVTecADDataset(Dataset):
         return image, label
 
 
-def generate_dataset(root_dir, category, transform):
+def generate_dataset(root_dir, category, transform, imagesize):
     train_dataset = MVTecADDataset(root_dir=root_dir, category=category, is_train=True, transform=transform)
     test_dataset = MVTecADDataset(root_dir=root_dir, category=category, is_train=False, transform=transform)
 
@@ -59,31 +59,48 @@ def generate_dataset(root_dir, category, transform):
     train_loader = DataLoader(train_dataset, batch_size=500, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=500, shuffle=False)
 
-    X = torch.Tensor()
-    y = torch.Tensor()
+    X_train = torch.Tensor()
+    y_train = torch.Tensor()
+
+    X_test = torch.Tensor()
+    y_test = torch.Tensor()
 
     # Now you can iterate over train_loader and test_loader
     for images, labels in train_loader:
-        X = torch.concat((X, images))
-        y = torch.concat((y, labels))
+        X_train = torch.concat((X_train, images))
+        y_train = torch.concat((y_train, labels))
 
     for images, labels in test_loader:
-        X = torch.concat((X, images))
-        y = torch.concat((y, labels))
+        X_test = torch.concat((X_test, images))
+        y_test = torch.concat((y_test, labels))
 
     # Convert tensors to numpy arrays
-    X_np = X.numpy()
-    y_np = y.numpy()
+    X_train = X_train.numpy()
+    X_test = X_test.numpy()
+    y_train = y_train.numpy()
+    y_test = y_test.numpy()
+    X_np = np.concatenate((X_train, X_test))
+    y_np = np.concatenate((y_train, y_test))
 
     # Save as NPZ
-    np.savez(path_project + f"/data/mvtec_ad/MVTec-AD_{category}.npz", X=X_np, y=y_np)
+    output_path = path_project + f"/data/mvtec_ad_imgsize={imagesize}"
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+    np.savez(os.path.join(output_path, f"MVTec-AD_{category}.npz"), X=X_np, y=y_np, X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test)
 
 
 path_project = '/home/yukina/Missile_Fault_Detection/project'
+
+resize = 32
+imagesize = 32
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD = [0.229, 0.224, 0.225]
 # Define a transform to apply to each image
 transform = transforms.Compose([
-    transforms.Resize((32, 32)),
+    transforms.Resize(resize),
+    # transforms.CenterCrop(imagesize),
     transforms.ToTensor(),
+    # transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
 ])
 
 # Create the dataset
@@ -91,6 +108,6 @@ root_dir = path_project + '/data/mvtec_ad_raw'
 category_list = ['bottle', 'cable', 'capsule', 'carpet', 'grid', 'hazelnut', 'leather',
                  'metal_nut', 'pill', 'screw', 'tile', 'toothbrush', 'transistor', 'wood', 'zipper']
 for category in tqdm(category_list):
-    generate_dataset(root_dir, category, transform)
+    generate_dataset(root_dir, category, transform, imagesize)
 
 print('Data generate complete.')

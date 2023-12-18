@@ -26,7 +26,7 @@ def build_network(net_name, input_size ,ae_net=None):
         net = CIFAR10_LeNet_1()
 
     else:
-        net = MLP(x_dim=input_size, h_dims=[100, 20], rep_dim=10, bias=False)
+        net = MLP(x_dim=input_size, h_dims=[128, 64], rep_dim=32, bias=False)
 
     return net
 
@@ -47,6 +47,6 @@ def build_autoencoder(net_name, input_size):
         ae_net = CIFAR10_LeNet_1_Autoencoder()
 
     else:
-        ae_net = MLP_Autoencoder(x_dim=input_size, h_dims=[100, 20], rep_dim=10, bias=False)
+        ae_net = MLP_Autoencoder(x_dim=input_size, h_dims=[128, 64], rep_dim=32, bias=False)
 
     return ae_net

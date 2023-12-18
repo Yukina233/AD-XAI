@@ -215,7 +215,7 @@ class DataGenerator():
 
         return X, y
 
-    def generator(self, X=None, y=None, minmax=True,
+    def generator(self, X=None, y=None, X_train=None, y_train=None, X_test=None, y_test=None, minmax=True,
                   la=None, at_least_one_labeled=False,
                   realistic_synthetic_mode=None, alpha:int=5, percentage:float=0.1,
                   noise_type=None, duplicate_times:int=2, contam_ratio=1.00, noise_ratio:float=0.05):
@@ -227,116 +227,109 @@ class DataGenerator():
         # set seed for reproducible results
         self.utils.set_seed(self.seed)
 
-        # load dataset
-        if self.dataset is None:
-            assert X is not None and y is not None, "For customized dataset, you should provide the X and y!"
-            print('Testing on customized dataset...')
-        else:
-            if self.dataset in self.dataset_list_classical:
-                data = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Classical', self.dataset + '.npz'), allow_pickle=True)
-            elif self.dataset in self.dataset_list_cv:
-                data = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'CV_by_ResNet18', self.dataset + '.npz'), allow_pickle=True)
-            elif self.dataset in self.dataset_list_nlp:
-                data = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'NLP_by_BERT', self.dataset + '.npz'), allow_pickle=True)
+
+        if X_train is None or y_train is None or X_test is None or y_test is None:
+            # load dataset
+            if self.dataset is None:
+                assert X is not None and y is not None, "For customized dataset, you should provide the X and y!"
+                print('Testing on customized dataset...')
+            else:
+                if self.dataset in self.dataset_list_classical:
+                    data = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Classical', self.dataset + '.npz'), allow_pickle=True)
+                elif self.dataset in self.dataset_list_cv:
+                    data = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'CV_by_ResNet18', self.dataset + '.npz'), allow_pickle=True)
+                elif self.dataset in self.dataset_list_nlp:
+                    data = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'NLP_by_BERT', self.dataset + '.npz'), allow_pickle=True)
+                else:
+                    raise NotImplementedError
+
+                X = data['X']
+                y = data['y']
+
+            # number of labeled anomalies in the original data
+            if type(la) == float:
+                if at_least_one_labeled:
+                    n_labeled_anomalies = ceil(sum(y) * (1 - self.test_size) * la)
+                else:
+                    n_labeled_anomalies = int(sum(y) * (1 - self.test_size) * la)
+            elif type(la) == int:
+                n_labeled_anomalies = la
             else:
                 raise NotImplementedError
 
-            X = data['X']
-            y = data['y']
+            # if the dataset is too small, generating duplicate smaples up to n_samples_threshold
+            if len(y) < self.n_samples_threshold and self.generate_duplicates:
+                print(f'generating duplicate samples for dataset {self.dataset}...')
+                self.utils.set_seed(self.seed)
+                idx_duplicate = np.random.choice(np.arange(len(y)), self.n_samples_threshold, replace=True)
+                X = X[idx_duplicate]
+                y = y[idx_duplicate]
 
-        # number of labeled anomalies in the original data
-        if type(la) == float:
-            if at_least_one_labeled:
-                n_labeled_anomalies = ceil(sum(y) * (1 - self.test_size) * la)
-            else:
-                n_labeled_anomalies = int(sum(y) * (1 - self.test_size) * la)
-        elif type(la) == int:
-            n_labeled_anomalies = la
-        else:
-            raise NotImplementedError
+            # if the dataset is too large, subsampling for considering the computational cost
+            if len(y) > 10000:
+                print(f'subsampling for dataset {self.dataset}...')
+                self.utils.set_seed(self.seed)
+                idx_sample = np.random.choice(np.arange(len(y)), 10000, replace=False)
+                X = X[idx_sample]
+                y = y[idx_sample]
 
-        # if the dataset is too small, generating duplicate smaples up to n_samples_threshold
-        if len(y) < self.n_samples_threshold and self.generate_duplicates:
-            print(f'generating duplicate samples for dataset {self.dataset}...')
-            self.utils.set_seed(self.seed)
-            idx_duplicate = np.random.choice(np.arange(len(y)), self.n_samples_threshold, replace=True)
-            X = X[idx_duplicate]
-            y = y[idx_duplicate]
+            # whether to generate realistic synthetic outliers
+            if realistic_synthetic_mode is not None:
+                # we save the generated dependency anomalies, since the Vine Copula could spend too long for generation
+                if realistic_synthetic_mode == 'dependency':
+                    filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'synthetic')
+                    filename = 'dependency_anomalies_' + self.dataset + '_' + str(self.seed) + '.npz'
 
-        # if the dataset is too large, subsampling for considering the computational cost
-        if len(y) > 10000:
-            print(f'subsampling for dataset {self.dataset}...')
-            self.utils.set_seed(self.seed)
-            idx_sample = np.random.choice(np.arange(len(y)), 10000, replace=False)
-            X = X[idx_sample]
-            y = y[idx_sample]
+                    if not os.path.exists(filepath):
+                        os.makedirs(filepath)
+                    try:
+                        data_dependency = np.load(os.path.join(filepath, filename), allow_pickle=True)
+                        X = data_dependency['X']; y = data_dependency['y']
+                    except:
+                        # raise NotImplementedError
+                        print(f'Generating dependency anomalies...')
+                        X, y = self.generate_realistic_synthetic(X, y,
+                                                                 realistic_synthetic_mode=realistic_synthetic_mode,
+                                                                 alpha=alpha, percentage=percentage)
+                        np.savez_compressed(os.path.join(filepath, filename), X=X, y=y)
+                        pass
 
-        # whether to generate realistic synthetic outliers
-        if realistic_synthetic_mode is not None:
-            # we save the generated dependency anomalies, since the Vine Copula could spend too long for generation
-            if realistic_synthetic_mode == 'dependency':
-                filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'synthetic')
-                filename = 'dependency_anomalies_' + self.dataset + '_' + str(self.seed) + '.npz'
-
-                if not os.path.exists(filepath):
-                    os.makedirs(filepath)
-                try:
-                    data_dependency = np.load(os.path.join(filepath, filename), allow_pickle=True)
-                    X = data_dependency['X']; y = data_dependency['y']
-                except:
-                    # raise NotImplementedError
-                    print(f'Generating dependency anomalies...')
+                else:
                     X, y = self.generate_realistic_synthetic(X, y,
                                                              realistic_synthetic_mode=realistic_synthetic_mode,
                                                              alpha=alpha, percentage=percentage)
-                    np.savez_compressed(os.path.join(filepath, filename), X=X, y=y)
-                    pass
+
+            # whether to add different types of noise for testing the robustness of benchmark models
+            if noise_type is None:
+                pass
+
+            elif noise_type == 'duplicated_anomalies':
+                # X, y = self.add_duplicated_anomalies(X, y, duplicate_times=duplicate_times)
+                pass
+
+            elif noise_type == 'irrelevant_features':
+                X, y = self.add_irrelevant_features(X, y, noise_ratio=noise_ratio)
+
+            elif noise_type == 'label_contamination':
+                pass
 
             else:
-                X, y = self.generate_realistic_synthetic(X, y,
-                                                         realistic_synthetic_mode=realistic_synthetic_mode,
-                                                         alpha=alpha, percentage=percentage)
+                raise NotImplementedError
 
-        # whether to add different types of noise for testing the robustness of benchmark models
-        if noise_type is None:
-            pass
+            print(f'current noise type: {noise_type}')
 
-        elif noise_type == 'duplicated_anomalies':
-            # X, y = self.add_duplicated_anomalies(X, y, duplicate_times=duplicate_times)
-            pass
+            # show the statistic
+            self.utils.data_description(X=X, y=y)
 
-        elif noise_type == 'irrelevant_features':
-            X, y = self.add_irrelevant_features(X, y, noise_ratio=noise_ratio)
+            # spliting the current data to the training set and testing set
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_size, shuffle=True, stratify=y)
 
-        elif noise_type == 'label_contamination':
-            pass
-
-        else:
-            raise NotImplementedError
-
-        print(f'current noise type: {noise_type}')
-
-        # show the statistic
-        self.utils.data_description(X=X, y=y)
-
-
-        # 分离出 y=0 的样本和其它样本
-        X_zero = X[y == 0]
-        y_zero = y[y == 0]
-        X_non_zero = X[y != 0]
-        y_non_zero = y[y != 0]
-        # 只对 y=0 的样本进行训练集和测试集的划分
-        X_zero_train, X_zero_test, y_zero_train, y_zero_test = train_test_split(
-            X_zero, y_zero, test_size=self.test_size, shuffle=True, stratify=y)
-        # 将 y=0 的训练集与 y 不为0的样本合并，形成最终的训练集
-        X_train = X_zero_train
-        y_train = y_zero_train
-        # y=0 的测试集就是您原本想要的测试集
-        X_test = np.concatenate(X_zero_test, X_non_zero)
-        y_test = np.concatenate(y_zero_test, y_non_zero)
-
-        # spliting the current data to the training set and testing set
-        # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_size, shuffle=True, stratify=y)
+        if len(y_train) < self.n_samples_threshold and self.generate_duplicates:
+            print(f'generating duplicate samples for dataset {self.dataset}...')
+            self.utils.set_seed(self.seed)
+            idx_duplicate = np.random.choice(np.arange(len(y_train)), self.n_samples_threshold, replace=True)
+            X_train = X_train[idx_duplicate]
+            y_train = y_train[idx_duplicate]
 
         # we respectively generate the duplicated anomalies for the training and testing set
         if noise_type == 'duplicated_anomalies':

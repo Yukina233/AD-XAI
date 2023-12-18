@@ -37,7 +37,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 #     df_output.to_csv(os.path.join(result_path, 'AUCROC_grouped.csv'), index=False)
 
 # 合并输出每个类的结果
-base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/extra', 'DeepSAD_cutmix,lamda=0.85,aux_size=1')
+base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/n_samples_threshold=1000,imgsize=224', 'DeepSAD_origin')
 result_names = os.listdir(base_dir)
 
 suffix = 'DeepSAD'

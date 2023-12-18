@@ -14,9 +14,10 @@ class DeepSADTrainer(BaseTrainer):
 
     def __init__(self, c, eta: float, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 150,
                  lr_milestones: tuple = (), batch_size: int = 128, weight_decay: float = 1e-6, device: str = 'cuda',
-                 n_jobs_dataloader: int = 0):
+                 n_jobs_dataloader: int = 0, ae_dataset: BaseADDataset = None):
         super().__init__(optimizer_name, lr, n_epochs, lr_milestones, batch_size, weight_decay, device,
                          n_jobs_dataloader)
+        self.ae_dataset = ae_dataset
 
         # Deep SAD parameters
         self.c = torch.tensor(c, device=self.device) if c is not None else None
@@ -37,6 +38,7 @@ class DeepSADTrainer(BaseTrainer):
         # Get train data loader
         train_loader = dataset.loaders(batch_size=self.batch_size, num_workers=self.n_jobs_dataloader)
 
+
         # Set device for network
         net = net.to(self.device)
 
@@ -49,7 +51,8 @@ class DeepSADTrainer(BaseTrainer):
         # Initialize hypersphere center c (if c not loaded)
         if self.c is None:
             logger.info('Initializing center c...')
-            self.c = self.init_center_c(train_loader, net)
+            ae_train_loader = self.ae_dataset.loaders(batch_size=self.batch_size, num_workers=self.n_jobs_dataloader)
+            self.c = self.init_center_c(ae_train_loader, net)
             logger.info('Center c initialized.')
 
         # Training

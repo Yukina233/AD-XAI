@@ -259,12 +259,16 @@ class RunPipeline:
         if dataset is None:
             #  filteting dataset that does not meet the experimental requirements
             dataset_list = self.dataset_filter()
-            X, y = None, None
+            X, y, X_train, y_train, X_test, y_test = None, None, None, None, None, None
         else:
             isinstance(dataset, dict)
             dataset_list = [None]
             X = dataset['X']
             y = dataset['y']
+            X_train = dataset['X_train']
+            y_train = dataset['y_train']
+            X_test = dataset['X_test']
+            y_test = dataset['y_test']
 
         # experimental parameters
         if self.mode == 'nla':
@@ -312,18 +316,26 @@ class RunPipeline:
             try:
                 if self.noise_type == 'duplicated_anomalies':
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode,
                                                               noise_type=self.noise_type, duplicate_times=noise_param)
                 elif self.noise_type == 'irrelevant_features':
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode,
                                                               noise_type=self.noise_type, noise_ratio=noise_param)
                 elif self.noise_type == 'label_contamination':
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode,
                                                               noise_type=self.noise_type, noise_ratio=noise_param)
                 else:
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode)
 
             except Exception as error:
@@ -396,6 +408,14 @@ class RunPipeline:
         dataset_list = [None]
         X = target_dataset['X']
         y = target_dataset['y']
+        X_train = None
+        y_train = None
+        X_test = None
+        y_test = None
+        # X_train = target_dataset['X_train']
+        # y_train = target_dataset['y_train']
+        # X_test = target_dataset['X_test']
+        # y_test = target_dataset['y_test']
 
         # experimental parameters
         if self.mode == 'nla':
@@ -438,18 +458,25 @@ class RunPipeline:
             try:
                 if self.noise_type == 'duplicated_anomalies':
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode,
                                                               noise_type=self.noise_type, duplicate_times=noise_param)
                 elif self.noise_type == 'irrelevant_features':
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode,
                                                               noise_type=self.noise_type, noise_ratio=noise_param)
                 elif self.noise_type == 'label_contamination':
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode,
                                                               noise_type=self.noise_type, noise_ratio=noise_param)
                 else:
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode)
 
             except Exception as error:
@@ -546,14 +573,14 @@ class RunPipeline:
 # For test use
 if __name__ == '__main__':
     seed = 1
-    aug_type = 'cutmix'
-    lamda = 0.95
+    aug_type = 'citmix'
+    lamda = 0.85
     aux_size = 1
-    use_preprocess = True
+    use_preprocess = False
 
     path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-    category = 'MVTec-AD_grid'
+    category = 'MVTec-AD_metal_nut'
     dataset_path = os.path.join(path_project, f'data/mvtec_ad/{category}.npz')
 
     path_save = os.path.join(path_project, 'auxiliary_data_AD/log/test',

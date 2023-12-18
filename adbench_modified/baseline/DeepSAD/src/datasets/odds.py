@@ -28,7 +28,7 @@ class ODDSADDataset(BaseADDataset):
 
         if self.train:
             train_loader = DataLoader(dataset=self.train_set, batch_size=batch_size, shuffle=shuffle_train,
-                                      num_workers=num_workers, drop_last=True)
+                                      num_workers=num_workers, drop_last=False)
             return train_loader
         else:
             test_loader = DataLoader(dataset=self.test_set, batch_size=batch_size, shuffle=shuffle_test,

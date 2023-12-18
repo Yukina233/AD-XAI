@@ -17,10 +17,11 @@ timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
 seed = 5
 aug_type = 'cutmix'
-lamda = 0.85
+lamda = 0.8
 aux_size = 1
 use_preprocess = False
-noise_type = 'label_contamination'
+noise_type = None
+n_samples_threshold = 0
 
 # 遍历所有数据集文件
 for dataset_path in tqdm(dataset_files):
@@ -28,13 +29,13 @@ for dataset_path in tqdm(dataset_files):
     base_name = os.path.basename(dataset_path).replace('.npz', '')
     # 创建结果文件夹路径
 
-    path_save = os.path.join(path_project, 'auxiliary_data_AD/log/extra',
+    path_save = os.path.join(path_project, f'auxiliary_data_AD/log/n_samples_threshold = {n_samples_threshold}',
                              f'DeepSAD_{aug_type},lamda={lamda},aux_size={aux_size}',
                              base_name)
     os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 
     # 实例化并运行pipeline
-    pipeline = RunPipeline(suffix='DeepSAD', parallel='unsupervise', n_samples_threshold=200, seed=seed,
+    pipeline = RunPipeline(suffix='DeepSAD', parallel='unsupervise', n_samples_threshold=n_samples_threshold, seed=seed,
                            realistic_synthetic_mode=None,
                            noise_type=noise_type, path_result=path_save)
     results = pipeline.run_universum(clf=DeepSAD, target_dataset_name=base_name,

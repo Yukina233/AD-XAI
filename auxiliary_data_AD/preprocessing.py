@@ -61,8 +61,7 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class MVTecDataset(Dataset):
-    def __init__(self, npz_file):
-        data = np.load(npz_file, allow_pickle=True)
+    def __init__(self, data):
         self.X = data['X']
         self.y = data['y']
 
@@ -73,35 +72,78 @@ class MVTecDataset(Dataset):
         return self.X[idx], self.y[idx]
 
 
-def embedding_MVTec_AD(encoder=None, batch_size=16, dataset_name=None, plot=True,
+def embedding_MVTec_AD(encoder=None, batch_size=4, dataset_name=None, plot=True,
                        path_datasets=None, output_path=None):
     fig = plt.figure(figsize=(14, 8))
     # 加载所有的数据集
     n = 0
-    for filename in os.listdir(path_datasets):
+    for filename in tqdm(os.listdir(path_datasets)):
         data_name = filename.split('.')[0]
-        dataset = MVTecDataset(npz_file=os.path.join(path_datasets, filename))
+        npz_file = os.path.join(path_datasets, filename)
+        data_all = np.load(npz_file, allow_pickle=True)
+        data_train = {
+            'X': data_all['X_train'],
+            'y': data_all['y_train']
+        }
+        data_test = {
+            'X': data_all['X_test'],
+            'y': data_all['y_test']
+        }
+        dataset = MVTecDataset(data_all)
+        dataset_train = MVTecDataset(data_train)
+        dataset_test = MVTecDataset(data_test)
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
         train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
+        test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
 
         # encoder for extracting embedding
         encoder.eval()
 
-        embeddings = []
+        X_embeddings = []
+        X_train_embeddings = []
+        X_test_embeddings = []
+
         labels = []
+        labels_train = []
+        labels_test = []
+
         with torch.no_grad():
-            for i, data in enumerate(tqdm(train_loader)):
+            for i, data in enumerate(data_loader):
                 X, y = data
                 X = X.to(device)
 
-                embeddings.append(encoder(X).squeeze().cpu().numpy())
+                X_embeddings.append(encoder(X).squeeze().cpu().numpy())
                 labels.append(y.numpy())
 
-        X = np.vstack(embeddings)
+        with torch.no_grad():
+            for i, data in enumerate(train_loader):
+                X_train, y_train = data
+                X_train = X_train.to(device)
+
+                X_train_embeddings.append(encoder(X_train).squeeze().cpu().numpy())
+                labels_train.append(y_train.numpy())
+
+        with torch.no_grad():
+            for i, data in enumerate(test_loader):
+                X_test, y_test = data
+                X_test = X_test.to(device)
+
+                X_test_embeddings.append(encoder(X_test).squeeze().cpu().numpy())
+                labels_test.append(y_test.numpy())
+
+        X = np.vstack(X_embeddings)
         y = np.hstack(labels)
+        X_train = np.vstack(X_train_embeddings)
+        y_train = np.hstack(labels_train)
+        X_test = np.vstack(X_test_embeddings)
+        y_test = np.hstack(labels_test)
+
 
         print(
             f'Class: {data_name}, Samples: {len(y)}, Anomalies: {sum(y)}, Anomaly Ratio(%): {round(sum(y) / len(y) * 100, 2)}')
-        np.savez_compressed(os.path.join(output_path, data_name + '.npz'), X=X, y=y)
+        if not os.path.isdir(output_path):
+            os.mkdir(output_path)
+        np.savez_compressed(os.path.join(output_path, data_name + '.npz'), X=X, y=y, X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test)
 
         if plot:
             fig.add_subplot(3, 5, n + 1)
@@ -117,15 +159,14 @@ def embedding_MVTec_AD(encoder=None, batch_size=16, dataset_name=None, plot=True
 
     plt.subplots_adjust(wspace=0.4, hspace=0.5)
     plt.suptitle(f'Dataset: {dataset_name}', y=0.98, fontsize=16)
-    plt.show()
-
+    plt.savefig(os.path.join(output_path, f'TSNE.png'))
 
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 set_seed(42)
 encoder_name = 'ResNet-18'
 
 if encoder_name == 'ResNet-18':
-    img_size = 32
+    imgsize = 224
 
     # resnet18 pretrained on the ImageNet (embedding dimension: 512)
     encoder = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
@@ -144,5 +185,5 @@ else:
     raise NotImplementedError
 
 embedding_MVTec_AD(encoder=encoder,
-                   path_datasets=path_project + '/data/mvtec_ad',
-                   output_path=path_project + '/data/mvtec_ad_preprocess')
+                   path_datasets=path_project + '/data/mvtec_ad_imgsize=224',
+                   output_path=path_project + f'/data/mvtec_ad_preprocessed_{encoder_name}_imgsize={imgsize}')

@@ -24,8 +24,9 @@ class deepsad(object):
         ae_results: A dictionary to save the autoencoder results.
     """
 
-    def __init__(self, eta: float = 1.0):
+    def __init__(self, eta: float = 1.0, ae_dataset: BaseADDataset = None):
         """Inits DeepSAD with hyperparameter eta."""
+        self.ae_dataset = ae_dataset
 
         self.eta = eta
         self.c = None  # hypersphere center c
@@ -68,7 +69,7 @@ class deepsad(object):
         self.optimizer_name = optimizer_name
         self.trainer = DeepSADTrainer(self.c, self.eta, optimizer_name=optimizer_name, lr=lr, n_epochs=n_epochs,
                                       lr_milestones=lr_milestones, batch_size=batch_size, weight_decay=weight_decay,
-                                      device=device, n_jobs_dataloader=n_jobs_dataloader)
+                                      device=device, n_jobs_dataloader=n_jobs_dataloader, ae_dataset=self.ae_dataset)
         # Get the model
         self.net = self.trainer.train(dataset, self.net)
         self.results['train_time'] = self.trainer.train_time

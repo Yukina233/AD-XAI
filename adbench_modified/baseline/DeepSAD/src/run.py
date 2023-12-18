@@ -37,6 +37,7 @@ class DeepSAD():
         self.num_threads = 0
         self.n_jobs_dataloader = 0
 
+
     def fit(self, X_train, y_train, ratio=None):
         """
         Deep SAD, a method for deep semi-supervised anomaly detection.
@@ -58,11 +59,13 @@ class DeepSAD():
 
         # Load data
         data = {'X_train': X_train, 'y_train': y_train}
+        normal_train_data = {'X_train': X_train[y_train == 0], 'y_train': y_train[y_train == 0]}
         dataset = load_dataset(data=data, train=True)
+        ae_dataset = load_dataset(data=normal_train_data, train=True)
         input_size = dataset.train_set.data.size(1)  # input size
 
         # Initialize DeepSAD model and set neural network phi
-        self.deepSAD = deepsad(self.eta)
+        self.deepSAD = deepsad(self.eta, ae_dataset)
 
         if X_train.ndim == 2:
             # 对应use_preprocess==True时，即pretrain_encoder=ResNet18
@@ -82,7 +85,7 @@ class DeepSAD():
         logging.info('Pretraining: %s' % self.pretrain)
         if self.pretrain:
             # Pretrain model on dataset (via autoencoder)
-            self.deepSAD.pretrain(dataset,
+            self.deepSAD.pretrain(ae_dataset,
                                   input_size,
                                   optimizer_name=self.ae_optimizer_name,
                                   lr=self.ae_lr,
