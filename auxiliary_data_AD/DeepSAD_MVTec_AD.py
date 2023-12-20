@@ -13,10 +13,17 @@ import glob
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 seed = 5
-n_samples_threshold = 1000
+n_samples_threshold = 0
 imagesize = 224
+encoder_name = 'resnet50'
+layers = ['layer1', 'layer2', 'layer3']
 # 获取所有以'MVTec_AD'开头的数据集文件路径
-dataset_files = glob.glob(os.path.join(path_project, 'data/mvtec_ad_preprocessed_ResNet-18_imgsize=224/MVTec-AD*.npz'))
+if layers == ['avgpool']:
+    layers_name = ''
+else:
+    layers_name = layers.__str__().replace('[', '').replace(']', '').replace(' ', '').replace('\'', '')
+data_path = path_project + f'/data/mvtec_ad_preprocessed_{encoder_name}_{layers_name}_imgsize={imagesize}'
+dataset_files = glob.glob(data_path + '/MVTec-AD*.npz')
 timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
 # 遍历所有数据集文件
@@ -25,7 +32,7 @@ for dataset_path in tqdm(dataset_files):
     base_name = os.path.basename(dataset_path).replace('.npz', '')
     # 创建结果文件夹路径
 
-    path_save = os.path.join(path_project, f'auxiliary_data_AD/log/n_samples_threshold={n_samples_threshold},imgsize={imagesize}', 'DeepSAD_origin', base_name)
+    path_save = os.path.join(path_project, f'auxiliary_data_AD/log/n_samples_threshold={n_samples_threshold},imgsize={imagesize}', f'DeepSAD_origin_{encoder_name}_{layers_name}', base_name)
     os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 
     # 加载数据集

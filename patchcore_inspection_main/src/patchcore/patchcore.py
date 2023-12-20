@@ -52,7 +52,7 @@ class PatchCore(torch.nn.Module):
         feature_dimensions = feature_aggregator.feature_dimensions(input_shape)
         self.forward_modules["feature_aggregator"] = feature_aggregator
 
-        # 将提取的特征映射到预训练的嵌入维度
+        # 将提取的特征映射从多个维度例如(1024, 3, 3)映射到预训练的一个嵌入维度(1024)
         preprocessing = patchcore.common.Preprocessing(
             feature_dimensions, pretrain_embed_dimension
         )
@@ -103,15 +103,15 @@ class PatchCore(torch.nn.Module):
             features = self.forward_modules["feature_aggregator"](images)
 
         features = [features[layer] for layer in self.layers_to_extract_from]
-
+        # features: [(2,512,28,28), (2,1024,14,14)]
         features = [
             self.patch_maker.patchify(x, return_spatial_info=True) for x in features
         ]
 
         patch_shapes = [x[1] for x in features]
         features = [x[0] for x in features]
-        # features: [(2,784,512,3,3), (2,196,1024,3,3)]
-
+        # patch_shapes: [[28,28], [14,14]]
+        # features: [(2,28*28,512,3,3), (2,14*14,1024,3,3)]
         ref_num_patches = patch_shapes[0]
 
         for i in range(1, len(features)):
@@ -308,18 +308,22 @@ class PatchMaker:
         unfolder = torch.nn.Unfold(
             kernel_size=self.patchsize, stride=self.stride, padding=padding, dilation=1
         )
+        # features: (2,512,28,28)
         unfolded_features = unfolder(features)
+        # unfolded_features: (2,512*9,784)
         number_of_total_patches = []
         for s in features.shape[-2:]:
             n_patches = (
                 s + 2 * padding - 1 * (self.patchsize - 1) - 1
             ) / self.stride + 1
             number_of_total_patches.append(int(n_patches))
+        # number_of_total_patches: [28,28]
         unfolded_features = unfolded_features.reshape(
             *features.shape[:2], self.patchsize, self.patchsize, -1
         )
+        # unfolded_features: (2,512,3,3,784)
         unfolded_features = unfolded_features.permute(0, 4, 1, 2, 3)
-
+        # unfolded_features: (2,784,512,3,3)
         if return_spatial_info:
             return unfolded_features, number_of_total_patches
         return unfolded_features

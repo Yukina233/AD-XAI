@@ -157,6 +157,8 @@ class Preprocessing(torch.nn.Module):
         _features = []
         for module, feature in zip(self.preprocessing_modules, features):
             _features.append(module(feature))
+        # features: {(1568, 512, 3, 3), (1568, 1024, 3, 3)}
+        # _features: {(1568, 1024), (1568, 1024)}
         return torch.stack(_features, dim=1)
 
 
@@ -167,7 +169,9 @@ class MeanMapper(torch.nn.Module):
 
     def forward(self, features):
         features = features.reshape(len(features), 1, -1)
+        # features: (1568, 1, 512 * 3 * 3）
         return F.adaptive_avg_pool1d(features, self.preprocessing_dim).squeeze(1)
+        # return: (1568, 1024)
 
 
 class Aggregator(torch.nn.Module):

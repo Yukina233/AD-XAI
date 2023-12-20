@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
+from torch.nn import AdaptiveAvgPool2d
 from tqdm import tqdm
 import random
 from random import shuffle
@@ -72,9 +73,32 @@ class MVTecDataset(Dataset):
         return self.X[idx], self.y[idx]
 
 
-def embedding_MVTec_AD(encoder=None, batch_size=4, dataset_name=None, plot=True,
+def embedding_MVTec_AD(encoder_name='resnet18', layers=['avgpool'], interpolate=False, batch_size=4, dataset_name=None,
+                       plot=True,
                        path_datasets=None, output_path=None):
+    outputs = {}
+    encoder = torch.hub.load('pytorch/vision:v0.10.0', encoder_name, pretrained=True)
+
+    def get_embedding(layer_name):
+        def hook(module, input, output):
+            outputs[str(layer_name)] = output.detach()
+
+        return hook
+
+    # Register the hook on the first and second layer
+    for layer in layers:
+        if layer == 'avgpool':
+            encoder.avgpool.register_forward_hook(get_embedding(layer))
+        else:
+            encoder.__dict__["_modules"][layer][-1].register_forward_hook(get_embedding(layer))
+
+    encoder = nn.Sequential(*list(encoder.children())[:-1])
+    encoder.to(device)
+    avgpool = AdaptiveAvgPool2d(output_size=(1, 1))
+    avgpool.to(device)
+
     fig = plt.figure(figsize=(14, 8))
+
     # 加载所有的数据集
     n = 0
     for filename in tqdm(os.listdir(path_datasets)):
@@ -93,8 +117,8 @@ def embedding_MVTec_AD(encoder=None, batch_size=4, dataset_name=None, plot=True,
         dataset_train = MVTecDataset(data_train)
         dataset_test = MVTecDataset(data_test)
         data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
-        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
-        test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
+        train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
+        test_loader = DataLoader(dataset_test, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
 
         # encoder for extracting embedding
         encoder.eval()
@@ -107,29 +131,30 @@ def embedding_MVTec_AD(encoder=None, batch_size=4, dataset_name=None, plot=True,
         labels_train = []
         labels_test = []
 
-        with torch.no_grad():
-            for i, data in enumerate(data_loader):
-                X, y = data
-                X = X.to(device)
+        def generate_embedding(data_loader, embedding_list, label_list):
+            with torch.no_grad():
+                for i, data in enumerate(data_loader):
+                    outputs.clear()
+                    X, y = data
+                    X = X.to(device)
 
-                X_embeddings.append(encoder(X).squeeze().cpu().numpy())
-                labels.append(y.numpy())
+                    encoder(X)
+                    if interpolate:
+                        shallow_embed_size = [outputs[layer] for layer in layers][0].shape
+                        embedding = torch.cat([
+                            F.interpolate(outputs[layer],
+                                          size=(shallow_embed_size[-2], shallow_embed_size[-1]),
+                                          mode="bilinear",
+                                          align_corners=False) for layer in layers], dim=1)
+                        embedding = avgpool(embedding)
+                    else:
+                        embedding = torch.cat([avgpool(outputs[layer]) for layer in layers], dim=1)
+                    embedding_list.append(embedding.squeeze().cpu().numpy())
+                    label_list.append(y.numpy())
 
-        with torch.no_grad():
-            for i, data in enumerate(train_loader):
-                X_train, y_train = data
-                X_train = X_train.to(device)
-
-                X_train_embeddings.append(encoder(X_train).squeeze().cpu().numpy())
-                labels_train.append(y_train.numpy())
-
-        with torch.no_grad():
-            for i, data in enumerate(test_loader):
-                X_test, y_test = data
-                X_test = X_test.to(device)
-
-                X_test_embeddings.append(encoder(X_test).squeeze().cpu().numpy())
-                labels_test.append(y_test.numpy())
+        generate_embedding(data_loader, X_embeddings, labels)
+        generate_embedding(train_loader, X_train_embeddings, labels_train)
+        generate_embedding(test_loader, X_test_embeddings, labels_test)
 
         X = np.vstack(X_embeddings)
         y = np.hstack(labels)
@@ -138,12 +163,12 @@ def embedding_MVTec_AD(encoder=None, batch_size=4, dataset_name=None, plot=True,
         X_test = np.vstack(X_test_embeddings)
         y_test = np.hstack(labels_test)
 
-
         print(
             f'Class: {data_name}, Samples: {len(y)}, Anomalies: {sum(y)}, Anomaly Ratio(%): {round(sum(y) / len(y) * 100, 2)}')
         if not os.path.isdir(output_path):
             os.mkdir(output_path)
-        np.savez_compressed(os.path.join(output_path, data_name + '.npz'), X=X, y=y, X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test)
+        np.savez_compressed(os.path.join(output_path, data_name + '.npz'), X=X, y=y, X_train=X_train, y_train=y_train,
+                            X_test=X_test, y_test=y_test)
 
         if plot:
             fig.add_subplot(3, 5, n + 1)
@@ -161,29 +186,27 @@ def embedding_MVTec_AD(encoder=None, batch_size=4, dataset_name=None, plot=True,
     plt.suptitle(f'Dataset: {dataset_name}', y=0.98, fontsize=16)
     plt.savefig(os.path.join(output_path, f'TSNE.png'))
 
+
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 set_seed(42)
-encoder_name = 'ResNet-18'
+encoder_name = 'resnet50'
+layers = ['layer1', 'layer2', 'layer3']
+imgsize = 224
+interpolate = False
+path_datasets = path_project + f'/data/mvtec_ad_imgsize={imgsize}'
 
-if encoder_name == 'ResNet-18':
-    imgsize = 224
-
-    # resnet18 pretrained on the ImageNet (embedding dimension: 512)
-    encoder = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
-    encoder = nn.Sequential(*list(encoder.children())[:-1])
-    encoder.to(device)
-
-# elif encoder_name == 'ViT':
-#   img_size = 384
-#
-#   # Load ViT
-#   from pytorch_pretrained_vit import ViT
-#   encoder = ViT('B_16_imagenet1k', pretrained=True)
-#   encoder.to(device)
-
+if layers == ['avgpool']:
+    layers_name = ''
 else:
-    raise NotImplementedError
+    layers_name = layers.__str__().replace('[', '').replace(']', '').replace(' ', '').replace('\'', '')
 
-embedding_MVTec_AD(encoder=encoder,
-                   path_datasets=path_project + '/data/mvtec_ad_imgsize=224',
-                   output_path=path_project + f'/data/mvtec_ad_preprocessed_{encoder_name}_imgsize={imgsize}')
+if interpolate:
+    output_path = path_project + f'/data/interpolate/mvtec_ad_preprocessed_{encoder_name}_{layers_name}_imgsize={imgsize}'
+else:
+    output_path = path_project + f'/data/mvtec_ad_preprocessed_{encoder_name}_{layers_name}_imgsize={imgsize}'
+
+embedding_MVTec_AD(encoder_name=encoder_name,
+                   layers=layers,
+                   interpolate=interpolate,
+                   path_datasets=path_datasets,
+                   output_path=output_path)

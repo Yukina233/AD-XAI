@@ -37,61 +37,72 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 #     df_output.to_csv(os.path.join(result_path, 'AUCROC_grouped.csv'), index=False)
 
 # 合并输出每个类的结果
-base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/n_samples_threshold=1000,imgsize=224', 'DeepSAD_origin')
-result_names = os.listdir(base_dir)
 
-suffix = 'DeepSAD'
-noise_type = None
-group_seed_num = 5
-classes_output = []
-aucroc_output = []
-for result_name in result_names:
-    if 'MVTec-AD' not in result_name:
-        continue
-    result_path = os.path.join(base_dir, result_name)
-    csv_path = os.path.join(result_path, f'AUCROC_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
-    df = pd.read_csv(csv_path)
-    count = 0
-    values = []
-    for index, row in df.iterrows():
-        aucroc = row['Customized']
-        if math.isnan(aucroc):
+def group_results(base_dir):
+    result_names = os.listdir(base_dir)
+
+    suffix = 'DeepSAD'
+    noise_type = None
+    group_seed_num = 5
+    classes_output = []
+    aucroc_output = []
+    for result_name in result_names:
+        if 'MVTec-AD' not in result_name:
             continue
-        count += 1
-        values.append(aucroc)
-        if count == group_seed_num:
-            classes_output.append(result_name)
-            aucroc_output.append(np.mean(values))
-            count = 0
-            values = []
+        result_path = os.path.join(base_dir, result_name)
+        csv_path = os.path.join(result_path, f'AUCROC_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
+        df = pd.read_csv(csv_path)
+        count = 0
+        values = []
+        for index, row in df.iterrows():
+            aucroc = row['Customized']
+            if math.isnan(aucroc):
+                continue
+            count += 1
+            values.append(aucroc)
+            if count == group_seed_num:
+                classes_output.append(result_name)
+                aucroc_output.append(np.mean(values))
+                count = 0
+                values = []
+    classes_output.append('mean')
+    aucroc_output.append(np.mean(aucroc_output))
 
-df_output = pd.DataFrame(data={'class': classes_output, 'aucroc': aucroc_output})
-df_output.to_csv(os.path.join(base_dir, f'AUCROC_{suffix}_grouped.csv'), index=False)
+    df_output = pd.DataFrame(data={'class': classes_output, 'aucroc': aucroc_output})
+    df_output.to_csv(os.path.join(base_dir, f'AUCROC_{suffix}_grouped.csv'), index=False)
 
-classes_output = []
-aucroc_output = []
-for result_name in result_names:
-    if 'MVTec-AD' not in result_name:
-        continue
-    result_path = os.path.join(base_dir, result_name)
-    csv_path = os.path.join(result_path, f'AUCPR_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
-    df = pd.read_csv(csv_path)
-    count = 0
-    values = []
-    for index, row in df.iterrows():
-        aucroc = row['Customized']
-        if math.isnan(aucroc):
+    classes_output = []
+    aucpr_output = []
+    for result_name in result_names:
+        if 'MVTec-AD' not in result_name:
             continue
-        count += 1
-        values.append(aucroc)
-        if count == group_seed_num:
-            classes_output.append(result_name)
-            aucroc_output.append(np.mean(values))
-            count = 0
-            values = []
+        result_path = os.path.join(base_dir, result_name)
+        csv_path = os.path.join(result_path, f'AUCPR_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
+        df = pd.read_csv(csv_path)
+        count = 0
+        values = []
+        for index, row in df.iterrows():
+            aucpr = row['Customized']
+            if math.isnan(aucpr):
+                continue
+            count += 1
+            values.append(aucpr)
+            if count == group_seed_num:
+                classes_output.append(result_name)
+                aucpr_output.append(np.mean(values))
+                count = 0
+                values = []
 
-df_output = pd.DataFrame(data={'class': classes_output, 'aucpr': aucroc_output})
-df_output.to_csv(os.path.join(base_dir, f'AUCRPR_{suffix}_grouped.csv'), index=False)
+    classes_output.append('mean')
+    aucpr_output.append(np.mean(aucpr_output))
 
-print("Group results finished!")
 
+    df_output = pd.DataFrame(data={'class': classes_output, 'aucpr': aucpr_output})
+    df_output.to_csv(os.path.join(base_dir, f'AUCRPR_{suffix}_grouped.csv'), index=False)
+
+    print("Group results finished!")
+
+layers = ['layer1,layer3', 'layer2,layer3', 'layer1,layer2,layer3']
+for layer in layers:
+    base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/interpolate/n_samples_threshold=0,imgsize=224', f'DeepSAD_origin_resnet50_{layer}')
+    group_results(base_dir)
