@@ -3,6 +3,8 @@ import random
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
+from numba import jit
+
 
 
 def rand_bbox(size, lam):
@@ -10,22 +12,33 @@ def rand_bbox(size, lam):
     W = size[1]
     H = size[2]
     cut_rat = np.sqrt(1. - lam)
-    cut_w = int(W * cut_rat)
-    cut_h = int(H * cut_rat)
+    cut_w = np.int32(W * cut_rat)
+    cut_h = np.int32(H * cut_rat)
 
+    # old code
     # uniform
-    cx = np.random.randint(W)
-    cy = np.random.randint(H)
+    # cx = np.random.randint(W)
+    # cy = np.random.randint(H)
 
-    bbx1 = np.clip(cx - cut_w // 2, 0, W)
-    bby1 = np.clip(cy - cut_h // 2, 0, H)
-    bbx2 = np.clip(cx + cut_w // 2, 0, W)
-    bby2 = np.clip(cy + cut_h // 2, 0, H)
+    # bbx1 = np.clip(cx - cut_w // 2, 0, W)
+    # bby1 = np.clip(cy - cut_h // 2, 0, H)
+    # bbx2 = np.clip(cx + cut_w // 2, 0, W)
+    # bby2 = np.clip(cy + cut_h // 2, 0, H)
+
+    cx = np.random.randint(cut_w // 2, W - cut_w // 2)
+    cy = np.random.randint(cut_h // 2, H - cut_h // 2)
+
+    bbx1 = cx - cut_w // 2
+    bby1 = cy - cut_h // 2
+    bbx2 = cx + cut_w // 2
+    bby2 = cy + cut_h // 2
 
     return bbx1, bby1, bbx2, bby2
 
 
 def get_universum(image1, image2, aug_type, lamda):
+    image1 = image1.astype(np.float32)
+    image2 = image2.astype(np.float32)
     if_plot = False
     if image1.shape != image2.shape:
         if image2.shape[0] == 1:
@@ -50,10 +63,10 @@ def get_universum(image1, image2, aug_type, lamda):
 
     # for debug
     if if_plot:
-        plt.imshow(image1.transpose(1, 2, 0), cmap='gray')
+        plt.imshow(image1.transpose(1, 2, 0))
         plt.savefig('/home/yukina/Missile_Fault_Detection/project/auxiliary_data_AD/log/example/image1.png')
-        plt.imshow(image2.transpose(1, 2, 0), cmap='gray')
+        plt.imshow(image2.transpose(1, 2, 0))
         plt.savefig('/home/yukina/Missile_Fault_Detection/project/auxiliary_data_AD/log/example/image2.png')
-        plt.imshow(universum.transpose(1, 2, 0), cmap='gray')
+        plt.imshow(universum.transpose(1, 2, 0))
         plt.savefig('/home/yukina/Missile_Fault_Detection/project/auxiliary_data_AD/log/example/universum.png')
     return universum

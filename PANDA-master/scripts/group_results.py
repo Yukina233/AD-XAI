@@ -41,7 +41,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 def group_results(base_dir):
     result_names = os.listdir(base_dir)
 
-    suffix = 'DeepSAD'
+    suffix = 'PANDA'
     noise_type = None
     group_seed_num = 2
     classes_output = []
@@ -71,38 +71,9 @@ def group_results(base_dir):
     df_output = pd.DataFrame(data={'class': classes_output, 'aucroc': aucroc_output})
     df_output.to_csv(os.path.join(base_dir, f'AUCROC_{suffix}_grouped.csv'), index=False)
 
-    classes_output = []
-    aucpr_output = []
-    for result_name in result_names:
-        if 'MVTec-AD' not in result_name:
-            continue
-        result_path = os.path.join(base_dir, result_name)
-        csv_path = os.path.join(result_path, f'AUCPR_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
-        df = pd.read_csv(csv_path)
-        count = 0
-        values = []
-        for index, row in df.iterrows():
-            aucpr = row['Customized']
-            if math.isnan(aucpr):
-                continue
-            count += 1
-            values.append(aucpr)
-            if count == group_seed_num:
-                classes_output.append(result_name)
-                aucpr_output.append(np.mean(values))
-                count = 0
-                values = []
-
-    classes_output.append('mean')
-    aucpr_output.append(np.mean(aucpr_output))
-
-
-    df_output = pd.DataFrame(data={'class': classes_output, 'aucpr': aucpr_output})
-    df_output.to_csv(os.path.join(base_dir, f'AUCRPR_{suffix}_grouped.csv'), index=False)
-
     print("Group results finished!")
 
-layers = ['layer3']
-for layer in layers:
-    base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/n_samples_threshold=0,imgsize=224', f'DeepSAD_mixup,lamda=0.5,aux_size=1_resnet50_{layer}')
-    group_results(base_dir)
+
+
+base_dir = os.path.join(path_project, 'PANDA-master/log/n_samples_threshold=0,imgsize=224', f'PANDA_cutmix,lamda=1,aux_size=1_resnet50')
+group_results(base_dir)

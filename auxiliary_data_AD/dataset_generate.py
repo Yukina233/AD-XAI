@@ -91,17 +91,6 @@ def generate_dataset(root_dir, category, transform, imagesize):
 
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-resize = 256
-imagesize = 224
-IMAGENET_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_STD = [0.229, 0.224, 0.225]
-# Define a transform to apply to each image
-transform = transforms.Compose([
-    transforms.Resize(resize),
-    transforms.CenterCrop(imagesize),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-])
 
 # Create the dataset
 root_dir = path_project + '/data/mvtec_ad_raw'

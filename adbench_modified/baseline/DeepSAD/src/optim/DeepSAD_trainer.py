@@ -8,6 +8,7 @@ import time
 import torch
 import torch.optim as optim
 import numpy as np
+from tqdm import tqdm
 
 
 class DeepSADTrainer(BaseTrainer):
@@ -59,7 +60,7 @@ class DeepSADTrainer(BaseTrainer):
         logger.info('Starting training...')
         start_time = time.time()
         net.train()
-        for epoch in range(self.n_epochs):
+        for epoch in tqdm(range(self.n_epochs), desc='Training epoch'):
 
             epoch_loss = 0.0
             n_batches = 0

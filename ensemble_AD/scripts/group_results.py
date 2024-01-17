@@ -43,11 +43,11 @@ def group_results(base_dir):
 
     suffix = 'DeepSAD'
     noise_type = None
-    group_seed_num = 2
+    group_seed_num = 1
     classes_output = []
     aucroc_output = []
     for result_name in result_names:
-        if 'MVTec-AD' not in result_name:
+        if 'iot' not in result_name:
             continue
         result_path = os.path.join(base_dir, result_name)
         csv_path = os.path.join(result_path, f'AUCROC_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
@@ -102,7 +102,6 @@ def group_results(base_dir):
 
     print("Group results finished!")
 
-layers = ['layer3']
-for layer in layers:
-    base_dir = os.path.join(path_project, 'auxiliary_data_AD/log/n_samples_threshold=0,imgsize=224', f'DeepSAD_mixup,lamda=0.5,aux_size=1_resnet50_{layer}')
-    group_results(base_dir)
+
+base_dir = os.path.join(path_project, 'ensemble_AD/log/baseline', f'DeepSAD_origin_seed=3')
+group_results(base_dir)

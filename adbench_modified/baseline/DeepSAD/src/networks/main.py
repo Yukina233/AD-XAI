@@ -9,8 +9,8 @@ from .dgm import DeepGenerativeModel, StackedDeepGenerativeModel
 #注意此处与源码有不同
 #源码是不同数据集有不同的网络结构(which is weird)
 #注意bias必须要设为0,否则DeepSAD可能出现mode collapse(原论文中也提及)
-h_dims = [512, 256]
-rep_dim = 128
+h_dims = [128, 64]
+rep_dim = 32
 def build_network(net_name, input_size ,ae_net=None):
     """Builds the neural network."""
     net = None

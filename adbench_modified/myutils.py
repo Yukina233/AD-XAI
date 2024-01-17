@@ -187,7 +187,7 @@ class Utils():
         aucroc = roc_auc_score(y_true=y_true, y_score=y_score)
         aucpr = average_precision_score(y_true=y_true, y_score=y_score, pos_label=1)
 
-        return {'aucroc':aucroc, 'aucpr':aucpr}
+        return {'aucroc':aucroc, 'aucpr':aucpr, 'scores':y_score, 'labels':y_true}
 
     # resampling function
     def sampler(self, X_train, y_train, batch_size):

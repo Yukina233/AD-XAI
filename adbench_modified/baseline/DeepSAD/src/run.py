@@ -30,8 +30,8 @@ class DeepSAD():
         self.pretrain = True  # whether to use auto-encoder for pretraining
         self.ae_optimizer_name = 'adam'
         self.ae_lr = 0.001
-        self.ae_n_epochs = 100
-        self.ae_lr_milestone = [100, ]
+        self.ae_n_epochs = 50
+        self.ae_lr_milestone = [50, ]
         self.ae_batch_size = 128
         self.ae_weight_decay = 1e-6
         self.num_threads = 0

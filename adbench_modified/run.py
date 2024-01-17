@@ -15,8 +15,9 @@ from keras import backend as K
 
 from adbench_modified.datasets.data_generator import DataGenerator
 from adbench_modified.myutils import Utils
+from auxiliary_data_AD.universum_generate import get_universum
 
-path_project = '/home/yukina/Missile_Fault_Detection/project/test'
+path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 
 class RunPipeline:
@@ -68,7 +69,7 @@ class RunPipeline:
         # number of labeled anomalies
         self.nla_list = [0, 1, 5, 10, 25, 50, 75, 100]
         # seed list
-        self.seed_list = list(np.arange(self.seed) + 1)
+        self.seed_list = [3]
 
         if self.noise_type is None:
             pass
@@ -243,8 +244,6 @@ class RunPipeline:
             K.clear_session()
             print(f"Model: {self.model_name}, AUC-ROC: {result['aucroc']}, AUC-PR: {result['aucpr']}")
 
-            del self.clf
-            gc.collect()
 
         except Exception as error:
             print(f'Error in model fitting. Model:{self.model_name}, Error: {error}')
@@ -387,10 +386,25 @@ class RunPipeline:
                 df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'),
                                          index=True)
 
+                # save the Deep SAD model
+                torch.save(self.clf.deepSAD.ae_net,
+                    os.path.join(self.path_result, 'model_ae_net' + '.pth'))
+                torch.save(self.clf.deepSAD.net,
+                    os.path.join(self.path_result, 'model_net' + '.pth'))
+                np.save(os.path.join(self.path_result, 'c' + '.npy'), self.clf.deepSAD.c)
+
+                print_score = True
+                if print_score is True:
+                    results = {'scores': metrics['scores'], 'labels': metrics['labels']}
+                    df_results = pd.DataFrame(data=results)
+                    df_results.to_csv(os.path.join(self.path_result, 'results.csv'), index=False)
+
+                del self.clf
+                gc.collect()
         return results
 
     def run_universum(self, target_dataset_name='MVTec-AD_bottle', path_datasets=None, clf=None, use_preprocess=False,
-                      universum_params=None):
+                      universum_params=None, preprocess_params=None):
 
         # 加载所有的数据集
         datasets = {}
@@ -408,14 +422,14 @@ class RunPipeline:
         dataset_list = [None]
         X = target_dataset['X']
         y = target_dataset['y']
-        X_train = None
-        y_train = None
-        X_test = None
-        y_test = None
-        # X_train = target_dataset['X_train']
-        # y_train = target_dataset['y_train']
-        # X_test = target_dataset['X_test']
-        # y_test = target_dataset['y_test']
+        # X_train = None
+        # y_train = None
+        # X_test = None
+        # y_test = None
+        X_train = target_dataset['X_train']
+        y_train = target_dataset['y_train']
+        X_test = target_dataset['X_test']
+        y_test = target_dataset['y_test']
 
         # experimental parameters
         if self.mode == 'nla':
@@ -441,7 +455,7 @@ class RunPipeline:
         df_time_inference = pd.DataFrame(data=None, index=experiment_params, columns=columns)
 
         results = []
-        for i, params in tqdm(enumerate(experiment_params)):
+        for i, params in tqdm(enumerate(experiment_params), desc='Seed'):
             if self.noise_type is not None:
                 dataset, la, noise_param, self.seed = params
             else:
@@ -476,7 +490,8 @@ class RunPipeline:
                                                               noise_type=self.noise_type, noise_ratio=noise_param)
                 else:
                     self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
-                                                              X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
                                                               realistic_synthetic_mode=self.realistic_synthetic_mode)
 
             except Exception as error:
@@ -484,63 +499,81 @@ class RunPipeline:
                 pass
                 continue
 
-            # 假设npz文件中有 'train' 和 'test' 键
-            # 如果数据集结构不同，需要调整代码以匹配实际结构
-            X_train = self.data['X_train']
-            y_train = self.data['y_train']
+            output_path = os.path.join(path_project, 'auxiliary_data_AD/aug_data',
+                                       f'n_samples_threshold={self.n_samples_threshold},aug_type={universum_params["aug_type"]},aux_size={universum_params["aux_size"]},lamda={universum_params["lamda"]},seed={self.seed}')
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            npz_file = os.path.join(output_path, target_dataset_name + '.npz')
+            if os.path.exists(npz_file):
+                npz_data = np.load(npz_file, allow_pickle=True)
+                self.data['X_train'] = npz_data['X_train']
+                self.data['y_train'] = npz_data['y_train']
+            else:
+                # 假设npz文件中有 'train' 和 'test' 键
+                # 如果数据集结构不同，需要调整代码以匹配实际结构
+                X_train = self.data['X_train']
+                y_train = self.data['y_train']
 
-            # 对于训练集中的每个样本，从其他数据集中随机抽取一个样本
-            augmented_train_samples = {
-                'X': [],
-                'y': []
-            }
-            for sample in X_train:
-                for j in range(universum_params['aux_size']):
-                    # 从除了目标数据集之外的其他数据集中随机选择一个数据集
-                    other_datasets = [name for name in datasets if name != target_dataset_name]
-                    random_dataset_name = np.random.choice(other_datasets)
-                    random_dataset = datasets[random_dataset_name]
+                # 预先分配内存
+                total_samples = len(X_train) * universum_params['aux_size']
+                augmented_train_samples = {
+                    'X': [None] * total_samples,
+                    'y': [1] * total_samples
+                }
 
-                    # 首先找出所有 y == 0 的索引
-                    indices_of_y_equals_0 = np.where(random_dataset['y'] == 0)[0]
-                    # 然后只从这些索引对应的 X 中抽取一个样本
-                    sample_indices = np.random.choice(indices_of_y_equals_0, 1)
-                    random_sample = random_dataset['X'][sample_indices][0]
+                other_datasets = [name for name in datasets if name != target_dataset_name]
+                # 为每个非目标数据集预先计算 y == 0 的索引
+                indices_of_y_equals_0 = {
+                    name: np.where(datasets[name]['y'] == 0)[0]
+                    for name in other_datasets
+                }
+                # 对于每个样本，从其他数据集中随机抽取一个样本
+                sample_counter = 0
+                for sample in tqdm(X_train, desc='Generate auxiliary data'):
+                    for _ in range(universum_params['aux_size']):
+                        # 随机选择一个数据集
+                        random_dataset_name = np.random.choice(other_datasets)
+                        # 从预先计算好的索引中随机选择一个
+                        sample_indices = np.random.choice(indices_of_y_equals_0[random_dataset_name], 1)
+                        random_sample = datasets[random_dataset_name]['X'][sample_indices][0]
 
-                    # 将随机抽取的样本与目标样本结合
-                    from auxiliary_data_AD.universum_generate import get_universum
-                    augmented_sample = get_universum(sample, random_sample, universum_params['aug_type'],
-                                                     universum_params['lamda'])
-                    augmented_train_samples['X'].append(augmented_sample)
-                    augmented_train_samples['y'].append(1)
+                        # 结合样本
+                        augmented_sample = get_universum(sample, random_sample, universum_params['aug_type'],
+                                                         universum_params['lamda'])
 
-            # 现在 'augmented_train_samples' 包含了原始训练样本和随机抽取的样本对
-            # 接下来可以根据实际需求使用这些样本对进行训练模型等操作
-            self.data['X_train'] = np.concatenate((self.data['X_train'], np.stack(augmented_train_samples['X'])))
-            self.data['y_train'] = np.concatenate((self.data['y_train'], np.stack(augmented_train_samples['y'])))
+                        # 填充预先分配的数组
+                        augmented_train_samples['X'][sample_counter] = augmented_sample
+                        # 'y'的值已经在预分配时设置为1，所以这里不需要再次设置
+                        sample_counter += 1
+
+                # 现在 'augmented_train_samples' 包含了原始训练样本和随机抽取的样本对
+                self.data['X_train'] = np.concatenate((self.data['X_train'], np.array(augmented_train_samples['X'])))
+                self.data['y_train'] = np.concatenate((self.data['y_train'], np.array(augmented_train_samples['y'])))
+                np.savez_compressed(os.path.join(output_path, target_dataset_name + '.npz'),
+                                    X_train=self.data['X_train'],
+                                    y_train=self.data['y_train'],
+                                    X_test=self.data['X_test'],
+                                    y_test=self.data['y_test'])
 
             if use_preprocess:
-                pretrain_encoder = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
-                pretrain_encoder = nn.Sequential(*list(pretrain_encoder.children())[:-1])
-                device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-                pretrain_encoder.to(device)
-                pretrain_encoder.eval()
-                with torch.no_grad():
-                    X_t = self.data['X_train']
-                    X_t = torch.tensor(X_t).to(device)
-                    X_v = self.data['X_test']
-                    X_v = torch.tensor(X_v).to(device)
-                    if X_t.shape[1] == 1:
-                        X_t = X_t.repeat(1, 3, 1, 1)
-                    if X_v.shape[1] == 1:
-                        X_v = X_v.repeat(1, 3, 1, 1)
-                    X_t_e = pretrain_encoder(X_t).squeeze().cpu().numpy()
-                    X_v_e = pretrain_encoder(X_v).squeeze().cpu().numpy()
+                print(f'Start preprocess...')
+                from auxiliary_data_AD.preprocessing import embedding_data
+                X_t = self.data['X_train']
+                y_t = self.data['y_train']
+                X_v = self.data['X_test']
+                y_v = self.data['y_test']
 
+                X_t_e, _ = embedding_data(encoder_name=preprocess_params['encoder_name'],
+                                          layers=preprocess_params['layers'],
+                                          interpolate=preprocess_params['interpolate'], X=X_t,
+                                          y=y_t)
+                X_v_e, _ = embedding_data(encoder_name=preprocess_params['encoder_name'],
+                                          layers=preprocess_params['layers'],
+                                          interpolate=preprocess_params['interpolate'], X=X_v,
+                                          y=y_v)
                 self.data['X_train'] = X_t_e
                 self.data['X_test'] = X_v_e
-
-                del pretrain_encoder
+                print(f'Finish preprocess.')
 
             if clf is None:
                 print(f'Clf is None')

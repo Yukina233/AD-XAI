@@ -73,7 +73,66 @@ class MVTecDataset(Dataset):
         return self.X[idx], self.y[idx]
 
 
-def embedding_MVTec_AD(encoder_name='resnet18', layers=['avgpool'], interpolate=False, batch_size=4, dataset_name=None,
+def embedding_data(encoder_name='resnet18', layers=['avgpool'], interpolate=False, batch_size=4, X=None, y=None):
+    outputs = {}
+    encoder = torch.hub.load('pytorch/vision:v0.10.0', encoder_name, pretrained=True)
+    # Create dataloader
+    data = {
+        'X': X,
+        'y': y
+    }
+    dataset = MVTecDataset(data)
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=3, drop_last=False)
+    def get_embedding(layer_name):
+        def hook(module, input, output):
+            outputs[str(layer_name)] = output.detach()
+
+        return hook
+
+    # Register the hook on the first and second layer
+    for layer in layers:
+        if layer == 'avgpool':
+            encoder.avgpool.register_forward_hook(get_embedding(layer))
+        else:
+            encoder.__dict__["_modules"][layer][-1].register_forward_hook(get_embedding(layer))
+
+    encoder = nn.Sequential(*list(encoder.children())[:-1])
+    encoder.to(device)
+    avgpool = AdaptiveAvgPool2d(output_size=(1, 1))
+    avgpool.to(device)
+
+    # encoder for extracting embedding
+    encoder.eval()
+
+    def generate_embedding(data_loader):
+        embedding_list = []
+        label_list = []
+        with torch.no_grad():
+            for i, data in enumerate(data_loader):
+                outputs.clear()
+                X, y = data
+                X = X.to(device)
+
+                encoder(X)
+                if interpolate:
+                    print(embedding.hhh)
+                    shallow_embed_size = [outputs[layer] for layer in layers][0].shape
+                    embedding = torch.cat([
+                        F.interpolate(outputs[layer],
+                                      size=(shallow_embed_size[-2], shallow_embed_size[-1]),
+                                      mode="bilinear",
+                                      align_corners=False) for layer in layers], dim=1)
+                    embedding = avgpool(embedding)
+                else:
+                    embedding = torch.cat([avgpool(outputs[layer]) for layer in layers], dim=1)
+                embedding_list.append(embedding.squeeze().cpu().numpy())
+                label_list.append(y.numpy())
+        return np.vstack(embedding_list), np.hstack(label_list)
+
+    return generate_embedding(data_loader)
+
+
+def embedding_datasets(encoder_name='resnet18', layers=['avgpool'], interpolate=False, batch_size=4, dataset_name=None,
                        plot=True,
                        path_datasets=None, output_path=None):
     outputs = {}
@@ -123,15 +182,9 @@ def embedding_MVTec_AD(encoder_name='resnet18', layers=['avgpool'], interpolate=
         # encoder for extracting embedding
         encoder.eval()
 
-        X_embeddings = []
-        X_train_embeddings = []
-        X_test_embeddings = []
-
-        labels = []
-        labels_train = []
-        labels_test = []
-
-        def generate_embedding(data_loader, embedding_list, label_list):
+        def generate_embedding(data_loader):
+            embedding_list = []
+            label_list = []
             with torch.no_grad():
                 for i, data in enumerate(data_loader):
                     outputs.clear()
@@ -151,17 +204,11 @@ def embedding_MVTec_AD(encoder_name='resnet18', layers=['avgpool'], interpolate=
                         embedding = torch.cat([avgpool(outputs[layer]) for layer in layers], dim=1)
                     embedding_list.append(embedding.squeeze().cpu().numpy())
                     label_list.append(y.numpy())
+            return np.vstack(embedding_list), np.hstack(label_list)
 
-        generate_embedding(data_loader, X_embeddings, labels)
-        generate_embedding(train_loader, X_train_embeddings, labels_train)
-        generate_embedding(test_loader, X_test_embeddings, labels_test)
-
-        X = np.vstack(X_embeddings)
-        y = np.hstack(labels)
-        X_train = np.vstack(X_train_embeddings)
-        y_train = np.hstack(labels_train)
-        X_test = np.vstack(X_test_embeddings)
-        y_test = np.hstack(labels_test)
+        X, y = generate_embedding(data_loader)
+        X_train, y_train = generate_embedding(train_loader)
+        X_test, y_test = generate_embedding(test_loader)
 
         print(
             f'Class: {data_name}, Samples: {len(y)}, Anomalies: {sum(y)}, Anomaly Ratio(%): {round(sum(y) / len(y) * 100, 2)}')
@@ -181,32 +228,33 @@ def embedding_MVTec_AD(encoder_name='resnet18', layers=['avgpool'], interpolate=
             plt.title(f'Category: {data_name}')
 
         n += 1
+    if plot:
+        plt.subplots_adjust(wspace=0.4, hspace=0.5)
+        plt.suptitle(f'Dataset: {dataset_name}', y=0.98, fontsize=16)
+        plt.savefig(os.path.join(output_path, f'TSNE.png'))
 
-    plt.subplots_adjust(wspace=0.4, hspace=0.5)
-    plt.suptitle(f'Dataset: {dataset_name}', y=0.98, fontsize=16)
-    plt.savefig(os.path.join(output_path, f'TSNE.png'))
 
+if __name__ == '__main__':
+    path_project = '/home/yukina/Missile_Fault_Detection/project'
+    set_seed(42)
+    encoder_name = 'resnet152'
+    layers = ['layer1', 'layer3']
+    imgsize = 224
+    interpolate = False
+    path_datasets = path_project + f'/data/mvtec_ad_imgsize={imgsize}'
 
-path_project = '/home/yukina/Missile_Fault_Detection/project'
-set_seed(42)
-encoder_name = 'resnet50'
-layers = ['layer1', 'layer2', 'layer3']
-imgsize = 224
-interpolate = False
-path_datasets = path_project + f'/data/mvtec_ad_imgsize={imgsize}'
+    if layers == ['avgpool']:
+        layers_name = ''
+    else:
+        layers_name = layers.__str__().replace('[', '').replace(']', '').replace(' ', '').replace('\'', '')
 
-if layers == ['avgpool']:
-    layers_name = ''
-else:
-    layers_name = layers.__str__().replace('[', '').replace(']', '').replace(' ', '').replace('\'', '')
+    if interpolate:
+        output_path = path_project + f'/data/interpolate/mvtec_ad_preprocessed_{encoder_name}_{layers_name}_imgsize={imgsize}'
+    else:
+        output_path = path_project + f'/data/mvtec_ad_preprocessed_{encoder_name}_{layers_name}_imgsize={imgsize}'
 
-if interpolate:
-    output_path = path_project + f'/data/interpolate/mvtec_ad_preprocessed_{encoder_name}_{layers_name}_imgsize={imgsize}'
-else:
-    output_path = path_project + f'/data/mvtec_ad_preprocessed_{encoder_name}_{layers_name}_imgsize={imgsize}'
-
-embedding_MVTec_AD(encoder_name=encoder_name,
-                   layers=layers,
-                   interpolate=interpolate,
-                   path_datasets=path_datasets,
-                   output_path=output_path)
+    embedding_datasets(encoder_name=encoder_name,
+                       layers=layers,
+                       interpolate=interpolate,
+                       path_datasets=path_datasets,
+                       output_path=output_path)
