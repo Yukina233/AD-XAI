@@ -16,8 +16,8 @@ n_jobs_dataloader = 0
 
 
 # 加载所有模型
-models_path = os.path.join(path_project, 'ensemble_AD/log/ensemble', f'DeepSAD_origin_seed=1')
-output_path = os.path.join(models_path, 'ensemble_results_std')
+models_path = os.path.join(path_project, 'ensemble_AD/log/ensemble_id', f'DeepSAD_origin_seed=1')
+output_path = os.path.join(models_path, 'ensemble_results_mean-std')
 os.makedirs(output_path, exist_ok=True)
 task_dirs = glob.glob(models_path + '/iot*')
 
@@ -36,8 +36,9 @@ for task_dir in task_dirs:
     model_list.append(model)
 
 # 加载所有数据集
-data_path = path_project + f'/data/iot_data'
+data_path = path_project + f'/data/iot_data_with_id'
 dataset_files = os.listdir(data_path)
+
 
 dataset_list = []
 for dataset_path in dataset_files:
@@ -59,7 +60,7 @@ for id in tqdm(range(len(dataset_list)), desc='Testing'):
         scores_list.append(model.test(test_data, device=device, n_jobs_dataloader=n_jobs_dataloader))
     scores = np.array(scores_list)
     # metric = np.mean(scores, axis=0)
-    metric = np.std(scores, axis=0)
+    metric = np.mean(scores, axis=0) + np.std(scores, axis=0)
 
     aucroc = roc_auc_score(y_true=test_data.test_set.targets, y_score=metric)
     aucpr = average_precision_score(y_true=test_data.test_set.targets, y_score=metric, pos_label=1)

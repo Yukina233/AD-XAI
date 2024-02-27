@@ -103,5 +103,5 @@ def group_results(base_dir):
     print("Group results finished!")
 
 
-base_dir = os.path.join(path_project, 'ensemble_AD/log/baseline', f'DeepSAD_origin_seed=3')
+base_dir = os.path.join(path_project, 'ensemble_AD/log/baseline_id', f'DeepSAD_origin_seed=3')
 group_results(base_dir)

@@ -26,7 +26,7 @@ from tqdm import tqdm
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 # Create the dataset
-root_dir = path_project + '/data/iot_data'
+root_dir = path_project + '/data/iot_data_with_id'
 
 data_all = []
 files = os.listdir(root_dir)
@@ -58,7 +58,7 @@ for combo in tqdm(combinations_of_datasets):
     y_train_combined = np.concatenate(y_train_combined, axis=0)
 
     # Save as NPZ
-    output_path = path_project + f"/data/iot_data_baseline"
+    output_path = path_project + f"/data/iot_data_baseline_with_id"
     if not os.path.isdir(output_path):
         os.mkdir(output_path)
     np.savez(os.path.join(output_path, f"iot_{test_index}.npz"), X=[0], y=[0], X_train=X_train_combined, y_train=y_train_combined,
