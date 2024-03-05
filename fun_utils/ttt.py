@@ -1,20 +1,15 @@
-path_project = '/home/yukina/Missile_Fault_Detection/project/'
 from spot import dSPOT
 import scipy.io as scio
 import numpy as np
 from sklearn.preprocessing import RobustScaler,MinMaxScaler
-from sklearn.manifold import LocallyLinearEmbedding,Isomap,TSNE
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
-from sklearn.decomposition import KernelPCA,PCA
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.patches import ConnectionPatch
 import pandas as pd
 import matplotlib.ticker as mtick
-import ctypes as c
+from scipy.io import savemat
 import time
 from keras.models import load_model
-
 def selfscaler(traindata,testdata):
     iq = np.percentile(traindata,(25,75),axis=0)
     fenmu = iq[1, :] - iq[0, :]
@@ -122,6 +117,7 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
         fp_rate = np.size(np.where(id_high < divide-ts_length)[0],0)*100/(divide - ts_length)
         print('故障误报率为:{:.3f}%'.format(fp_rate))
         print('故障漏报率为:{:.3f}%'.format(pf_rate))
+
         fault_time = (id_high[np.where(id_high >= fault_start - train_end - ts_length - 1)[0]][0] + ts_length)/100
         print('故障检测时间为:{:.3f}s'.format(fault_time))
         x_ticks = np.linspace(train_end / 100 + ts_length/100, train_end / 100 + len(test_distance) / 100 - 0.01 + ts_length/100,
@@ -140,13 +136,13 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
         plt.xlabel('时间/s', fontdict={'family': ['SimSun'], 'size': 12})
         plt.ylabel('故障检测指标值', fontdict={'family': ['SimSun'], 'size': 12})
         plt.legend(loc='best', prop={'family': ['SimSun'], 'size': 12})
-        axins = ax.inset_axes((0.08,0.45,0.35,0.25))
-        axins.plot(x_ticks,test_distance,color = colors[0])
-        axins.plot([train_end / 100 + 3,train_end / 100 + len(test_distance) / 100 - 0.01 + 3],[cl,cl], color = colors[3])
-        zone_left = int((fault_time - 1)*100-300)
-        zone_right = int((fault_time + 1)*100-300)
+        axins = ax.inset_axes((0.08,0.45,0.35,0.25))   # 子图的位置和宽度占整个图的比例
+        #axins.plot(x_ticks,test_distance,color = colors[0])
+        #axins.plot([train_end / 100 + 3,train_end / 100 + len(test_distance) / 100 - 0.01 + 3],[cl,cl], color = colors[3])
+        zone_left = int((fault_time - 1)*100-200)
+        zone_right = int((fault_time + 1)*100-200)
         x_ratio = 0
-        y_ratio = 0.05
+        y_ratio = 0.1
         xlim0 = x_ticks[zone_left] - (x_ticks[zone_right] - x_ticks[zone_left]) * x_ratio
         xlim1 = x_ticks[zone_right] + (x_ticks[zone_right] - x_ticks[zone_left]) * x_ratio
         y = np.hstack((test_distance[zone_left:zone_right]))
@@ -184,21 +180,22 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
         s.fit(train_distance, test_distance)  #  data import
         s.initialize(verbose=True)  #  initialization step
         results = s.run()  #  run
-        cl = results['thresholds']     # 展示自适应阈值
+        cl = results['thresholds']
         alarm = results['alarms']
-        plt.plot(cl)
-        plt.plot(test_distance)
-        plt.show()
-        print(np.shape(cl),np.shape(test_distance))
+        # plt.show()
         th_d = test_distance - cl
-        id_high = np.where(th_d > 0)[0]   # 检测出故障故障
-        id_low = np.where(th_d < 0)[0]    # 检测为正常
-        divide = fault_start - train_end  # 5000-2000 为开始检测到故障发生的时间
-        pf_rate = np.size(np.where(id_low >= divide - ts_length)[0], 0) * 100 / (np.size(test_distance, 0) - divide + window_length)
-        fp_rate = np.size(np.where(id_high < divide - ts_length)[0], 0) * 100 / (divide - window_length)
+        id_high = np.where(th_d > 0)[0]
+        id_low = np.where(th_d < 0)[0]
+        divide = fault_start - train_end
+
+        b = np.where(id_high >= fault_start - train_end - ts_length + 10)[0]
+        pf_rate = np.size(np.where(id_low >= divide - ts_length)[0], 0) * 100 / (np.size(test_distance, 0) - divide + 100)
+        fp_rate = np.size(np.where(id_high < divide - ts_length)[0], 0) * 100 / (divide - 100)
         print('故障误报率为:{:.3f}%'.format(fp_rate))
         print('故障漏报率为:{:.3f}%'.format(pf_rate))
-        fault_time = (id_high[np.where(id_high >= fault_start - train_end - ts_length - 1)[0]][0] + ts_length) / 100
+        fault_time = (id_high[np.where(id_high >= fault_start - train_end - ts_length + 10)[0]][0] + ts_length-fault_start+train_end) / 100
+        fault_time = (id_high[0]-2901)/100
+        print(id_high)
         print('故障检测时间为:{:.3f}s'.format(fault_time))
         x_ticks = np.linspace(train_end / 100 + int(ts_length/100), train_end / 100 + len(test_distance) / 100 - 0.01 + int(ts_length/100),
                               len(test_distance))
@@ -207,11 +204,49 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
         ax.grid(which='major', ls='--', alpha=.8, lw=.8)
         plt.plot(x_ticks, test_distance, color=colors[0], label='K均值距离')
         plt.plot(x_ticks, cl, color=colors[3], label='自适应阈值')
+        savemat("test_distance.mat",{"test_distance":test_distance})
+        savemat("cl.mat", {"cl": cl})
+
         plt.xticks(fontproperties='Times New Roman', fontsize=10)
         plt.yticks(fontproperties='Times New Roman', fontsize=10)
         plt.xlabel('时间/s', fontdict={'family': ['SimSun'], 'size': 12})
         plt.ylabel('故障检测指标值', fontdict={'family': ['SimSun'], 'size': 12})
+        plt.title('升力面缺损故障下SSLLE自适应阈值故障检测效果', fontdict={'family': ['SimSun'], 'size': 12})
         plt.legend(loc='best', prop={'family': ['SimSun'], 'size': 12})
+
+        axins = ax.inset_axes((0.18, 0.45, 0.35, 0.25))    # 子图
+        axins.plot(x_ticks, test_distance, color=colors[0])
+        axins.plot(x_ticks, cl, color=colors[3])
+        zone_left = int((29 - 0.1) * 100)
+        zone_right = int((29 + 0.1) * 100)  # 将故障前后0.1s的数据用于展示子图
+        x_ratio = 0
+        y_ratio = 0.02
+        xlim0 = x_ticks[zone_left] - (x_ticks[zone_right] - x_ticks[zone_left]) * x_ratio
+        xlim1 = x_ticks[zone_right] + (x_ticks[zone_right] - x_ticks[zone_left]) * x_ratio
+        y = np.hstack((test_distance[zone_left:zone_right]))
+        ylim0 = np.min(y) - (np.max(y) - np.min(y)) * y_ratio
+        ylim1 = np.max(y) + (np.max(y) - np.min(y)) * y_ratio
+        # 调整子坐标系的显示范围
+        axins.set_xlim(xlim0, xlim1)
+        axins.set_ylim(ylim0, ylim1)
+        tx0 = xlim0
+        tx1 = xlim1
+        ty0 = ylim0
+        ty1 = ylim1
+        sx = [tx0, tx1, tx1, tx0, tx0]
+        sy = [ty0, ty0, ty1, ty1, ty0]
+        ax.plot(sx, sy, "black", linestyle='-.')
+        # 画两条线
+        xy = (xlim0, ylim0)
+        xy2 = (xlim1, ylim0)
+        con = ConnectionPatch(xyA=xy2, xyB=xy, coordsA="data", coordsB="data",
+                              axesA=axins, axesB=ax)
+        axins.add_artist(con)
+        xy = (xlim0, ylim1)
+        xy2 = (xlim1, ylim1)
+        con = ConnectionPatch(xyA=xy2, xyB=xy, coordsA="data", coordsB="data",
+                              axesA=axins, axesB=ax)
+        axins.add_artist(con)
         plt.show()
         return fp_rate,pf_rate
 def km_cluster(lle_train_data, test_new, x_train_new):
@@ -385,84 +420,40 @@ def data_flatten(X):
         flattened_X[i] = X[i, (X.shape[1] - 1), :]
     return (flattened_X)
 
-if __name__ == '__main__':
+def hhs_main():
     zongfp,zongpf = [],[]
-    path1 = path_project + 'anomaly_detection/data/zc1.dat'
+    path1 = r"..\data\normal\zc1.dat"
     nor_data = get_dat(path1)
     # plot_data(nor_data)
     xtrain = nor_data[2000:, :]
-    print(np.shape(xtrain))
     scaler = RobustScaler().fit(xtrain)
 
     nor_t = moving_average(nor_data[:, -1], 10)
     t_mean = np.mean(nor_t)
     t_std = np.std(nor_t)
-    th1 = t_mean + 3 * t_std   # 阈值1 平均值加三倍标准差
+    th1 = t_mean + 3 * t_std
 
-    A = np.load(path_project + 'anomaly_detection/model/projection.npy')
-    train_distance = np.load(path_project + 'anomaly_detection/model/train_distance.npy')
-    center = np.load(path_project + 'anomaly_detection/model/center.npy')
+    A = np.load('projection.npy')
+    train_distance = np.load('train_distance.npy')
+    center = np.load('center.npy')
 
     # path2 = 'D:\share\新建文件夹\T\T0.6.dat'
-    path2 = path_project + 'anomaly_detection/data/ks2_7.dat'
+    path2 = r"..\data\all_data\T\1\T0.2.dat"     #
     ka_data = get_dat(path2)
     train_end = 2000  # 2000
     fault_start = 5000
     window_length = 100
-    # model = load_model('location.h5')
-    # model_classify = load_model('lstm-fcn.h5')
-    a1 = time.time()
-    a,b = [],[]
-    ff = 0
     for i in range(1):
         testdata = ka_data[2000:, :]
         xtest = scaler.transform(testdata)
         test_extract = timewindow(xtest, window_length)
-        print(test_extract.shape)
-        test_new = np.transpose(np.dot(A, np.transpose(test_extract)))   # 降维
-        test_distance = np.sqrt(np.sum(np.square(test_new - center[0]), axis=1))  # 计算距离
-        # cl, c = detect_realtime(train_distance, test_distance)
-        # print(c)
-        # b.append(test_distance)
-        # if c != []:
-        #     print(1)
-        #     ff = i
-        #     print(i)
-        #     print(c)
-        #     print(cl)
-        #     print(test_distance)9
-        #     break
+        test_new = np.transpose(np.dot(A, np.transpose(test_extract)))
+        test_distance = np.sqrt(np.sum(np.square(test_new - center[0]), axis=1))
         fp, pf = detect_accurate(train_distance, test_distance, window_length, train_end, fault_start, mode='auto')
 
-
-        # tt = np.mean(testdata[:10, -1])
-        # if tt>th1:
-        #     print(1)
-        #     print(i)
-        #     break
-
-
-        # testdata = ka_data[2000:,:]
-        # xtest = scaler.transform(testdata)
-        # train_extract = timewindow(xtrain, window_length)
-        # test_extract = timewindow(xtest, window_length)
-        # lle_train_data = LocallyLinearEmbedding(n_neighbors=5, n_components=14).fit_transform(train_extract)
-        # A = pro_matirx(lle_train_data, train_extract)
-        # np.save('projection.npy',A)
-        # test_new = np.transpose(np.dot(A, np.transpose(test_extract)))
-        # x_train_new = np.transpose(np.dot(A, np.transpose(train_extract)))
-        # train_distance, test_distance, center = km_cluster(lle_train_data, test_new, x_train_new)
-        # np.save('train_distance.npy',train_distance)
-        # np.save('center.npy', center)
-        # fp,pf = detect_accurate(train_distance, test_distance, window_length, train_end, fault_start, mode='auto')
-    a2 = time.time()
-    print(f'时间 {a2-a1}')
-    # print(np.mean(zongfp))
-    # print(np.mean(zongpf))
+hhs_main()
 
 
 
 
-q = 1e-5  # risk parameter
-d = 50  # depth parameter
-s = dSPOT(q, d)
+

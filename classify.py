@@ -3,6 +3,7 @@ import os
 import tensorflow as tf
 import scipy.io as scio
 import numpy as np
+from keras.layers import MaxPooling1D
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, LSTM, multiply, concatenate, Activation, Masking, Reshape, \
     RepeatVector, \
@@ -20,7 +21,7 @@ import pandas as pd
 import time
 import matplotlib.ticker as mtick
 
-path_project = ''
+path_project = '/home/yukina/Missile_Fault_Detection/project/'
 
 
 def data_preprocess(path1):
@@ -610,9 +611,10 @@ if __name__ == "__main__":
     f = []
     r = []
     l = []
-    seeds_num = 1
-
-    np.save(path_project + 'data/one_hot_label.npy', mode)
+    seeds_num = 3
+    # for j in range(0, fea.shape[1]):
+    #     feature = np.concatenate((fea[:, :j, :], fea[:, j+1:, :]), axis=1)
+    #     np.save(path_project + 'data/one_hot_label.npy', mode)
     for i in range(0, seeds_num):
         print(f'Training seed={i}........................')
         # add sample_id to the data, for later use of explaining
@@ -639,13 +641,14 @@ if __name__ == "__main__":
 
         model = generate_model(fea.shape[1], 5, fea.shape[2])
         from tensorflow.keras.optimizers import Adam
+
         learning_rate = 0.001
         optimizer = Adam(learning_rate=learning_rate)
         model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
         # history = model.fit(X_train, mode, batch_size=64, epochs=100)  # 每次取32张图片，共计循环10次
         history = model.fit(X_train, Y_train, validation_data=(X_test, Y_test), batch_size=64,
                             epochs=100)  # 每次取32张图片，共计循环10次
-        model.save(path_project + f'models/lstm-fcn-{i}.h5')
+        model.save(path_project + f'anomaly_classify/models/lstm-fcn-{i}.h5')
         # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'wb') as file_pi:
         #     pickle.dump(history.history, file_pi)
         # with open('F:\微信文件\研一上大作业\DD\毕设\lstm-fcn\classify.txt', 'rb') as file_pi:
@@ -708,36 +711,37 @@ if __name__ == "__main__":
         'recall': r,
         'loss': l
     })
-    result.to_csv(path_project + 'models/performance.csv', index=False)
-    '''测试'''
-    # print(model.predict(X_train))
-    # path2 = 'F:\微信文件\研一上大作业\DD\demo_x\demoV9-7.07\data\\1ka\\1ka0.mat'
-    # testdata = data_preprocess(path2)
-    # scaler = RobustScaler().fit(normal_data[3000:8000, :])
-    # xtest = scaler.transform(testdata)
-    # lookback = 5
-    # test_extract = np.array(temporalize(xtest, lookback))
-    # print(np.shape(test_extract))
-    # test_extract = np.reshape(test_extract, (test_extract.shape[0], lookback, test_extract.shape[3]))
-    # time_steps = test_extract.shape[1]
-    # n_features = test_extract.shape[2]
-    # model = load_model('location.h5')
-    # pred = model.predict(test_extract)
-    # test_pred = data_flatten(pred)
-    # test_real = data_flatten(test_extract)
-    # # test_error = np.sum(abs(test_real - test_pred), axis=1)
-    # test_error = test_real - test_pred
-    # # test_fea = np.array(test_error[7993:8020, :])
-    # test_fea = np.array(test_error[7993:8020,:])
-    # print(test_fea.shape[0])
-    # # x_test = np.reshape(test_fea, (1, 1, test_fea.shape[0]))
-    # test_fea = test_fea.T
-    # x_test = np.reshape(test_fea, (1, test_fea.shape[0], test_fea.shape[1]))
-    # print('x_test',x_test.shape)
-    # model_classify = load_model('lstm-fcn.h5')
-    # y_test = model_classify.predict(x_test)
-    # print('松浮-0，缺损-1，卡死-2')
-    # print(y_test)
-    # # model = generate_model_2()
-    # # # train_model(model, DATASET_INDEX, dataset_prefix='lp5_', epochs=1000, batch_size=128)
-    # # evaluate_model(model, DATASET_INDEX, dataset_prefix='lp5_', batch_size=128)
+    result.to_csv(path_project + f'anomaly_classify/log/performance.csv', index=False)
+
+'''测试'''
+# print(model.predict(X_train))
+# path2 = 'F:\微信文件\研一上大作业\DD\demo_x\demoV9-7.07\data\\1ka\\1ka0.mat'
+# testdata = data_preprocess(path2)
+# scaler = RobustScaler().fit(normal_data[3000:8000, :])
+# xtest = scaler.transform(testdata)
+# lookback = 5
+# test_extract = np.array(temporalize(xtest, lookback))
+# print(np.shape(test_extract))
+# test_extract = np.reshape(test_extract, (test_extract.shape[0], lookback, test_extract.shape[3]))
+# time_steps = test_extract.shape[1]
+# n_features = test_extract.shape[2]
+# model = load_model('location.h5')
+# pred = model.predict(test_extract)
+# test_pred = data_flatten(pred)
+# test_real = data_flatten(test_extract)
+# # test_error = np.sum(abs(test_real - test_pred), axis=1)
+# test_error = test_real - test_pred
+# # test_fea = np.array(test_error[7993:8020, :])
+# test_fea = np.array(test_error[7993:8020,:])
+# print(test_fea.shape[0])
+# # x_test = np.reshape(test_fea, (1, 1, test_fea.shape[0]))
+# test_fea = test_fea.T
+# x_test = np.reshape(test_fea, (1, test_fea.shape[0], test_fea.shape[1]))
+# print('x_test',x_test.shape)
+# model_classify = load_model('lstm-fcn.h5')
+# y_test = model_classify.predict(x_test)
+# print('松浮-0，缺损-1，卡死-2')
+# print(y_test)
+# # model = generate_model_2()
+# # # train_model(model, DATASET_INDEX, dataset_prefix='lp5_', epochs=1000, batch_size=128)
+# # evaluate_model(model, DATASET_INDEX, dataset_prefix='lp5_', batch_size=128)

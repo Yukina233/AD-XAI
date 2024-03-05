@@ -16,7 +16,7 @@ n_jobs_dataloader = 0
 
 
 # 加载所有模型
-models_path = os.path.join(path_project, 'ensemble_AD/log/ensemble_id', f'DeepSAD_origin_seed=1')
+models_path = os.path.join(path_project, 'ensemble_AD/log/ensemble_id', f'DeepSAD_origin_seed=3')
 output_path = os.path.join(models_path, 'ensemble_results_mean-std')
 os.makedirs(output_path, exist_ok=True)
 task_dirs = glob.glob(models_path + '/iot*')
