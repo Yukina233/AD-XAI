@@ -9,9 +9,10 @@ from keras.layers import Input, Dense, LSTM, concatenate, Activation, Masking, R
 from keras.layers import Conv1D, BatchNormalization, GlobalAveragePooling1D, Permute, Dropout,multiply
 from keras.models import Model
 
+path_project = '/home/yukina/Missile_Fault_Detection/project/'
 class Fault_Identif_Train():
     def __init__(self):
-        self.filePath = r"..\..\data\all_data"  # 数据所在的文件夹
+        self.filePath =  path_project + r"data\banwuli_data"  # 数据所在的文件夹
         self.data_class = np.array(os.listdir(self.filePath))   # 获得所有故障的名称
 
         # 故障数据路径
@@ -25,7 +26,7 @@ class Fault_Identif_Train():
         self.class_num = 9
         self.param = ['dOmega_ib_b[0]', 'dOmega_ib_b[1]', 'dOmega_ib_b[2]', 'Gama', 'Theta_k', 'Psi_t', 'fb[0]',
                       'fb[1]','fb[2]', 'Alfa', 'Beta', 'zmb', 'P']     # 需要提取的列
-        self.scaler = RobustScaler().fit(self.read_dat(r"..\..\data\normal\zc1.dat")[3000:10000, :])
+        self.scaler = RobustScaler().fit(self.read_dat(path_project + r"data\banwuli_data\normal\zc1.dat")[3000:10000, :])
         self.lookback = 5
         self.label = {"sf":0,"rqs":1,"ks":2,"T":3,"lqs":4}
         # 获取数据集和标签
@@ -35,11 +36,11 @@ class Fault_Identif_Train():
         # self.LQS_Data, self.LQS_Label= self.get_Train_data(self.LQS_Fault_Path, "lqs")
         # self.T_Data, self.T_Label = self.get_Train_data(self.T_Fault_Path, "T")          # 第一次需要执行，后面可以直接读取npy文件，节约时间
 
-        self.SF_Data = np.load(r"..\..\data\all_data\hhsdata\sf.npy")
-        self.KS_Data = np.load(r"..\..\data\all_data\hhsdata\ks.npy")
-        self.RQS_Data = np.load(r"..\..\data\all_data\hhsdata\rqs.npy")
-        self.LQS_Data = np.load(r"..\..\data\all_data\hhsdata\lqs.npy")
-        self.T_Data = np.load(r"..\..\data\all_data\hhsdata\T.npy")
+        self.SF_Data = np.load(path_project + "data/banwuli_data/hhsdata/sf.npy")
+        self.KS_Data = np.load(path_project + "data/banwuli_data/hhsdata/ks.npy")
+        self.RQS_Data = np.load(path_project + "data/banwuli_data/hhsdata/rqs.npy")
+        self.LQS_Data = np.load(path_project + "data/banwuli_data/hhsdata/lqs.npy")
+        self.T_Data = np.load(path_project + "data/banwuli_data/hhsdata/T.npy")
 
         self.SF_Label = [0]*len(self.SF_Data)
         self.KS_Label = [2]*len(self.KS_Data)

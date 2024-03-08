@@ -14,9 +14,11 @@ from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
 import seaborn as sns
 import pickle
 
+path_project = '/home/yukina/Missile_Fault_Detection/project'
+
 class Fault_Identif_Train():
     def __init__(self):
-        self.filePath = r"..\..\data\all_data"  # 数据所在的文件夹
+        self.filePath = os.path.join(path_project, 'data/all_data')  # 数据所在的文件夹
         self.data_class = np.array(os.listdir(self.filePath))   # 获得所有故障的名称
 
         # 故障数据路径

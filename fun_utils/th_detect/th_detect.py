@@ -4,6 +4,9 @@ from scipy import stats
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import RobustScaler
+
+path_project = '/home/yukina/Missile_Fault_Detection/project/'
+
 class fault_detect():
     def __init__(self):
         """
@@ -15,8 +18,8 @@ class fault_detect():
         self.start_time = 2000       # 20s后开始平飞
 
         # 数据的读取
-        self.nor_datapath_orig = '..\..\data\zc1.dat'                             # 初始正常数据路径 ..\表示上级目录
-        self.fau_datapath_orig = '..\..\data\zc1.dat'                             # 故障数据路径
+        self.nor_datapath_orig = path_project + 'data/banwuli_data/normal/zc1.dat'                             # 初始正常数据路径 ..\表示上级目录
+        self.fau_datapath_orig = path_project + 'data/banwuli_data/normal/zc1.dat'                             # 故障数据路径
         self.param = [['dOmega_ib_b[0]', 'dOmega_ib_b[1]', 'dOmega_ib_b[2]', 'Gama', 'Theta_k', 'Psi_t', 'fb[0]', 'fb[1]', 'fb[2]', 'Alfa', 'Beta', 'zmb'],
                       [],
                       [],
