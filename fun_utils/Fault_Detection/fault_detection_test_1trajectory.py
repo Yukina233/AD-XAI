@@ -117,7 +117,7 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
         id_high = np.where(th_d > 0)[0]
         id_low = np.where(th_d < 0)[0]
         divide = fault_start - train_end
-        pf_rate=np.size(np.where(id_low>=divide-ts_length)[0],0)*100/(np.size(test_distance,0)-divide+ts_length)
+        pf_rate = np.size(np.where(id_low>=divide-ts_length)[0],0)*100/(np.size(test_distance,0)-divide+ts_length)
         fp_rate = np.size(np.where(id_high < divide-ts_length)[0],0)*100/(divide - ts_length)
         print('故障误报率为:{:.3f}%'.format(fp_rate))
         print('故障漏报率为:{:.3f}%'.format(pf_rate))
@@ -192,12 +192,27 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
         id_low = np.where(th_d < 0)[0]
         divide = fault_start - train_end
 
-        b = np.where(id_high >= fault_start - train_end - ts_length + 10)[0]
+        # b = np.where(id_high >= fault_start - train_end - ts_length + 10)[0]
         pf_rate = np.size(np.where(id_low >= divide - ts_length)[0], 0) * 100 / (np.size(test_distance, 0) - divide + 100)
         fp_rate = np.size(np.where(id_high < divide - ts_length)[0], 0) * 100 / (divide - 100)
         tp_rate = np.size(np.where(id_high >= divide - ts_length)[0], 0) * 100 / (divide - 100)
+
+        tp = np.size(np.where(id_high >= divide - ts_length)[0], 0)
+        tn = np.size(np.where(id_low < divide - ts_length)[0], 0)
+        fp = np.size(np.where(id_high < divide - ts_length)[0], 0)
+        fn = np.size(np.where(id_low >= divide - ts_length)[0], 0)
+
+        FDR = tp * 100 / (tp + fn)
+        if tp + fp == 0:
+            FAR = 0
+        else:
+            FAR = fp * 100 / (tp + fp)
+
         print('故障误报率为:{:.3f}%'.format(fp_rate))
         print('故障漏报率为:{:.3f}%'.format(pf_rate))
+
+        print('故障检测率为:{:.3f}%'.format(FDR))
+        print('虚警率为:{:.3f}%'.format(FAR))
         # fault_time = (id_high[np.where(id_high >= fault_start - train_end - ts_length + 10)[0]][0] + ts_length-fault_start+train_end) / 100
         if id_high.shape[0] > 0:
             fault_time = (id_high[0]-2901)/100
@@ -446,7 +461,7 @@ def hhs_main():
     center = np.load(os.path.join(path_project, 'fun_utils/origin_model/center.npy'))
 
     # path2 = 'D:\share\新建文件夹\T\T0.6.dat'
-    path2 = os.path.join(path_project, 'data/banwuli_data/rqs/rqs-1/rqs-1-0.10.dat')     #
+    path2 = os.path.join(path_project, 'data/banwuli_data/rqs/rqs-2/rqs-2-0.40.dat')     #
     fault_data = get_dat(path2)
     train_end = 2000  # 2000
 

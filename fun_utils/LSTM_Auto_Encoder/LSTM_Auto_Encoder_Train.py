@@ -5,10 +5,12 @@ import os
 from keras.layers import Dense,LSTM,RepeatVector,TimeDistributed
 from keras.models import Sequential
 
+path_project = '/home/yukina/Missile_Fault_Detection/project'
+
 #  LSTM自编码器的训练程序程序
 class LSTM_Auto_Encoder_Train():
     def __init__(self):
-        self.filePath = r"..\..\data\normal"     # 数据所在的文件夹
+        self.filePath = os.path.join(path_project,'data/banwuli_data/normal')    # 数据所在的文件夹
         self.data_name = os.listdir(self.filePath)
         self.data_normalize_path = os.path.join(self.filePath,self.data_name[0])      # 将文件夹中的第一个数据用于归一化
 
@@ -68,10 +70,10 @@ class LSTM_Auto_Encoder_Train():
         self.model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
         history = self.model.fit(self.train_data, self.train_data, epochs=self.epoch, batch_size=self.batch,
                             validation_data=(self.valid_data, self.valid_data))
-        self.model.save(r'..\..\model\Lstm_Auto_Encoder.h5')
+        self.model.save(os.path.join(path_project, 'fun_utils/model/Lstm_Auto_Encoder.h5'))
         return history
 
 LAET = LSTM_Auto_Encoder_Train()
+print("Data load finish.")
 history = LAET.model_train()
-
-
+print("Finish")

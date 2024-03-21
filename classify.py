@@ -115,13 +115,13 @@ def get_ka_data():
         id3.append(name3)
         name4 = 'ks4_' + str(id_index1[i])
         id4.append(name4)
-    path3 = path_project + 'raw/normal/zc1.dat'
+    path3 = path_project + 'data/banwuli_data/normal/zc1.dat'
     normal_data = get_dat(path3)
     alltest = []
     scaler = RobustScaler().fit(normal_data[3000:10000, :])
     print(id1)
     train_end = 2000
-    path_ks = path_project + 'raw/ks/'
+    path_ks = path_project + 'data/banwuli_data/ks/'
     for i in range(len(id1)):
         path = path_ks + '1/{}.dat'.format(id1[i])
         data = get_dat(path)
@@ -177,12 +177,12 @@ def get_que_data():
         name4 = 'rqs-4-%g' % id_index[i]
         id4.append(name4)
     print(id1)
-    path3 = path_project + 'raw/normal/zc1.dat'
+    path3 = path_project + 'data/banwuli_data/normal/zc1.dat'
     normal_data = get_dat(path3)
     alltest = []
     scaler = RobustScaler().fit(normal_data[3000:10000, :])
     train_end = 2000
-    path_qs = path_project + 'raw/rqs/'
+    path_qs = path_project + 'data/banwuli_data/rqs/'
     for i in range(len(id1)):
         path = path_qs + 'rqs-1/{}.dat'.format(id1[i])
         data = get_dat(path)
@@ -235,11 +235,11 @@ def get_song_data():
         id3.append(name3)
         name4 = 'sf4-' + str(id_index[i])
         id4.append(name4)
-    path3 = path_project + 'raw/normal/zc1.dat'
+    path3 = path_project + 'data/banwuli_data/normal/zc1.dat'
     normal_data = get_dat(path3)
     alltest = []
     scaler = RobustScaler().fit(normal_data[3000:10000, :])
-    path_sf = path_project + 'raw/sf2_23/'
+    path_sf = path_project + 'data/banwuli_data/sf/'
     for i in range(len(id1)):
         path = path_sf + '1/{}.dat'.format(id1[i])
         data = get_dat(path)
@@ -287,12 +287,12 @@ def get_th_data():
         name1 = 'T%g' % id_index[i]
         id1.append(name1)
     print(id1)
-    path3 = path_project + 'raw/normal/zc1.dat'
+    path3 = path_project + 'data/banwuli_data/normal/zc1.dat'
     normal_data = get_dat(path3)
     alltest = []
     scaler = RobustScaler().fit(normal_data[3000:10000, :])
     for i in range(len(id1)):
-        path = path_project + 'raw/T/{}.dat'.format(id1[i])
+        path = path_project + 'data/banwuli_data/T/{}.dat'.format(id1[i])
         data = get_dat(path)
         testdata = data[2000:5200, :]
         xtest = scaler.transform(testdata)
@@ -312,12 +312,12 @@ def get_ls_data():
         id1.append(name1)
         name2 = 'lqs-r-%g' % id_index[i]
         id2.append(name2)
-    path3 = path_project + 'raw/normal/zc1.dat'
+    path3 = path_project + 'data/banwuli_data/normal/zc1.dat'
     normal_data = get_dat(path3)
     alltest = []
     scaler = RobustScaler().fit(normal_data[3000:10000, :])
     for i in range(len(id1)):
-        path = path_project + 'raw/lqs-l/{}.dat'.format(id1[i])
+        path = path_project + 'data/banwuli_data/lqs/lqs-l/{}.dat'.format(id1[i])
         data = get_dat(path)
         testdata = data[2000:5200, :]
         xtest = scaler.transform(testdata)
@@ -326,7 +326,7 @@ def get_ls_data():
         test_extract = np.reshape(test_extract, (test_extract.shape[0], lookback, test_extract.shape[3]))
         alltest.append(test_extract)
     for i in range(len(id2)):
-        path = path_project + 'raw/lqs-r/{}.dat'.format(id2[i])
+        path = path_project + 'data/banwuli_data/lqs/lqs-r/{}.dat'.format(id2[i])
         data = get_dat(path)
         testdata = data[2000:5200, :]
         xtest = scaler.transform(testdata)
@@ -499,11 +499,11 @@ def cof(model, fea, label, ax):
 
 
 def trainaemodel():
-    path1 = path_project + 'raw/normal/zc1.dat'
+    path1 = path_project + 'data/banwuli_data/normal/zc1.dat'
     normal_data = get_dat(path1)
     alltrain = []
     for i in range(2):
-        path2 = path_project + 'raw/normal/{}.dat'.format('zc' + str(i + 2))
+        path2 = path_project + 'data/banwuli_data/normal/{}.dat'.format('zc' + str(i + 2))
         data = get_dat(path2)
         traindata = data[3000:10000, :]
         scaler = RobustScaler().fit(normal_data[3000:10000, :])

@@ -8,11 +8,15 @@ from sklearn.model_selection import train_test_split
 from keras.layers import Input, Dense, LSTM, concatenate, Activation, Masking, Reshape
 from keras.layers import Conv1D, BatchNormalization, GlobalAveragePooling1D, Permute, Dropout,multiply
 from keras.models import Model
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score,roc_auc_score
+import seaborn as sns
 
-path_project = '/home/yukina/Missile_Fault_Detection/project/'
+path_project = '/home/yukina/Missile_Fault_Detection/project'
 class Fault_Identif_Train():
     def __init__(self):
-        self.filePath =  path_project + r"data\banwuli_data"  # 数据所在的文件夹
+        self.filePath =  os.path.join(path_project , "data/banwuli_data")  # 数据所在的文件夹
         self.data_class = np.array(os.listdir(self.filePath))   # 获得所有故障的名称
 
         # 故障数据路径
@@ -26,7 +30,7 @@ class Fault_Identif_Train():
         self.class_num = 9
         self.param = ['dOmega_ib_b[0]', 'dOmega_ib_b[1]', 'dOmega_ib_b[2]', 'Gama', 'Theta_k', 'Psi_t', 'fb[0]',
                       'fb[1]','fb[2]', 'Alfa', 'Beta', 'zmb', 'P']     # 需要提取的列
-        self.scaler = RobustScaler().fit(self.read_dat(path_project + r"data\banwuli_data\normal\zc1.dat")[3000:10000, :])
+        self.scaler = RobustScaler().fit(self.read_dat(os.path.join(path_project, "data/banwuli_data/normal/zc1.dat"))[3000:10000, :])
         self.lookback = 5
         self.label = {"sf":0,"rqs":1,"ks":2,"T":3,"lqs":4}
         # 获取数据集和标签
@@ -36,11 +40,11 @@ class Fault_Identif_Train():
         # self.LQS_Data, self.LQS_Label= self.get_Train_data(self.LQS_Fault_Path, "lqs")
         # self.T_Data, self.T_Label = self.get_Train_data(self.T_Fault_Path, "T")          # 第一次需要执行，后面可以直接读取npy文件，节约时间
 
-        self.SF_Data = np.load(path_project + "data/banwuli_data/hhsdata/sf.npy")
-        self.KS_Data = np.load(path_project + "data/banwuli_data/hhsdata/ks.npy")
-        self.RQS_Data = np.load(path_project + "data/banwuli_data/hhsdata/rqs.npy")
-        self.LQS_Data = np.load(path_project + "data/banwuli_data/hhsdata/lqs.npy")
-        self.T_Data = np.load(path_project + "data/banwuli_data/hhsdata/T.npy")
+        self.SF_Data = np.load(os.path.join(path_project, "data/banwuli_data/hhsdata/sf.npy"))
+        self.KS_Data = np.load(os.path.join(path_project, "data/banwuli_data/hhsdata/ks.npy"))
+        self.RQS_Data = np.load(os.path.join(path_project, "data/banwuli_data/hhsdata/rqs.npy"))
+        self.LQS_Data = np.load(os.path.join(path_project, "data/banwuli_data/hhsdata/lqs.npy"))
+        self.T_Data = np.load(os.path.join(path_project, "data/banwuli_data/hhsdata/T.npy"))
 
         self.SF_Label = [0]*len(self.SF_Data)
         self.KS_Label = [2]*len(self.KS_Data)
@@ -49,12 +53,13 @@ class Fault_Identif_Train():
         self.T_Label = [3]*len(self.T_Data)
 
         self.train_data_pre = np.concatenate((self.SF_Data, self.KS_Data, self.RQS_Data, self.LQS_Data, self.T_Data), axis=0)
-        self.LAET = load_model(r"..\..\model\Lstm_Auto_Encoder.h5")    # 加载LSTM自编码器模型用于残差生成
+        self.LAET = load_model(os.path.join(path_project, "fun_utils/model/Lstm_Auto_Encoder.h5"))   # 加载LSTM自编码器模型用于残差生成
         # self.train_data_real = self.residual()                         # 训练集数据
-        self.train_data_real = np.load(r"..\..\data\all_data\hhsdata\residual.npy")
+        self.train_data_real = np.load(os.path.join(path_project, "data/banwuli_data/hhsdata/residual.npy"))
         self.train_label = to_categorical(
             self.SF_Label * 12 + self.KS_Label * 12 + self.RQS_Label * 12 + self.LQS_Label * 12 + self.T_Label * 12,
             num_classes=9)                                             # 训练集标签
+        print([np.argmax(j) for j in self.train_label])
         self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(self.train_data_real, self.train_label, test_size=0.30, random_state=42)
         self.model = self.get_mode()   # 获得模型
 
@@ -77,7 +82,7 @@ class Fault_Identif_Train():
     # 根据输入路径提取出数据训练集和标签
     def get_Train_data(self,Path,flag):
         train_data = np.array([self.temporalize(self.scaler.transform(self.read_dat(os.path.join(os.path.join(os.path.join(self.filePath,Path),dic),data_id))[2000:5200,:])) for dic in os.listdir(Path) for data_id in os.listdir(os.path.join(os.path.join(self.filePath, Path), dic))])
-        np.save(r"..\..\data\all_data\hhsdata\{}.npy".format(flag),train_data)  # 数据保存
+        np.save(os.path.join(path_project, "data/banwuli_data/hhsdata/{}.npy").format(flag),train_data)  # 数据保存
         return train_data,[self.label[flag]]*(len(train_data))
 
     # 将3维LSTM数据展平为2维
@@ -89,7 +94,7 @@ class Fault_Identif_Train():
     def residual(self):
         XX = [self.data_flatten(real_data)-self.data_flatten(self.LAET.predict(real_data)) for real_data in self.train_data_pre]
         X = np.array([residual[3007+j:3034+j,:].T for residual in XX for j in range(12)])
-        np.save(r"..\..\data\all_data\hhsdata\residual.npy", X)  # 保存训练集残差
+        np.save(os.path.join(path_project, "data/banwuli_data/hhsdata/residual.npy"), X)  # 保存训练集残差
         return X
 
     def squeeze_excite_block(self,input):
@@ -137,9 +142,56 @@ class Fault_Identif_Train():
         self.model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         history = self.model.fit(self.X_train, self.Y_train, validation_data=(self.X_test, self.Y_test), batch_size=64,
                             epochs=100)
-        self.model.save(r'..\..\model\Fault_Identif_Train.h5')
+        self.model.save(os.path.join(path_project, 'model/Fault_Identif_Train.h5'))
         return history
 
+    def cof(self,model):
+        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+        plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+        train_pred = model.predict(self.X_test)
+        train_pred = np.argmax(train_pred, axis=1)
+        con_mat = confusion_matrix([np.argmax(j) for j in self.Y_test], train_pred)
+        con_mat_norm = con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis]  # 归一化
+        con_mat_norm = np.around(con_mat_norm, decimals=2)
+        plt.figure(figsize=(10, 10))
+        print(con_mat)
+        LABELS = ['松浮故障', '缺损故障', '卡死故障','升力面缺损',"推力损失"]
+        sns.heatmap(con_mat_norm, xticklabels=LABELS, yticklabels=LABELS, annot=True)
+
+        plt.show()
+        print('a', accuracy_score([np.argmax(j) for j in self.Y_test], train_pred))
+        print('f', f1_score([np.argmax(j) for j in self.Y_test], train_pred, average='macro'))
+        print('r', recall_score([np.argmax(j) for j in self.Y_test], train_pred, average='macro'))
+        # 0.9987843792736666  a
+        # 0.9988423897986536  f
+        # 0.998755057578587   r
+
 a = Fault_Identif_Train()
-a.model_train()
+print("Data load finish.")
+# a.model_train()
+print("Finish")
+a.cof(load_model(os.path.join(path_project, 'model/Fault_Identif_Train.h5')))
+# history = a.model_train()
+
+
+# with open('trainHistoryDict.txt', 'wb') as file_pi:
+#     pickle.dump(history.history, file_pi)
+# plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+# plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+# with open('trainHistoryDict.txt','rb') as file_pi:
+#     history=pickle.load(file_pi)
+# print(history)
+# Loss = history['loss']
+# val_loss = history['val_loss']
+#
+# print(1)
+# plt.grid(which='major', ls='--', alpha=.8, lw=.8)
+# plt.plot(history['loss'], label='训练集Loss')
+# plt.plot(history['val_loss'], label='验证集Loss')
+#
+# plt.xlabel("训练轮数")
+# plt.ylabel("Loss")
+# plt.legend(prop={'family':'SimHei','size':15})
+#
+# plt.show()
 

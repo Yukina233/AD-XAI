@@ -1,3 +1,6 @@
+import os
+
+import pandas as pd
 from sklearn.cluster import KMeans
 #from spot import dSPOT
 import scipy.io
@@ -6,20 +9,35 @@ from sklearn.preprocessing import RobustScaler
 from sklearn.manifold import LocallyLinearEmbedding
 import matplotlib.pyplot as plt
 
+path_project = '/home/yukina/Missile_Fault_Detection/project'
+
 class Fault_Detect_Train():
     def __init__(self):
-        self.Train_Path = r"..\..\..\data\nor\6x26000.mat"
-        self.Test_Path = r"..\..\..\data\nor\7x26000.mat"
-        self.param = ['p_dot','phi','theta','psai','acc','alpha','beta','y','T_command']
         # 获得数据
-        self.Train_Data = self.read_mat(self.Train_Path)[3000:, :]
-        self.Test_Data = self.read_mat(self.Test_Path)[3000:, :]
+
+        # nor_data = None
+        # path_normal = os.path.join(path_project, 'data/banwuli_data/normal')
+        # for file in os.listdir(path_normal):
+        #     path_file = os.path.join(path_normal, file)
+        #     data = self.get_dat(path_file)
+        #     if nor_data is None:
+        #         nor_data = data[3000:, :]
+        #     else:
+        #         nor_data = np.concatenate((nor_data, data[3000:, :]))
+
+        train_data = self.get_dat(os.path.join(path_project, 'data/banwuli_data/normal/zc1.dat'))[3000:, :]
+        test_data = self.get_dat(os.path.join(path_project, 'data/banwuli_data/normal/zc2.dat'))[3000:, :]
+        self.Train_Data = train_data
+        self.Test_Data = test_data
+        self.param = ['dOmega_ib_b[0]', 'dOmega_ib_b[1]', 'dOmega_ib_b[2]', 'Gama', 'Theta_k', 'Psi_t', 'fb[0]', 'fb[1]',
+           'fb[2]', 'Alfa', 'Beta', 'zmb', 'P']
+
 
         # 归一化
         self.ts_length = 100  # 滑动窗口长度
         self.Train_scaler = RobustScaler().fit(self.Train_Data[0:self.ts_length,:])
         self.Test_scaler = RobustScaler().fit(self.Test_Data[0:self.ts_length,:])
-        self.Xtrain = self.Train_scaler.transform(self.Test_Data)
+        self.Xtrain = self.Train_scaler.transform(self.Train_Data)
         self.Xtest = self.Test_scaler.transform(self.Test_Data)
 
         self.Train_extract = self.time_window(self.Xtrain)
@@ -32,6 +50,12 @@ class Fault_Detect_Train():
         self.kmeans = KMeans(n_clusters=1)
         self.kmeans.fit_transform(self.lle_train_data)
 
+    def get_dat(self, path):
+        a = pd.read_csv(path, delim_whitespace=True)
+        b = a[['dOmega_ib_b[0]', 'dOmega_ib_b[1]', 'dOmega_ib_b[2]', 'Gama', 'Theta_k', 'Psi_t', 'fb[0]', 'fb[1]',
+               'fb[2]', 'Alfa', 'Beta', 'zmb', 'P']]
+        b = np.array(b, dtype=float)
+        return b
 
     def read_mat(self,path):
         mat = scipy.io.loadmat(path)
@@ -83,17 +107,17 @@ class Fault_Detect_Train():
         for i in range(x_train_new.shape[0]):
             train_distance[i] = np.sqrt(np.sum(np.square(x_train_new[i, :] - center[0])))
         differ = np.divide(test_distance[:10], train_distance[-10:])
-        c = np.mean(differ)
+        c = np.mean(differ) # c设置成常数1.5也可以达到较好效果 by Yukina
         return train_distance * c, test_distance, center
 
     def Run(self):
-        np.save(r'..\..\..\model\projection2.npy', self.A)
+        np.save(os.path.join(path_project, 'fun_utils/origin_model/projection.npy'), self.A)
         test_new = np.transpose(np.dot(self.A, np.transpose(self.Test_extract)))
         x_train_new = np.transpose(np.dot(self.A, np.transpose(self.Train_extract)))
         train_distance, test_distance ,center = self.km_cluster(test_new, x_train_new)
-        np.save(r'..\..\..\model\center2.npy', center)
-        np.save(r'..\..\..\model\train_distance2.npy', train_distance)
-
+        np.save(os.path.join(path_project, 'fun_utils/origin_model/center.npy'), center)
+        np.save(os.path.join(path_project, 'fun_utils/origin_model/train_distance.npy'), train_distance)
+        print('Finish')
 
 
 if __name__ == "__main__":
