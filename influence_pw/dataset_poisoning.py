@@ -116,9 +116,9 @@ def iterative_attack(top_model, full_model, top_graph, full_graph, project_fn, t
     # Remove everything but the poisoned train indices from the full model, to save time
     full_model.update_train_x_y(
         full_model.data_sets.train.x[indices_to_poison, :],
-        full_model.data_sets.train.labels[indices_to_poison])
+        full_model.data_sets.train.cluster_labels[indices_to_poison])
     eff_indices_to_poison = np.arange(len(indices_to_poison))
-    labels_subset = full_model.data_sets.train.labels[eff_indices_to_poison]
+    labels_subset = full_model.data_sets.train.cluster_labels[eff_indices_to_poison]
 
     for attack_iter in range(num_iter):
         print('*** Iter: %s' % attack_iter)
@@ -190,7 +190,7 @@ def iterative_attack(top_model, full_model, top_graph, full_graph, project_fn, t
                 print('Test pred (top): %s' % test_pred)
 
             if ((early_stop is not None) and (len(test_indices) == 1)):
-                if test_pred[0, int(full_model.data_sets.test.labels[test_indices])] < early_stop:
+                if test_pred[0, int(full_model.data_sets.test.cluster_labels[test_indices])] < early_stop:
                     print('Successfully attacked. Saving and breaking...')
                     np.savez('output/%s_attack_%s_testidx-%s_trainidx-%s_stepsize-%s_proj_final' % (full_model.model_name, loss_type, test_description, train_idx_str, step_size), 
                         poisoned_X_train_image=poisoned_X_train_subset, 

@@ -69,7 +69,7 @@ class RunPipeline:
         # number of labeled anomalies
         self.nla_list = [0, 1, 5, 10, 25, 50, 75, 100]
         # seed list
-        self.seed_list = [3]
+        self.seed_list = [1, 2, 3]
 
         if self.noise_type is None:
             pass
@@ -210,13 +210,16 @@ class RunPipeline:
             return any([_ in dataset for _ in NLPCV_list])
 
     # model fitting function
-    def model_fit(self):
+    def model_fit(self, load_model=None):
         try:
             # model initialization, if model weights are saved, the save_suffix should be specified
             if self.model_name in ['DevNet', 'FEAWAD', 'REPEN']:
                 self.clf = self.clf(seed=self.seed, model_name=self.model_name, save_suffix=self.suffix)
             else:
-                self.clf = self.clf(seed=self.seed, model_name=self.model_name)
+                if load_model is not None:
+                    self.clf = self.clf(seed=self.seed, model_name=self.model_name, load_model=load_model)
+                else:
+                    self.clf = self.clf(seed=self.seed, model_name=self.model_name)
 
         except Exception as error:
             print(f'Error in model initialization. Model:{self.model_name}, Error: {error}')
@@ -229,32 +232,59 @@ class RunPipeline:
             end_time = time.time()
             time_fit = end_time - start_time
 
+        except Exception as error:
+            print(f'Error in model fitting. Model:{self.model_name}, Error: {error}')
+            time_fit, time_inference = None, None
+            pass
+
+        return time_fit
+
+    def model_test(self):
+        try:
             # predicting score (inference)
             start_time = time.time()
             if self.model_name == 'DAGMM':
                 score_test = self.clf.predict_score(self.data['X_train'], self.data['X_test'])
             else:
                 score_test = self.clf.predict_score(self.data['X_test'])
+
+            # 计算故障检测率和虚警率
+            score_train = self.clf.predict_score(self.data['X_train'])
+            thresholds = np.percentile(score_train, 100 * (1 - sum(self.data['y_train']) / len(self.data['y_train'])))
+            thresholds = thresholds * 1.6
+            id_anomaly_pred = np.where(score_test > thresholds)[0]
+            id_normal_pred = np.where(score_test <= thresholds)[0]
+
+            tp = np.size(np.where(self.data['y_test'][id_anomaly_pred] == 1)[0], 0)
+            fp = np.size(np.where(self.data['y_test'][id_anomaly_pred] == 0)[0], 0)
+            fn = np.size(np.where(self.data['y_test'][id_normal_pred] == 1)[0], 0)
+
+            FDR = tp / (tp + fn)
+            if tp + fp == 0:
+                FAR = 0
+            else:
+                FAR = fp / (tp + fp)
+
             end_time = time.time()
             time_inference = end_time - start_time
 
             # performance
             result = self.utils.metric(y_true=self.data['y_test'], y_score=score_test, pos_label=1)
+            result['FDR'] = FDR
+            result['FAR'] = FAR
 
             K.clear_session()
             print(f"Model: {self.model_name}, AUC-ROC: {result['aucroc']}, AUC-PR: {result['aucpr']}")
 
-
         except Exception as error:
-            print(f'Error in model fitting. Model:{self.model_name}, Error: {error}')
-            time_fit, time_inference = None, None
+            print(f'Error in model testing. Model:{self.model_name}, Error: {error}')
+            time_inference = None
             result = {'aucroc': np.nan, 'aucpr': np.nan}
             pass
 
-        return time_fit, time_inference, result
+        return time_inference, result
 
-    # run the experiments in ADBench_modified
-    def run(self, dataset=None, clf=None):
+    def train(self, dataset=None, clf=None):
         if dataset is None:
             #  filteting dataset that does not meet the experimental requirements
             dataset_list = self.dataset_filter()
@@ -266,8 +296,8 @@ class RunPipeline:
             y = dataset['y']
             X_train = dataset['X_train']
             y_train = dataset['y_train']
-            X_test = dataset['X_test']
-            y_test = dataset['y_test']
+            X_test = dataset['X_test'][-1]
+            y_test = dataset['y_test'][-1]
 
         # experimental parameters
         if self.mode == 'nla':
@@ -289,6 +319,8 @@ class RunPipeline:
         columns = list(self.model_dict.keys()) if clf is None else ['Customized']
         df_AUCROC = pd.DataFrame(data=None, index=experiment_params, columns=columns)
         df_AUCPR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_FDR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_FAR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
         df_time_fit = pd.DataFrame(data=None, index=experiment_params, columns=columns)
         df_time_inference = pd.DataFrame(data=None, index=experiment_params, columns=columns)
 
@@ -369,7 +401,20 @@ class RunPipeline:
                 self.clf = clf
                 self.model_name = 'Customized'
                 # fit and test model
-                time_fit, time_inference, metrics = self.model_fit()
+                train_once = True
+                if train_once is True:
+                    if not os.path.exists(os.path.join(path_project, f'adversarial_ensemble_AD/models',
+                                                       f'DeepSAD_seed={self.seed}.pth')):
+                        time_fit = self.model_fit()
+                        self.clf.deepSAD.save_model(export_model=os.path.join(path_project, 'adversarial_ensemble_AD/models',
+                                                                      f'DeepSAD_seed={self.seed}.pth'), save_ae=True)
+                    else:
+                        time_fit = self.model_fit(load_model=os.path.join(path_project, 'adversarial_ensemble_AD/models',
+                                                                    f'DeepSAD_seed={self.seed}.pth'))
+                else:
+                    time_fit = self.model_fit()
+
+                time_inference, metrics = self.model_test()
                 results.append([params, self.model_name, metrics, time_fit, time_inference])
                 print(f'Current experiment parameters: {params}, model: {self.model_name}, metrics: {metrics}, '
                       f'fitting time: {time_fit}, inference time: {time_inference}')
@@ -377,31 +422,204 @@ class RunPipeline:
                 # store and save the result (AUC-ROC, AUC-PR and runtime / inference time)
                 df_AUCROC[self.model_name].iloc[i] = metrics['aucroc']
                 df_AUCPR[self.model_name].iloc[i] = metrics['aucpr']
+                df_FDR[self.model_name].iloc[i] = metrics['FDR']
+                df_FAR[self.model_name].iloc[i] = metrics['FAR']
                 df_time_fit[self.model_name].iloc[i] = time_fit
                 df_time_inference[self.model_name].iloc[i] = time_inference
 
                 df_AUCROC.to_csv(os.path.join(self.path_result, 'AUCROC_' + self.suffix + '.csv'), index=True)
                 df_AUCPR.to_csv(os.path.join(self.path_result, 'AUCPR_' + self.suffix + '.csv'), index=True)
+                df_FDR.to_csv(os.path.join(self.path_result, 'FDR_' + self.suffix + '.csv'), index=True)
+                df_FAR.to_csv(os.path.join(self.path_result, 'FAR_' + self.suffix + '.csv'), index=True)
                 df_time_fit.to_csv(os.path.join(self.path_result, 'Time(fit)_' + self.suffix + '.csv'), index=True)
                 df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'),
                                          index=True)
 
                 # save the Deep SAD model
                 torch.save(self.clf.deepSAD.ae_net,
-                    os.path.join(self.path_result, 'model_ae_net' + '.pth'))
+                           os.path.join(self.path_result, 'model_ae_net' + '.pth'))
                 torch.save(self.clf.deepSAD.net,
-                    os.path.join(self.path_result, 'model_net' + '.pth'))
+                           os.path.join(self.path_result, 'model_net' + '.pth'))
                 np.save(os.path.join(self.path_result, 'c' + '.npy'), self.clf.deepSAD.c)
 
                 print_score = True
                 if print_score is True:
-                    results = {'scores': metrics['scores'], 'labels': metrics['labels']}
-                    df_results = pd.DataFrame(data=results)
+                    result_data = {'scores': metrics['scores'], 'labels': metrics['labels']}
+                    df_results = pd.DataFrame(data=result_data)
                     df_results.to_csv(os.path.join(self.path_result, 'results.csv'), index=False)
 
                 del self.clf
                 gc.collect()
-        return results
+        return result_data
+
+    # run the experiments in ADBench_modified
+    def run(self, dataset=None, clf=None):
+        if dataset is None:
+            #  filteting dataset that does not meet the experimental requirements
+            dataset_list = self.dataset_filter()
+            X, y, X_train, y_train, X_test, y_test = None, None, None, None, None, None
+        else:
+            isinstance(dataset, dict)
+            dataset_list = [None]
+            X = dataset['X']
+            y = dataset['y']
+            X_train = dataset['X_train']
+            y_train = dataset['y_train']
+            X_test = dataset['X_test']
+            y_test = dataset['y_test']
+
+        # experimental parameters
+        if self.mode == 'nla':
+            if self.noise_type is not None:
+                experiment_params = list(product(dataset_list, self.nla_list, self.noise_params_list, self.seed_list))
+            else:
+                experiment_params = list(product(dataset_list, self.nla_list, self.seed_list))
+        else:
+            if self.noise_type is not None:
+                experiment_params = list(product(dataset_list, self.rla_list, self.noise_params_list, self.seed_list))
+            else:
+                experiment_params = list(product(dataset_list, self.rla_list, self.seed_list))
+
+        print(f'{len(dataset_list)} datasets, {len(self.model_dict.keys())} models')
+
+        # save the results
+        print(f"Experiment results are saved at: {self.path_result}")
+        os.makedirs(self.path_result, exist_ok=True)
+        columns = list(self.model_dict.keys()) if clf is None else ['Customized']
+        df_AUCROC = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_AUCPR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_FDR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_FAR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_time_fit = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_time_inference = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+
+        results = []
+        for i, params in tqdm(enumerate(experiment_params)):
+            if self.noise_type is not None:
+                dataset, la, noise_param, self.seed = params
+            else:
+                dataset, la, self.seed = params
+
+            if self.parallel == 'unsupervise' and la != 0.0 and self.noise_type is None:
+                # if self.parallel == 'unsupervise' and self.noise_type is None:
+                continue
+
+            # We only run one time on CV / NLP datasets for considering computational cost
+            # The final results are the average performance on different classes
+            if self.isin_NLPCV(dataset) and self.seed > 1:
+                continue
+
+            # generate data
+            self.data_generator.seed = self.seed
+            self.data_generator.dataset = dataset
+
+            try:
+                if self.noise_type == 'duplicated_anomalies':
+                    self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
+                                                              realistic_synthetic_mode=self.realistic_synthetic_mode,
+                                                              noise_type=self.noise_type, duplicate_times=noise_param)
+                elif self.noise_type == 'irrelevant_features':
+                    self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
+                                                              realistic_synthetic_mode=self.realistic_synthetic_mode,
+                                                              noise_type=self.noise_type, noise_ratio=noise_param)
+                elif self.noise_type == 'label_contamination':
+                    self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
+                                                              realistic_synthetic_mode=self.realistic_synthetic_mode,
+                                                              noise_type=self.noise_type, noise_ratio=noise_param)
+                else:
+                    self.data = self.data_generator.generator(la=la, at_least_one_labeled=True, X=X, y=y,
+                                                              X_train=X_train, y_train=y_train, X_test=X_test,
+                                                              y_test=y_test,
+                                                              realistic_synthetic_mode=self.realistic_synthetic_mode)
+
+            except Exception as error:
+                print(f'Error when generating data: {error}')
+                pass
+                continue
+
+            if clf is None:
+                for model_name in tqdm(self.model_dict.keys()):
+                    self.model_name = model_name
+                    self.clf = self.model_dict[self.model_name]
+
+                    # fit and test model
+                    time_fit, time_inference, metrics = self.model_fit()
+                    results.append([params, model_name, metrics, time_fit, time_inference])
+                    print(f'Current experiment parameters: {params}, model: {model_name}, metrics: {metrics}, '
+                          f'fitting time: {time_fit}, inference time: {time_inference}')
+
+                    # store and save the result (AUC-ROC, AUC-PR and runtime / inference time)
+                    df_AUCROC[model_name].iloc[i] = metrics['aucroc']
+                    df_AUCPR[model_name].iloc[i] = metrics['aucpr']
+                    df_time_fit[model_name].iloc[i] = time_fit
+                    df_time_inference[model_name].iloc[i] = time_inference
+
+                    df_AUCROC.to_csv(os.path.join(self.path_result, 'AUCROC_' + self.suffix + '.csv'), index=True)
+                    df_AUCPR.to_csv(os.path.join(self.path_result, 'AUCPR_' + self.suffix + '.csv'), index=True)
+                    df_time_fit.to_csv(os.path.join(self.path_result, 'Time(fit)_' + self.suffix + '.csv'), index=True)
+                    df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'),
+                                             index=True)
+
+            else:
+                self.clf = clf
+                self.model_name = 'Customized'
+                # fit and test model
+                train_once = True
+                if train_once is True:
+                    if not os.path.exists(os.path.join(path_project, f'adversarial_ensemble_AD/models',
+                                                       f'DeepSAD_seed={self.seed}.pth')):
+                        time_fit = self.model_fit()
+                        self.clf.deepSAD.save_model(export_model=os.path.join(path_project, 'adversarial_ensemble_AD/models',
+                                                                      f'DeepSAD_seed={self.seed}.pth'), save_ae=True)
+                    else:
+                        time_fit = self.model_fit(load_model=os.path.join(path_project, 'adversarial_ensemble_AD/models',
+                                                                    f'DeepSAD_seed={self.seed}.pth'))
+                else:
+                    time_fit = self.model_fit()
+
+                time_inference, metrics = self.model_test()
+                results.append([params, self.model_name, metrics, time_fit, time_inference])
+                print(f'Current experiment parameters: {params}, model: {self.model_name}, metrics: {metrics}, '
+                      f'fitting time: {time_fit}, inference time: {time_inference}')
+
+                # store and save the result (AUC-ROC, AUC-PR and runtime / inference time)
+                df_AUCROC[self.model_name].iloc[i] = metrics['aucroc']
+                df_AUCPR[self.model_name].iloc[i] = metrics['aucpr']
+                df_FDR[self.model_name].iloc[i] = metrics['FDR']
+                df_FAR[self.model_name].iloc[i] = metrics['FAR']
+                df_time_fit[self.model_name].iloc[i] = time_fit
+                df_time_inference[self.model_name].iloc[i] = time_inference
+
+                df_AUCROC.to_csv(os.path.join(self.path_result, 'AUCROC_' + self.suffix + '.csv'), index=True)
+                df_AUCPR.to_csv(os.path.join(self.path_result, 'AUCPR_' + self.suffix + '.csv'), index=True)
+                df_FDR.to_csv(os.path.join(self.path_result, 'FDR_' + self.suffix + '.csv'), index=True)
+                df_FAR.to_csv(os.path.join(self.path_result, 'FAR_' + self.suffix + '.csv'), index=True)
+                df_time_fit.to_csv(os.path.join(self.path_result, 'Time(fit)_' + self.suffix + '.csv'), index=True)
+                df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'),
+                                         index=True)
+
+                # save the Deep SAD model
+                torch.save(self.clf.deepSAD.ae_net,
+                           os.path.join(self.path_result, 'model_ae_net' + '.pth'))
+                torch.save(self.clf.deepSAD.net,
+                           os.path.join(self.path_result, 'model_net' + '.pth'))
+                np.save(os.path.join(self.path_result, 'c' + '.npy'), self.clf.deepSAD.c)
+
+                print_score = True
+                if print_score is True:
+                    result_data = {'scores': metrics['scores'], 'labels': metrics['labels']}
+                    df_results = pd.DataFrame(data=result_data)
+                    df_results.to_csv(os.path.join(self.path_result, 'results.csv'), index=False)
+
+                del self.clf
+                gc.collect()
+        return result_data
 
     def run_universum(self, target_dataset_name='MVTec-AD_bottle', path_datasets=None, clf=None, use_preprocess=False,
                       universum_params=None, preprocess_params=None):
@@ -626,7 +844,7 @@ if __name__ == '__main__':
     pipeline = RunPipeline(suffix='DeepSAD', parallel='unsupervise', n_samples_threshold=200, seed=seed,
                            realistic_synthetic_mode=None,
                            noise_type=None, path_result=path_save)
-    results = pipeline.run_universum(clf=DeepSAD, target_dataset_name=category,
-                                     path_datasets=path_project + '/data/mvtec_ad',
-                                     use_preprocess=use_preprocess,
-                                     universum_params={'aug_type': aug_type, 'lamda': lamda, 'aux_size': aux_size})
+    result_data = pipeline.run_universum(clf=DeepSAD, target_dataset_name=category,
+                                         path_datasets=path_project + '/data/mvtec_ad',
+                                         use_preprocess=use_preprocess,
+                                         universum_params={'aug_type': aug_type, 'lamda': lamda, 'aux_size': aux_size})

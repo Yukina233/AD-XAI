@@ -57,7 +57,7 @@ def test_mislabeled_detection_batch(
 def viz_top_influential_examples(model, test_idx):
 
     model.reset_datasets()
-    print('Test point %s has label %s.' % (test_idx, model.data_sets.test.labels[test_idx]))
+    print('Test point %s has label %s.' % (test_idx, model.data_sets.test.cluster_labels[test_idx]))
 
     num_to_remove = 10000
     indices_to_remove = np.arange(num_to_remove)
@@ -79,7 +79,7 @@ def viz_top_influential_examples(model, test_idx):
         for counter, idx in enumerate(points):
             print("#%s, class=%s, predicted_loss_diff=%.8f" % (
                 idx, 
-                model.data_sets.train.labels[idx], 
+                model.data_sets.train.cluster_labels[idx],
                 predicted_loss_diffs[idx]))
 
 
@@ -95,7 +95,7 @@ def test_retraining(model, test_idx, iter_to_load, force_refresh=False,
     sess = model.sess
 
     
-    y_test = model.data_sets.test.labels[test_idx]
+    y_test = model.data_sets.test.cluster_labels[test_idx]
     print('Test label: %s' % y_test)
 
     ## Or, randomly remove training examples
@@ -109,7 +109,7 @@ def test_retraining(model, test_idx, iter_to_load, force_refresh=False,
     elif remove_type == 'maxinf':    
         predicted_loss_diffs = model.get_influence_on_test_loss(
             [test_idx], 
-            np.arange(len(model.data_sets.train.labels)),
+            np.arange(len(model.data_sets.train.cluster_labels)),
             force_refresh=force_refresh)
         indices_to_remove = np.argsort(np.abs(predicted_loss_diffs))[-num_to_remove:]
         predicted_loss_diffs = predicted_loss_diffs[indices_to_remove]
@@ -147,7 +147,7 @@ def test_retraining(model, test_idx, iter_to_load, force_refresh=False,
     for counter, idx_to_remove in enumerate(indices_to_remove):
 
         print("=== #%s ===" % counter)
-        print('Retraining without train_idx %s (label %s):' % (idx_to_remove, model.data_sets.train.labels[idx_to_remove]))
+        print('Retraining without train_idx %s (label %s):' % (idx_to_remove, model.data_sets.train.cluster_labels[idx_to_remove]))
 
         train_feed_dict = model.fill_feed_dict_with_all_but_one_ex(model.data_sets.train, idx_to_remove)
         model.retrain(num_steps=num_steps, feed_dict=train_feed_dict)

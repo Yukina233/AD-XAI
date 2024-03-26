@@ -93,7 +93,7 @@ class BinaryInceptionModel(GenericNeuralNet):
     def fill_feed_dict_with_all_ex(self, data_set):
         feed_dict = {
             self.input_placeholder: data_set.x,
-            self.labels_placeholder: data_set.labels,
+            self.labels_placeholder: data_set.cluster_labels,
             K.learning_phase(): 0
         }
         return feed_dict
@@ -105,7 +105,7 @@ class BinaryInceptionModel(GenericNeuralNet):
         idx[idx_to_remove] = False
         feed_dict = {
             self.input_placeholder: data_set.x[idx, :],
-            self.labels_placeholder: data_set.labels[idx],
+            self.labels_placeholder: data_set.cluster_labels[idx],
             K.learning_phase(): 0
         }
         return feed_dict
@@ -128,7 +128,7 @@ class BinaryInceptionModel(GenericNeuralNet):
 
     def fill_feed_dict_with_some_ex(self, data_set, target_indices):
         input_feed = data_set.x[target_indices, :].reshape(len(target_indices), -1)
-        labels_feed = data_set.labels[target_indices].reshape(-1)
+        labels_feed = data_set.cluster_labels[target_indices].reshape(-1)
         feed_dict = {
             self.input_placeholder: input_feed,
             self.labels_placeholder: labels_feed,
@@ -139,7 +139,7 @@ class BinaryInceptionModel(GenericNeuralNet):
 
     def fill_feed_dict_with_one_ex(self, data_set, target_idx):
         input_feed = data_set.x[target_idx, :].reshape(1, -1)
-        labels_feed = data_set.labels[target_idx].reshape(1)
+        labels_feed = data_set.cluster_labels[target_idx].reshape(1)
         feed_dict = {
             self.input_placeholder: input_feed,
             self.labels_placeholder: labels_feed,

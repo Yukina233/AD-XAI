@@ -15,20 +15,20 @@ class Fault_Detect_Train():
     def __init__(self):
         # 获得数据
 
-        # nor_data = None
-        # path_normal = os.path.join(path_project, 'data/banwuli_data/normal')
-        # for file in os.listdir(path_normal):
-        #     path_file = os.path.join(path_normal, file)
-        #     data = self.get_dat(path_file)
-        #     if nor_data is None:
-        #         nor_data = data[3000:, :]
-        #     else:
-        #         nor_data = np.concatenate((nor_data, data[3000:, :]))
+        nor_data = None
+        path_normal = os.path.join(path_project, 'data/banwuli_data/normal')
+        for file in os.listdir(path_normal):
+            path_file = os.path.join(path_normal, file)
+            data = self.get_dat(path_file)
+            if nor_data is None:
+                nor_data = data[2000:, :]
+            else:
+                nor_data = np.concatenate((nor_data, data[2000:, :]))
 
-        train_data = self.get_dat(os.path.join(path_project, 'data/banwuli_data/normal/zc1.dat'))[3000:, :]
-        test_data = self.get_dat(os.path.join(path_project, 'data/banwuli_data/normal/zc2.dat'))[3000:, :]
-        self.Train_Data = train_data
-        self.Test_Data = test_data
+        # train_data = self.get_dat(os.path.join(path_project, 'data/banwuli_data/normal/zc1.dat'))[3000:, :]
+        # test_data = self.get_dat(os.path.join(path_project, 'data/banwuli_data/normal/zc2.dat'))[3000:, :]
+        self.Train_Data = nor_data
+        self.Test_Data = nor_data
         self.param = ['dOmega_ib_b[0]', 'dOmega_ib_b[1]', 'dOmega_ib_b[2]', 'Gama', 'Theta_k', 'Psi_t', 'fb[0]', 'fb[1]',
            'fb[2]', 'Alfa', 'Beta', 'zmb', 'P']
 

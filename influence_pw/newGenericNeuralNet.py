@@ -118,8 +118,8 @@ class GenericNeuralNet(object):
 
         # Setup input
         self.input_placeholder, self.labels_placeholder = self.placeholder_inputs()
-        self.num_train_examples = self.data_sets.train.labels.shape[0]
-        self.num_test_examples = self.data_sets.test.labels.shape[0]
+        self.num_train_examples = self.data_sets.train.cluster_labels.shape[0]
+        self.num_test_examples = self.data_sets.test.cluster_labels.shape[0]
 
         # Setup inference and training
         if self.keep_probs is not None:
@@ -203,7 +203,7 @@ class GenericNeuralNet(object):
     def fill_feed_dict_with_all_ex(self, data_set):
         feed_dict = {
             self.input_placeholder: data_set.x,
-            self.labels_placeholder: data_set.labels
+            self.labels_placeholder: data_set.cluster_labels
         }
         return feed_dict
 
@@ -213,7 +213,7 @@ class GenericNeuralNet(object):
         idx[idx_to_remove] = False
         feed_dict = {
             self.input_placeholder: data_set.x[idx, :],
-            self.labels_placeholder: data_set.labels[idx]
+            self.labels_placeholder: data_set.cluster_labels[idx]
         }
         return feed_dict
 
@@ -232,7 +232,7 @@ class GenericNeuralNet(object):
 
     def fill_feed_dict_with_some_ex(self, data_set, target_indices):
         input_feed = data_set.x[target_indices, :].reshape(len(target_indices), -1)
-        labels_feed = data_set.labels[target_indices].reshape(-1)
+        labels_feed = data_set.cluster_labels[target_indices].reshape(-1)
         feed_dict = {
             self.input_placeholder: input_feed,
             self.labels_placeholder: labels_feed,
@@ -241,7 +241,7 @@ class GenericNeuralNet(object):
 
     def fill_feed_dict_with_one_ex(self, data_set, target_idx):
         input_feed = data_set.x[target_idx, :].reshape(1, -1)
-        labels_feed = data_set.labels[target_idx].reshape(-1)
+        labels_feed = data_set.cluster_labels[target_idx].reshape(-1)
         feed_dict = {
             self.input_placeholder: input_feed,
             self.labels_placeholder: labels_feed,
@@ -796,7 +796,7 @@ class GenericNeuralNet(object):
 
     def update_train_x(self, new_train_x):
         assert np.all(new_train_x.shape == self.data_sets.train.x.shape)
-        new_train = DataSet(new_train_x, np.copy(self.data_sets.train.labels))
+        new_train = DataSet(new_train_x, np.copy(self.data_sets.train.cluster_labels))
         self.data_sets = base.Datasets(train=new_train, validation=self.data_sets.validation, test=self.data_sets.test)
         self.all_train_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets.train)
         self.reset_datasets()

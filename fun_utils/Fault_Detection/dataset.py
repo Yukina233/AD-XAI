@@ -33,7 +33,7 @@ def timewindow(timeseries, ts_length):  # 滑动时间窗口法
 # 用来将原始数据处理成训练数据和测试数据，分别存储在yukina_data文件夹下的normal和anomaly文件夹下
 if __name__ == '__main__':
     path_all_data = os.path.join(path_project, "data/banwuli_data")
-    fault_list = ['ks', 'lqs', 'rqs', 'sf', 'T']
+    fault_list = ['rqs_0.02', 'rqs_0.04', 'rqs_0.06', 'rqs_0.08', 'rqs_0.10']
     normal_start = 2000
     anomaly_start = 5000
     window_size = 100
@@ -76,6 +76,7 @@ if __name__ == '__main__':
 
     # 遍历给定路径下的所有目录
     for fault in tqdm(fault_list, desc='Processing anomaly data'):
+        count = 0
         anomaly_data = None
         anomaly_label = None
         path_anomaly = os.path.join(path_all_data, fault)
@@ -91,15 +92,16 @@ if __name__ == '__main__':
                 X_1 = data[anomaly_start - normal_start - window_size:,:]
                 Y_0 = [0] * X_0.shape[0]
                 Y_1 = [1] * X_1.shape[0]
-                if anomaly_data is None and anomaly_label is None:
-                    anomaly_data = np.concatenate((X_0, X_1))
-                    anomaly_label = np.concatenate((Y_0, Y_1))
-                else:
-                    anomaly_data = np.concatenate((anomaly_data, X_0, X_1))
-                    anomaly_label = np.concatenate((anomaly_label, Y_0, Y_1))
 
-        path_anomaly_save = os.path.join(path_all_data, "yukina_data/anomaly", fault)
-        if not os.path.exists(path_anomaly_save):
-            os.makedirs(path_anomaly_save)
-        np.save(os.path.join(path_anomaly_save, "features.npy"), anomaly_data)
-        np.save(os.path.join(path_anomaly_save, "labels.npy"), anomaly_label)
+                anomaly_data = np.concatenate((X_0, X_1))
+                anomaly_label = np.concatenate((Y_0, Y_1))
+
+                count += 1
+
+                path_anomaly_save = os.path.join(path_all_data, "yukina_data/anomaly", fault)
+                if not os.path.exists(path_anomaly_save):
+                    os.makedirs(path_anomaly_save)
+                np.save(os.path.join(path_anomaly_save, f"features_{count}.npy"), anomaly_data)
+                np.save(os.path.join(path_anomaly_save, f"labels_{count}.npy"), anomaly_label)
+
+

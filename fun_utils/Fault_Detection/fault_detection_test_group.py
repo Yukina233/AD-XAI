@@ -283,33 +283,41 @@ def hhs_main():
     fault_list = ['ks', 'sf', 'rqs', 'lqs', 'T']
     window_length = 100
     # 读取SSLLE模型
-    A = np.load(os.path.join(path_project, 'fun_utils/origin_model/projection.npy'))
-    train_distance = np.load(os.path.join(path_project, 'fun_utils/origin_model/train_distance.npy'))
-    center = np.load(os.path.join(path_project, 'fun_utils/origin_model/center.npy'))
+    A = np.load(os.path.join(path_project, 'fun_utils/origin_model/projection_all_normal_without_c.npy'))
+    train_distance = np.load(os.path.join(path_project, 'fun_utils/origin_model/train_distance_all_normal_without_c.npy'))
+    center = np.load(os.path.join(path_project, 'fun_utils/origin_model/center_all_normal_without_c.npy'))
 
     # 读取数据
     path_dataset = os.path.join(path_project, "data/banwuli_data/yukina_data")
 
-    X_train = np.load(os.path.join(path_dataset, 'normal', "features.npy"))
-
     FDR_list = []
     FAR_list = []
-    for fault in tqdm(fault_list, desc='detecting'):
-        X_test = np.load(os.path.join(path_dataset,'anomaly', fault, "features.npy"))
-        Y_test = np.load(os.path.join(path_dataset,'anomaly', fault, "labels.npy"))
-        X_test = np.transpose(np.dot(A, np.transpose(X_test)))
-        test_distance = np.sqrt(np.sum(np.square(X_test - center[0]), axis=1))
-        FDR, FAR = detect_accurate(train_distance, test_distance, Y_test, mode='auto')
-        print('故障{}检测率为:{:.3f}%'.format(fault, FDR))
-        print('故障{}虚警率为:{:.3f}%'.format(fault, FAR))
-        FDR_list.append(FDR)
-        FAR_list.append(FAR)
 
-    print('平均故障检测率为:{:.3f}%'.format(np.mean(FDR_list)))
-    print('平均虚警率为:{:.3f}%'.format(np.mean(FAR_list)))
+    for fault in tqdm(fault_list, desc='detecting'):
+        FDRs = []
+        FARs = []
+        path_fault = os.path.join(path_dataset, 'anomaly', fault)
+        files = os.listdir(path_fault)
+
+        for i in range(1, int(len(files)/2 + 1)):
+
+            X_test = np.load(os.path.join(path_dataset,'anomaly', fault, f"features_{i}.npy"))
+            Y_test = np.load(os.path.join(path_dataset,'anomaly', fault, f"labels_{i}.npy"))
+            X_test = np.transpose(np.dot(A, np.transpose(X_test)))
+            test_distance = np.sqrt(np.sum(np.square(X_test - center[0]), axis=1))
+            FDR, FAR = detect_accurate(train_distance, test_distance, Y_test, mode='auto')
+            # print('故障{}检测率为:{:.3f}%'.format(fault, FDR))
+            # print('故障{}虚警率为:{:.3f}%'.format(fault, FAR))
+            FDRs.append(FDR)
+            FARs.append(FAR)
+
+        FDR_list.append(np.mean(FDRs))
+        FAR_list.append(np.mean(FARs))
+        print('平均故障检测率为:{:.3f}%'.format(np.mean(FDRs)))
+        print('平均虚警率为:{:.3f}%'.format(np.mean(FARs)))
 
     # 结果保存到csv文件
     result = pd.DataFrame({'fault': fault_list, 'FDR': FDR_list, 'FAR': FAR_list})
-    result.to_csv(os.path.join(path_project, "fun_utils/Fault_Detection/log/SSLLE_result.csv"), index=False)
+    result.to_csv(os.path.join(path_project, "fun_utils/Fault_Detection/log/SSLLE_result_all_normal_without_c.csv"), index=False)
 
 hhs_main()

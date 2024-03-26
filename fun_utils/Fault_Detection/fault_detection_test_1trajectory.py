@@ -1,5 +1,7 @@
 import os
 
+from tqdm import tqdm
+
 from spot import dSPOT
 import scipy.io as scio
 import numpy as np
@@ -271,7 +273,7 @@ def detect_accurate(train_distance,test_distance,ts_length,train_end,fault_start
                               axesA=axins, axesB=ax)
         axins.add_artist(con)
         plt.show()
-        return fp_rate,pf_rate
+        return FDR,FAR
 def km_cluster(lle_train_data, test_new, x_train_new):
     # 降维数据
     kmeans = KMeans(n_clusters=1)
@@ -444,12 +446,28 @@ def data_flatten(X):
     return (flattened_X)
 
 def hhs_main():
-    zongfp,zongpf = [],[]
-    path1 = os.path.join(path_project, "data/banwuli_data/normal/zc1.dat")
-    nor_data = get_dat(path1)
+    FDRs = []
+    FARs = []
+    # path1 = os.path.join(path_project, "data/banwuli_data/normal/zc1.dat")
+    # nor_data = get_dat(path1)
+
     # plot_data(nor_data)
-    xtrain = nor_data[2000:, :]
-    scaler = RobustScaler().fit(xtrain)
+    # xtrain = nor_data[2000:, :]
+    # scaler = RobustScaler().fit(xtrain)
+
+    nor_data = None
+    path_all_data = os.path.join(path_project, "data/banwuli_data")
+    path_normal = os.path.join(path_all_data, 'normal')
+    for file in tqdm(os.listdir(path_normal), desc='Read data for robust scaler'):
+        path_file = os.path.join(path_normal, file)
+        data = get_dat(path_file)
+        data = data[2000:, :]
+        if nor_data is None:
+            nor_data = data
+        else:
+            nor_data = np.concatenate((nor_data, data))
+
+    scaler = RobustScaler().fit(nor_data)
 
     nor_t = moving_average(nor_data[:, -1], 10)
     t_mean = np.mean(nor_t)
@@ -461,19 +479,26 @@ def hhs_main():
     center = np.load(os.path.join(path_project, 'fun_utils/origin_model/center.npy'))
 
     # path2 = 'D:\share\新建文件夹\T\T0.6.dat'
-    path2 = os.path.join(path_project, 'data/banwuli_data/rqs/rqs-2/rqs-2-0.40.dat')     #
-    fault_data = get_dat(path2)
-    train_end = 2000  # 2000
 
-    fault_start = 5000
-    window_length = 100
-    for i in range(1):
-        testdata = fault_data[2000:, :]
-        xtest = scaler.transform(testdata)
-        test_extract = timewindow(xtest, window_length)
-        test_new = np.transpose(np.dot(A, np.transpose(test_extract)))
-        test_distance = np.sqrt(np.sum(np.square(test_new - center[0]), axis=1))
-        fp, pf = detect_accurate(train_distance, test_distance, window_length, train_end, fault_start, mode='auto')
+    for num in ['1', '2', '3', '4']:
 
+        path2 = os.path.join(path_project, f'data/banwuli_data/rqs/rqs-{num}/rqs-{num}-0.10.dat')     #
+        fault_data = get_dat(path2)
+        train_end = 2000  # 2000
+
+        fault_start = 5000
+        window_length = 100
+        for i in range(1):
+            testdata = fault_data[2000:, :]
+            xtest = scaler.transform(testdata)
+            test_extract = timewindow(xtest, window_length)
+            test_new = np.transpose(np.dot(A, np.transpose(test_extract)))
+            test_distance = np.sqrt(np.sum(np.square(test_new - center[0]), axis=1))
+            FDR, FAR = detect_accurate(train_distance, test_distance, window_length, train_end, fault_start, mode='auto')
+            FDRs.append(FDR)
+            FARs.append(FAR)
+    csv_data = {'FDR': FDRs, 'FAR': FARs}
+    df = pd.DataFrame(csv_data)
+    df.to_csv(os.path.join(path_project, 'fun_utils/Fault_Detection/log/SSLLE_result_partial.csv'), index=False)
 hhs_main()
 

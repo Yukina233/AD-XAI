@@ -143,7 +143,7 @@ class deepsad(object):
                     'net_dict': net_dict,
                     'ae_net_dict': ae_net_dict}, export_model)
 
-    def load_model(self, model_path, load_ae=False, map_location='cpu'):
+    def load_model(self, model_path, load_ae=False, map_location='cpu', input_size=None):
         """Load Deep SAD model from model_path."""
 
         model_dict = torch.load(model_path, map_location=map_location)
@@ -154,7 +154,7 @@ class deepsad(object):
         # load autoencoder parameters if specified
         if load_ae:
             if self.ae_net is None:
-                self.ae_net = build_autoencoder(self.net_name)
+                self.ae_net = build_autoencoder(self.net_name, input_size)
             self.ae_net.load_state_dict(model_dict['ae_net_dict'])
 
     def save_results(self, export_json):

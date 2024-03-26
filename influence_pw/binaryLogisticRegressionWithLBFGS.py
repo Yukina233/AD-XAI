@@ -122,7 +122,7 @@ class BinaryLogisticRegressionWithLBFGS(LogisticRegressionWithLBFGS):
                 single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets.train, idx_to_remove)
                 train_grad_loss_val = self.sess.run(self.grad_total_loss_op, feed_dict=single_train_feed_dict)
             else:
-                train_grad_loss_val = [-(self.data_sets.train.labels[idx_to_remove] * 2 - 1) * self.data_sets.train.x[idx_to_remove, :]]
+                train_grad_loss_val = [-(self.data_sets.train.cluster_labels[idx_to_remove] * 2 - 1) * self.data_sets.train.x[idx_to_remove, :]]
             predicted_loss_diffs[counter] = np.dot(np.concatenate(inverse_hvp), np.concatenate(train_grad_loss_val)) / self.num_train_examples
 
         duration = time.time() - start_time
@@ -134,7 +134,7 @@ class BinaryLogisticRegressionWithLBFGS(LogisticRegressionWithLBFGS):
     def get_loo_influences(self):
 
         X_train = self.data_sets.train.x
-        Y_train = self.data_sets.train.labels * 2 - 1
+        Y_train = self.data_sets.train.cluster_labels * 2 - 1
         theta = self.sess.run(self.params)[0]
 
         # Pre-calculate inverse covariance matrix

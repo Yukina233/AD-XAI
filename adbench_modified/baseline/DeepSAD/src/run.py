@@ -12,14 +12,14 @@ from adbench_modified.myutils import Utils
 
 
 class DeepSAD():
-    def __init__(self, seed, model_name='DeepSAD'):
+    def __init__(self, seed, model_name='DeepSAD', load_model=None):
         self.utils = Utils()
         self.device = self.utils.get_device(gpu_specific=True)  # get device
         self.seed = seed
 
         self.xp_path = None
         self.load_config = None
-        self.load_model = None
+        self.load_model = load_model
         self.eta = 1.0  # eta in the loss function
         self.optimizer_name = 'adam'
         self.lr = 0.001
@@ -79,33 +79,34 @@ class DeepSAD():
 
         # If specified, load Deep SAD model (center c, network weights, and possibly autoencoder weights)
         if self.load_model:
-            self.deepSAD.load_model(model_path=self.load_model, load_ae=True, map_location=self.device)
+            self.deepSAD.load_model(model_path=self.load_model, load_ae=True, map_location=self.device, input_size=input_size)
             logging.info('Loading model from %s.' % self.load_model)
 
-        logging.info('Pretraining: %s' % self.pretrain)
-        if self.pretrain:
-            # Pretrain model on dataset (via autoencoder)
-            self.deepSAD.pretrain(ae_dataset,
-                                  input_size,
-                                  optimizer_name=self.ae_optimizer_name,
-                                  lr=self.ae_lr,
-                                  n_epochs=self.ae_n_epochs,
-                                  lr_milestones=self.ae_lr_milestone,
-                                  batch_size=self.ae_batch_size,
-                                  weight_decay=self.ae_weight_decay,
-                                  device=self.device,
-                                  n_jobs_dataloader=self.n_jobs_dataloader)
+        else:
+            logging.info('Pretraining: %s' % self.pretrain)
+            if self.pretrain:
+                # Pretrain model on dataset (via autoencoder)
+                self.deepSAD.pretrain(ae_dataset,
+                                      input_size,
+                                      optimizer_name=self.ae_optimizer_name,
+                                      lr=self.ae_lr,
+                                      n_epochs=self.ae_n_epochs,
+                                      lr_milestones=self.ae_lr_milestone,
+                                      batch_size=self.ae_batch_size,
+                                      weight_decay=self.ae_weight_decay,
+                                      device=self.device,
+                                      n_jobs_dataloader=self.n_jobs_dataloader)
 
-        # Train model on dataset
-        self.deepSAD.train(dataset,
-                           optimizer_name=self.optimizer_name,
-                           lr=self.lr,
-                           n_epochs=self.n_epochs,
-                           lr_milestones=self.lr_milestone,
-                           batch_size=self.batch_size,
-                           weight_decay=self.weight_decay,
-                           device=self.device,
-                           n_jobs_dataloader=self.n_jobs_dataloader)
+            # Train model on dataset
+            self.deepSAD.train(dataset,
+                               optimizer_name=self.optimizer_name,
+                               lr=self.lr,
+                               n_epochs=self.n_epochs,
+                               lr_milestones=self.lr_milestone,
+                               batch_size=self.batch_size,
+                               weight_decay=self.weight_decay,
+                               device=self.device,
+                               n_jobs_dataloader=self.n_jobs_dataloader)
 
         # Save results, model, and configuration
         # deepSAD.save_results(export_json=xp_path + '/results.json')

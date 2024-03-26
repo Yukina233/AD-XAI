@@ -100,7 +100,7 @@ class LabelTensor(Tensor):
 		super(LabelTensor,self).__init__(
 				x,
 				comment=comment)
-		out=zip(x.value[0].tolist(), x.owner.labels)
+		out=zip(x.value[0].tolist(), x.owner.cluster_labels)
 		out.sort(cmp=lambda a, b: cmp(a[0], b[0]), reverse=True)
 		self.content = out
 

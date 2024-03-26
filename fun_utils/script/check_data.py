@@ -81,7 +81,7 @@ def plot_data(data):
     ax[2, 0].set_yticks(yticks)
     ax[2, 0].set_yticklabels(yticks, fontdict={'family': 'Times New Roman', 'size': 10})
     ax[2, 0].set_xlabel('时间(秒)', fontdict={'family': ['SimSun'], 'size': 12})
-    ax[2, 0].set_ylabel('z轴偏移', fontdict={'family': ['SimSun'], 'size': 12})
+    ax[2, 0].set_ylabel('z轴偏移(米)', fontdict={'family': ['SimSun'], 'size': 12})
     ax[2, 0].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2f'))
     ax[2, 0].legend(loc='best', prop={'family': ['SimSun'], 'size': 12})
 
@@ -93,7 +93,7 @@ def plot_data(data):
     ax[2, 1].set_yticks(yticks)
     ax[2, 1].set_yticklabels(yticks, fontdict={'family': 'Times New Roman', 'size': 10})
     ax[2, 1].set_xlabel('时间(秒)', fontdict={'family': ['SimSun'], 'size': 12})
-    ax[2, 1].set_ylabel('推力', fontdict={'family': ['SimSun'], 'size': 12})
+    ax[2, 1].set_ylabel('推力(牛顿)', fontdict={'family': ['SimSun'], 'size': 12})
     ax[2, 1].yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2f'))
     ax[2, 1].legend(loc='best', prop={'family': ['SimSun'], 'size': 12})
 
@@ -104,8 +104,8 @@ normal_data = read_dat(path_project + "data/banwuli_data/normal/zc1.dat")
 ks_data = read_dat(path_project + "data/banwuli_data/ks/1/ks1_-1.dat")
 sf_data = read_dat(path_project + "data/banwuli_data/sf/1/sf1-1.dat")
 rqs_data = read_dat(path_project + "data/banwuli_data/rqs/rqs-1/rqs-1-0.10.dat")
-lqs_l_data = read_dat(path_project + "data/banwuli_data/lqs/lqs-l/lqs-l-0.22.dat")
+lqs_l_data = read_dat(path_project + "data/banwuli_data/lqs/lqs-l/lqs-l-0.02.dat")
 lqs_r_data = read_dat(path_project + "data/banwuli_data/lqs/lqs-r/lqs-r-0.22.dat")
 t_data = read_dat(path_project + "data/banwuli_data/T/1/T0.04.dat")
 
-plot_data(rqs_data)
+plot_data(lqs_l_data)
