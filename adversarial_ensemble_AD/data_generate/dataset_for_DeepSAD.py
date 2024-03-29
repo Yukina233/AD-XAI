@@ -20,8 +20,6 @@ X_train = np.load(os.path.join(root_dir, 'normal/features.npy'))
 y_train = np.load(os.path.join(root_dir, 'normal/labels.npy'))
 
 for fault in tqdm(os.listdir(os.path.join(root_dir, 'anomaly'))):
-    FDRs = []
-    FARs = []
     path_fault = os.path.join(root_dir, 'anomaly', fault)
     files = os.listdir(path_fault)
 

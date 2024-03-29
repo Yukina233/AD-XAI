@@ -54,6 +54,8 @@ class AETrainer(BaseTrainer):
             epoch_start_time = time.time()
             for data in train_loader:
                 inputs, _, _, _ = data
+                if inputs.size(0) <= 1:
+                    continue
                 inputs = inputs.to(self.device)
 
                 # Zero the network parameter gradients

@@ -28,7 +28,7 @@ def kmeans_clustering(X_train, num_clusters):
 
 
 num_clusters = 2
-output_path = os.path.join(path_project, root_dir, 'cluster_normal')
+output_path = os.path.join(root_dir, f'cluster_normal/n={num_clusters}')
 if not os.path.isdir(output_path):
     os.mkdir(output_path)
 
@@ -42,7 +42,7 @@ groups = [X_train[np.where(cluster_labels == i)] for i in range(num_clusters)]
 
 X = X_train
 y = cluster_labels
-tsne = TSNE(n_components=3, random_state=0)  # n_components表示目标维度
+tsne = TSNE(n_components=num_clusters, random_state=0)  # n_components表示目标维度
 
 X_2d = tsne.fit_transform(X)  # 对数据进行降维处理
 plt.figure(figsize=(8, 6))
@@ -77,7 +77,7 @@ plt.ylabel('Dimension 2')
 
 plt.show()
 
-# for item in enumerate(groups):
-#     np.save(os.path.join(output_path, f'{item[0]}.npy'), item[1])
+for item in enumerate(groups):
+    np.save(os.path.join(output_path, f'{item[0]}.npy'), item[1])
 
 print('Data generate complete.')

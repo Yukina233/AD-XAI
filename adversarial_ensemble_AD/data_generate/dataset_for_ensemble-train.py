@@ -42,7 +42,7 @@ def generate_train_data_seperate(path_output=None, path_normal=None, data_anomal
         else:
             labels = np.ones(data_anomaly.shape[0])
             train_dataset = Dataset(X=[0], y=[0], X_train=data_anomaly, y_train=labels, X_test=data_anomaly[0], y_test=labels[0])
-            train_dataset.save_data(os.path.join(path_output, 'train_data'))
+            train_dataset.save_data(os.path.join(path_output, 'init'))
     else:
         for i, file in enumerate(os.listdir(path_normal)):
             data_normal = np.load(os.path.join(path_normal, file))
@@ -59,8 +59,8 @@ def generate_train_data_seperate(path_output=None, path_normal=None, data_anomal
 
 
 if __name__ == '__main__':
-    path_normal = os.path.join(path_project, 'data/banwuli_data/yukina_data/cluster_normal')
-    path_output = os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate')
+    path_normal = os.path.join(path_project, 'data/banwuli_data/yukina_data/cluster_normal/n=2')
+    path_output = os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate/init')
     if not os.path.isdir(path_output):
         os.mkdir(path_output)
     generate_train_data_seperate(path_output=path_output, path_normal=path_normal, data_anomaly=None)

@@ -67,6 +67,8 @@ class DeepSADTrainer(BaseTrainer):
             epoch_start_time = time.time()
             for data in train_loader:
                 inputs, _, semi_targets, _ = data
+                if inputs.size(0) <= 1:
+                    continue
                 inputs, semi_targets = inputs.to(self.device), semi_targets.to(self.device)
 
                 # transfer the label "1" to "-1" for the inverse loss
@@ -134,7 +136,8 @@ class DeepSADTrainer(BaseTrainer):
                 # Save triples of (idx, label, score) in a list
                 idx_label_score += list(zip(idx.cpu().data.numpy().tolist(),
                                             labels.cpu().data.numpy().tolist(),
-                                            scores.cpu().data.numpy().tolist()))
+                                            scores.cpu().data.numpy().tolist(),
+                                            outputs.cpu().data.numpy().tolist()))
 
                 epoch_loss += loss.item()
                 n_batches += 1
@@ -143,7 +146,7 @@ class DeepSADTrainer(BaseTrainer):
         self.test_scores = idx_label_score
 
         # Compute AUC
-        _, labels, scores = zip(*idx_label_score)
+        _, labels, scores, outputs = zip(*idx_label_score)
         # labels = np.array(labels)
         scores = np.array(scores)
         # self.test_aucroc = roc_auc_score(labels, scores)
@@ -156,7 +159,7 @@ class DeepSADTrainer(BaseTrainer):
         logger.info('Test Time: {:.3f}s'.format(self.test_time))
         logger.info('Finished testing.')
 
-        return scores
+        return scores, outputs
 
     def init_center_c(self, train_loader: DataLoader, net: BaseNet, eps=0.1):
         """Initialize hypersphere center c as the mean from an initial forward pass on the data."""
