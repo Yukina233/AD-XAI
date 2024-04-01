@@ -47,9 +47,13 @@ def group_results(base_dir):
     classes_output = []
     FDR_output = []
     FAR_output = []
+    AUCROC_output = []
+    AUCPR_output = []
     for fault in fault_list:
         FDRs = []
         FARs = []
+        AUCROCs = []
+        AUCPRs = []
         path_fault = os.path.join(base_dir, fault)
         files = os.listdir(path_fault)
 
@@ -57,8 +61,12 @@ def group_results(base_dir):
 
             FDR_path = os.path.join(path_fault, f'{i}', f'FDR_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
             FAR_path = os.path.join(path_fault,f'{i}', f'FAR_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
+            AUCROC_path = os.path.join(path_fault, f'{i}', f'AUCROC_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
+            AUCPR_path = os.path.join(path_fault, f'{i}', f'AUCPR_{suffix}_type(None)_noise({noise_type})_unsupervise.csv')
             df_FDR = pd.read_csv(FDR_path)
             df_FAR = pd.read_csv(FAR_path)
+            df_AUCROC = pd.read_csv(AUCROC_path)
+            df_AUCPR = pd.read_csv(AUCPR_path)
             count = 0
             values = []
             for index, row in df_FDR.iterrows():
@@ -85,19 +93,49 @@ def group_results(base_dir):
                     count = 0
                     values = []
 
+            count = 0
+            values = []
+            for index, row in df_AUCROC.iterrows():
+                aucroc = row['Customized']
+                if math.isnan(aucroc):
+                    continue
+                count += 1
+                values.append(aucroc)
+                if count == group_seed_num:
+                    AUCROCs.append(np.mean(values))
+                    count = 0
+                    values = []
+
+            count = 0
+            values = []
+            for index, row in df_AUCPR.iterrows():
+                aucroc = row['Customized']
+                if math.isnan(aucroc):
+                    continue
+                count += 1
+                values.append(aucroc)
+                if count == group_seed_num:
+                    AUCPRs.append(np.mean(values))
+                    count = 0
+                    values = []
+
         classes_output.append(fault)
         FDR_output.append(np.mean(FDRs))
         FAR_output.append(np.mean(FARs))
+        AUCROC_output.append(np.mean(AUCROCs))
+        AUCPR_output.append(np.mean(AUCPRs))
 
     classes_output.append('mean')
     FDR_output.append(np.mean(FDR_output))
     FAR_output.append(np.mean(FAR_output))
+    AUCROC_output.append(np.mean(AUCROC_output))
+    AUCPR_output.append(np.mean(AUCPR_output))
 
-    df_output = pd.DataFrame(data={'class': classes_output, 'FDR': FDR_output, 'FAR': FAR_output})
-    df_output.to_csv(os.path.join(base_dir, f'FDR_FAR_{suffix}_grouped.csv'), index=False)
+    df_output = pd.DataFrame(data={'class': classes_output, 'FDR': FDR_output, 'FAR': FAR_output, 'AUCROC': AUCROC_output, 'AUCPR': AUCPR_output})
+    df_output.to_csv(os.path.join(base_dir, f'FDR_FAR_AUCROC_AUCPR{suffix}_grouped.csv'), index=False)
 
     print("Group results finished!")
 
 
-base_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/ensemble', f'DeepSAD')
+base_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/DeepSAD', f'DeepSAD,n_epoch=50')
 group_results(base_dir)

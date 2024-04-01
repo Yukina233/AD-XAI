@@ -38,7 +38,7 @@ for fault in tqdm(os.listdir(data_path), desc='Total progress'):
         dataset = {'X': data['X'], 'y': data['y'], 'X_train': data['X_train'], 'y_train': data['y_train'],
                 'X_test': data['X_test'], 'y_test': data['y_test']}
 
-        path_save = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble', f'DeepSAD',
+        path_save = os.path.join(path_project, f'adversarial_ensemble_AD/log/DeepSAD', 'DeepSAD,n_epoch=50',
                                  base_name, f'{i}')
         os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 

@@ -62,7 +62,7 @@ for fault in fault_list:
         "path_detector": path_detector
     }
     ad = Adversarial_Generator(params)
-    entropys = ad.calculate_entropy(X, y, tau=tau, path_plot=path_plot)
+    entropys = ad.calculate_entropy(X, tau=tau)
 
     if path_plot is not None:
         # 按照标签绘制直方图

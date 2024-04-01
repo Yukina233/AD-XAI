@@ -244,14 +244,14 @@ class RunPipeline:
             # predicting score (inference)
             start_time = time.time()
             if self.model_name == 'DAGMM':
-                score_test = self.clf.predict_score(self.data['X_train'], self.data['X_test'])
+                score_test, outputs = self.clf.predict_score(self.data['X_train'], self.data['X_test'])
             else:
-                score_test = self.clf.predict_score(self.data['X_test'])
+                score_test, outputs = self.clf.predict_score(self.data['X_test'])
 
             # 计算故障检测率和虚警率
-            score_train = self.clf.predict_score(self.data['X_train'])
+            score_train, outputs = self.clf.predict_score(self.data['X_train'])
             thresholds = np.percentile(score_train, 100 * (1 - sum(self.data['y_train']) / len(self.data['y_train'])))
-            thresholds = thresholds * 1.6
+            # thresholds = thresholds * 1.6
             id_anomaly_pred = np.where(score_test > thresholds)[0]
             id_normal_pred = np.where(score_test <= thresholds)[0]
 
