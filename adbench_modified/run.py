@@ -6,6 +6,7 @@ import itertools
 from itertools import product
 
 import torch
+from sklearn.metrics import precision_recall_curve
 from torch import nn
 from tqdm import tqdm
 import time
@@ -273,6 +274,15 @@ class RunPipeline:
             result['FDR'] = FDR
             result['FAR'] = FAR
 
+            precision, recall, _ = precision_recall_curve(self.data['y_test'], score_test)
+            precision_threshold = 0.99
+            recall_at_threshold = recall[np.where(precision >= precision_threshold)[0][0]]
+            recall_threshold = 0.99
+            precision_at_threshold = precision[np.where(recall >= recall_threshold)[0][-1]]
+
+            result['FDR_at_threshold'] = recall_at_threshold
+            result['FAR_at_threshold'] = 1 - precision_at_threshold
+
             K.clear_session()
             print(f"Model: {self.model_name}, AUC-ROC: {result['aucroc']}, AUC-PR: {result['aucpr']}")
 
@@ -322,6 +332,8 @@ class RunPipeline:
         df_AUCPR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
         df_FDR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
         df_FAR = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_FDR_at_threshold = pd.DataFrame(data=None, index=experiment_params, columns=columns)
+        df_FAR_at_threshold = pd.DataFrame(data=None, index=experiment_params, columns=columns)
         df_time_fit = pd.DataFrame(data=None, index=experiment_params, columns=columns)
         df_time_inference = pd.DataFrame(data=None, index=experiment_params, columns=columns)
 
@@ -425,6 +437,8 @@ class RunPipeline:
                 df_AUCPR[self.model_name].iloc[i] = metrics['aucpr']
                 df_FDR[self.model_name].iloc[i] = metrics['FDR']
                 df_FAR[self.model_name].iloc[i] = metrics['FAR']
+                df_FDR_at_threshold[self.model_name].iloc[i] = metrics['FDR_at_threshold']
+                df_FAR_at_threshold[self.model_name].iloc[i] = metrics['FAR_at_threshold']
                 df_time_fit[self.model_name].iloc[i] = time_fit
                 df_time_inference[self.model_name].iloc[i] = time_inference
 
@@ -432,6 +446,10 @@ class RunPipeline:
                 df_AUCPR.to_csv(os.path.join(self.path_result, 'AUCPR_' + self.suffix + '.csv'), index=True)
                 df_FDR.to_csv(os.path.join(self.path_result, 'FDR_' + self.suffix + '.csv'), index=True)
                 df_FAR.to_csv(os.path.join(self.path_result, 'FAR_' + self.suffix + '.csv'), index=True)
+                df_FDR_at_threshold.to_csv(os.path.join(self.path_result, 'FDR_at_threshold_' + self.suffix + '.csv'),
+                                             index=True)
+                df_FAR_at_threshold.to_csv(os.path.join(self.path_result, 'FAR_at_threshold_' + self.suffix + '.csv'),
+                                           index=True)
                 df_time_fit.to_csv(os.path.join(self.path_result, 'Time(fit)_' + self.suffix + '.csv'), index=True)
                 df_time_inference.to_csv(os.path.join(self.path_result, 'Time(inference)_' + self.suffix + '.csv'),
                                          index=True)

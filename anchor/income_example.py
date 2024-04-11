@@ -67,7 +67,7 @@ print('Prediction: ', class_names[explainer.predictor(X_test[idx].reshape(1, -1)
 
 explanation = explainer.explain(X_test[idx], threshold=0.95)
 print('Anchor: %s' % (' AND '.join(explanation.anchor)))
-print('Precision: %.2f' % explanation.precision)
+print('Precision: %.2f' % explanation.precision1)
 print('Coverage: %.2f' % explanation.coverage)
 
 
@@ -77,7 +77,7 @@ print('Prediction: ', class_names[explainer.predictor(X_test[idx].reshape(1, -1)
 
 explanation = explainer.explain(X_test[idx], threshold=0.95)
 print('Anchor: %s' % (' AND '.join(explanation.anchor)))
-print('Precision: %.2f' % explanation.precision)
+print('Precision: %.2f' % explanation.precision1)
 print('Coverage: %.2f' % explanation.coverage)
 
 # 计算所有样本的精度和覆盖率
@@ -101,7 +101,7 @@ for i in range (len(X_test)):
         explanation_dict['label'].append(Y_test[i])
         explanation_dict['prediction'].append(preds[i])
         explanation_dict['anchor'].append(explanation.anchor)
-        explanation_dict['precision'].append(explanation.precision)
+        explanation_dict['precision'].append(explanation.precision1)
         explanation_dict['coverage'].append(explanation.coverage)
 
 

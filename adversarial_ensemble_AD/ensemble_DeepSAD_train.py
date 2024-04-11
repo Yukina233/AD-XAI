@@ -28,18 +28,25 @@ if __name__ == '__main__':
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate'))
     parser.add_argument("--dir_model", type=str,
-                        default=os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/n=2'))
+                        default=os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble'))
     parser.add_argument("--path_output", type=str,
-                        default=os.path.join(path_project, f'adversarial_ensemble_AD/log/train_result/n=2'))
+                        default=os.path.join(path_project, f'adversarial_ensemble_AD/log/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
         "n_epochs": 20,
         "ae_n_epochs": 20
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "n_epochs": 100
+        "n_epochs": 50,
+        "lam": 3,
+        "tau": 10
     }, help="config of GAN")
 
     config = parser.parse_args()
+
+    # 生成特定参数的文件夹
+    param_dir = f'K=2,gan_epoch={config.GAN_config["n_epochs"]},lam={config.GAN_config["lam"]},tau={config.GAN_config["tau"]}'
+    config.dir_model = os.path.join(config.dir_model, param_dir)
+    config.path_output = os.path.join(config.path_output, param_dir)
 
     path_data_init = os.path.join(config.path_train_data, 'init')
     X_train_init = None
@@ -103,8 +110,9 @@ if __name__ == '__main__':
         loss_train = ad_g.train(dataloader=train_dataloader_GAN)
 
         # 将字典存储到文件中
-        os.makedirs(config.path_output, exist_ok=True)
-        with open(os.path.join(config.path_output, f'loss/{iteration}.pkl'), 'wb') as file:
+        path_train_result_save = os.path.join(config.path_output, 'loss')
+        os.makedirs(path_train_result_save, exist_ok=True)
+        with open(os.path.join(path_train_result_save, f'{iteration}.pkl'), 'wb') as file:
             pickle.dump(loss_train, file)
 
         # 构造新的训练数据集
@@ -121,7 +129,7 @@ if __name__ == '__main__':
             y_train_new = np.concatenate((y_train, np.ones(num_generate)))
 
             # 保存新的训练数据集
-            path_train_new = os.path.join(config.path_train_data, f'augment/{iteration}')
+            path_train_new = os.path.join(config.path_train_data, 'augment', param_dir, f'{iteration}')
             os.makedirs(path_train_new, exist_ok=True)
             np.savez(os.path.join(path_train_new, train_dataset), X_train=X_train_new, y_train=y_train_new)
 

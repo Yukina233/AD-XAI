@@ -1,5 +1,6 @@
 import os
 
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve, precision_recall_curve
 from tqdm import tqdm
 
 from spot import dSPOT
@@ -283,41 +284,83 @@ def hhs_main():
     fault_list = ['ks', 'sf', 'rqs', 'lqs', 'T']
     window_length = 100
     # 读取SSLLE模型
-    A = np.load(os.path.join(path_project, 'fun_utils/origin_model/projection_all_normal_without_c.npy'))
-    train_distance = np.load(os.path.join(path_project, 'fun_utils/origin_model/train_distance_all_normal_without_c.npy'))
-    center = np.load(os.path.join(path_project, 'fun_utils/origin_model/center_all_normal_without_c.npy'))
+    A = np.load(os.path.join(path_project, 'fun_utils/origin_model/projection.npy'))
+    train_distance = np.load(os.path.join(path_project, 'fun_utils/origin_model/train_distance.npy'))
+    center = np.load(os.path.join(path_project, 'fun_utils/origin_model/center.npy'))
 
     # 读取数据
     path_dataset = os.path.join(path_project, "data/banwuli_data/yukina_data")
 
     FDR_list = []
     FAR_list = []
+    AUCROC_list = []
+    AUCPR_list = []
+    score_list = []
+    y_list = []
+    recall_at_threshold_list = []
+    precision_at_threshold_list = []
 
     for fault in tqdm(fault_list, desc='detecting'):
         FDRs = []
         FARs = []
+        AUCROCs = []
+        AUCPRs = []
+        scores = []
+        ys = []
+        recall_at_thresholds = []
+        precision_at_thresholds = []
+
         path_fault = os.path.join(path_dataset, 'anomaly', fault)
         files = os.listdir(path_fault)
 
-        for i in range(1, int(len(files)/2 + 1)):
-
-            X_test = np.load(os.path.join(path_dataset,'anomaly', fault, f"features_{i}.npy"))
-            Y_test = np.load(os.path.join(path_dataset,'anomaly', fault, f"labels_{i}.npy"))
+        for i in range(1, int(len(files) / 2 + 1)):
+            X_test = np.load(os.path.join(path_dataset, 'anomaly', fault, f"features_{i}.npy"))
+            Y_test = np.load(os.path.join(path_dataset, 'anomaly', fault, f"labels_{i}.npy"))
             X_test = np.transpose(np.dot(A, np.transpose(X_test)))
             test_distance = np.sqrt(np.sum(np.square(X_test - center[0]), axis=1))
             FDR, FAR = detect_accurate(train_distance, test_distance, Y_test, mode='auto')
+            aucroc = roc_auc_score(y_true=Y_test, y_score=test_distance)
+            aucpr = average_precision_score(y_true=Y_test, y_score=test_distance, pos_label=1)
+
+            precision, recall, _ = precision_recall_curve(Y_test, test_distance)
+            precision_threshold = 0.99
+            recall_at_threshold = recall[np.where(precision >= precision_threshold)[0][0]]
+            recall_threshold = 0.99
+            precision_at_threshold = precision[np.where(recall >= recall_threshold)[0][-1]]
+
             # print('故障{}检测率为:{:.3f}%'.format(fault, FDR))
             # print('故障{}虚警率为:{:.3f}%'.format(fault, FAR))
             FDRs.append(FDR)
             FARs.append(FAR)
+            AUCROCs.append(aucroc * 100)
+            AUCPRs.append(aucpr * 100)
+            scores.append(test_distance)
+            ys.append(Y_test)
+            recall_at_thresholds.append(recall_at_threshold * 100)
+            precision_at_thresholds.append(precision_at_threshold * 100)
 
         FDR_list.append(np.mean(FDRs))
         FAR_list.append(np.mean(FARs))
+        AUCROC_list.append(np.mean(AUCROCs))
+        AUCPR_list.append(np.mean(AUCPRs))
+        score_list.append(np.array(scores))
+        y_list.append(np.array(ys))
+        recall_at_threshold_list.append(np.mean(recall_at_thresholds))
+        precision_at_threshold_list.append(100 - np.mean(precision_at_thresholds))
         print('平均故障检测率为:{:.3f}%'.format(np.mean(FDRs)))
         print('平均虚警率为:{:.3f}%'.format(np.mean(FARs)))
+        print('平均AUCROC为:{:.3f}'.format(np.mean(AUCROCs)))
+        print('平均AUCPR为:{:.3f}'.format(np.mean(AUCPRs)))
 
     # 结果保存到csv文件
-    result = pd.DataFrame({'fault': fault_list, 'FDR': FDR_list, 'FAR': FAR_list})
-    result.to_csv(os.path.join(path_project, "fun_utils/Fault_Detection/log/SSLLE_result_all_normal_without_c.csv"), index=False)
+    result = pd.DataFrame(
+        {'fault': fault_list, 'FDR': FDR_list, 'FAR': FAR_list, 'AUCROC': AUCROC_list, 'AUCPR': AUCPR_list,
+         'FDR_at_threshold': recall_at_threshold_list, 'FARat_threshold': precision_at_threshold_list})
+    result.to_csv(os.path.join(path_project, "fun_utils/Fault_Detection/log/SSLLE_result.csv"), index=False)
+
+    # 异常分数保存到npy文件
+    np.save(os.path.join(path_project, "data/scores/scores_SSLLE-AD.npy"), score_list)
+    np.save(os.path.join(path_project, "data/scores/labels.npy"), y_list)
+
 
 hhs_main()

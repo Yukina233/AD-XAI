@@ -58,7 +58,7 @@ class Fault_Identif_Train():
         self.train_data_real = np.load(os.path.join(path_project, "data/banwuli_data/hhsdata/residual.npy"))
         self.train_label = to_categorical(
             self.SF_Label * 12 + self.KS_Label * 12 + self.RQS_Label * 12 + self.LQS_Label * 12 + self.T_Label * 12,
-            num_classes=9)                                             # 训练集标签
+            num_classes=5)                                             # 训练集标签
         print([np.argmax(j) for j in self.train_label])
         self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(self.train_data_real, self.train_label, test_size=0.30, random_state=42)
         self.model = self.get_mode()   # 获得模型

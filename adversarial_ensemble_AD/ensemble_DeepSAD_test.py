@@ -2,7 +2,7 @@ import argparse
 
 import pandas as pd
 import torch
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import roc_auc_score, average_precision_score, precision_recall_curve
 from tqdm import tqdm
 
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
@@ -34,10 +34,11 @@ if __name__ == '__main__':
     seed = 3
     n_samples_threshold = 0
 
-    model_path = os.path.join(path_project, 'adversarial_ensemble_AD/models/ensemble/n=2/3')
+    model_name = 'K=2,gan_epoch=50,lam=3,tau=10'
+    model_path = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/{model_name}/4')
     train_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate/init')
     test_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/DeepSAD_data')
-    output_path = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/n=2/3')
+    output_path = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/{model_name}/4')
     timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
     # 加载模型
@@ -68,6 +69,8 @@ if __name__ == '__main__':
     thresholds = np.percentile(score_train, 100 * (1 - sum(y_train) / len(y_train)))
     # thresholds = thresholds * 1.6
 
+    score_ensemble_list = []
+    y_list = []
     # 遍历所有数据集文件
     for fault in tqdm(os.listdir(test_data_path), desc='Total progress'):
         base_name = os.path.basename(fault).replace('.npz', '')
@@ -76,10 +79,14 @@ if __name__ == '__main__':
         # 加载数据集
         FDRs = []
         FARs = []
+        scores_ensemble = []
+        ys = []
+
         path_fault = os.path.join(test_data_path, fault)
         files = os.listdir(path_fault)
 
         for i in range(1, int(len(files) + 1)):
+
             data = np.load(os.path.join(path_fault, f"dataset_{i}.npz"))
             dataset = {'X': data['X'], 'y': data['y'], 'X_train': data['X_train'], 'y_train': data['y_train'],
                        'X_test': data['X_test'], 'y_test': data['y_test']}
@@ -111,17 +118,36 @@ if __name__ == '__main__':
             else:
                 FAR = fp / (tp + fp)
 
+            precision, recall, _ = precision_recall_curve(dataset['y_test'], score_ensemble)
+            precision_threshold = 0.99
+            recall_at_threshold = recall[np.where(precision >= precision_threshold)[0][0]]
+            recall_threshold = 0.99
+            precision_at_threshold = precision[np.where(recall >= recall_threshold)[0][-1]]
+
             # performance
             result_1 = metric(y_true=dataset['y_test'], y_score=score_ensemble, pos_label=1)
             result = {'aucroc': result_1['aucroc'],
                       'aucpr': result_1['aucpr'],
                       'FDR': FDR,
                       'FAR': FAR,
+                      'FDR_at_threshold': recall_at_threshold,
+                      'FAR_at_threshold': 1 - precision_at_threshold,
                       'time_inference': time_inference
                       }
+
 
             # 创建DataFrame对象
             df = pd.DataFrame(list(result.items()), columns=['指标', '分数'])
             # 将DataFrame数据输出到CSV文件
             df.to_csv(os.path.join(path_save, f'{i}.csv'), index=False)
+            scores_ensemble.append(result_1['scores'])
+            ys.append(result_1['labels'])
+
+
+        score_ensemble_list.append(scores_ensemble)
+        y_list.append(ys)
+
+    # 异常分数保存到npy文件
+    np.save(os.path.join(path_project, "data/scores/scores_DeepSAD_Ensemble.npy"), score_ensemble_list)
+    np.save(os.path.join(path_project, "data/scores/labels_DeepSAD_Ensemble.npy"), y_list)
     print("All down!")

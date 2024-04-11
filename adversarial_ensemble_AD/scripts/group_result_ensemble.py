@@ -6,6 +6,7 @@ import pandas as pd
 
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
+
 #  单独输出每个类的结果
 # base_dir = os.path.join(path_project, 'auxiliary_data_AD/log', 'DeepSAD_origin')
 # result_names = os.listdir(base_dir)
@@ -49,11 +50,15 @@ def group_results(base_dir):
     FAR_output = []
     AUCROC_output = []
     AUCPR_output = []
+    FDR_at_threshold_output = []
+    FAR_at_threshold_output = []
     for fault in fault_list:
         FDRs = []
         FARs = []
         AUCROCs = []
         AUCPRs = []
+        FDR_at_thresholds = []
+        FAR_at_thresholds = []
         path_fault = os.path.join(base_dir, fault)
         files = os.listdir(path_fault)
 
@@ -70,24 +75,33 @@ def group_results(base_dir):
             FARs.append(df_result['FAR'])
             AUCROCs.append(df_result['aucroc'])
             AUCPRs.append(df_result['aucpr'])
+            FDR_at_thresholds.append(df_result['FDR_at_threshold'])
+            FAR_at_thresholds.append(df_result['FAR_at_threshold'])
 
         classes_output.append(fault)
-        FDR_output.append(np.mean(FDRs))
-        FAR_output.append(np.mean(FARs))
-        AUCROC_output.append(np.mean(AUCROCs))
-        AUCPR_output.append(np.mean(AUCPRs))
+        FDR_output.append(np.mean(FDRs) * 100)
+        FAR_output.append(np.mean(FARs) * 100)
+        AUCROC_output.append(np.mean(AUCROCs) * 100)
+        AUCPR_output.append(np.mean(AUCPRs) * 100)
+        FDR_at_threshold_output.append(np.mean(FDR_at_thresholds) * 100)
+        FAR_at_threshold_output.append(np.mean(FAR_at_thresholds) * 100)
 
     classes_output.append('mean')
     FDR_output.append(np.mean(FDR_output))
     FAR_output.append(np.mean(FAR_output))
     AUCROC_output.append(np.mean(AUCROC_output))
     AUCPR_output.append(np.mean(AUCPR_output))
+    FDR_at_threshold_output.append(np.mean(FDR_at_threshold_output))
+    FAR_at_threshold_output.append(np.mean(FAR_at_threshold_output))
 
-    df_output = pd.DataFrame(data={'class': classes_output, 'FDR': FDR_output, 'FAR': FAR_output, 'AUCROC': AUCROC_output, 'AUCPR': AUCPR_output})
-    df_output.to_csv(os.path.join(base_dir, f'FDR_FAR_AUCROC_AUCPR_{suffix}_grouped.csv'), index=False)
+    df_output = pd.DataFrame(
+        data={'class': classes_output, 'FDR': FDR_output, 'FAR': FAR_output, 'AUCROC': AUCROC_output,
+              'AUCPR': AUCPR_output, 'FDR_at_threshold': FDR_at_threshold_output,
+              'FAR_at_threshold': FAR_at_threshold_output})
+    df_output.to_csv(os.path.join(base_dir, f'FDR_FAR_AUCROC_AUCPR_ensemble-{suffix}_grouped.csv'), index=False)
 
     print("Group results finished!")
 
 
-base_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/ensemble/DeepSAD/n=2/3')
+base_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/ensemble/DeepSAD/K=2,gan_epoch=50,lam=3,tau=10/4')
 group_results(base_dir)
