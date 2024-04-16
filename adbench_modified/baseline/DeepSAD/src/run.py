@@ -178,7 +178,7 @@ class DeepSAD():
                                device=self.device,
                                n_jobs_dataloader=self.n_jobs_dataloader)
         else:
-            raise Exception
+            raise NotImplemented
 
 
         # Save results, model, and configuration

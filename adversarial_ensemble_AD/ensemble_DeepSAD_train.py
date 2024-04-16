@@ -62,11 +62,12 @@ if __name__ == '__main__':
 
 
     model_list = []
+
     for iteration in tqdm(range(0, config.n_epochs), desc='Main epochs'):
         if iteration == 0:
             path_train = os.path.join(config.path_train_data, 'init')
         else:
-            path_train = os.path.join(config.path_train_data, f'augment/{iteration - 1}')
+            path_train = os.path.join(config.path_train_data, 'augment', param_dir, f'{iteration - 1}')
         # 遍历所有数据集文件，分别训练各子模型
         for train_dataset in tqdm(os.listdir(path_train), desc='Seperate model train'):
             base_name = os.path.basename(train_dataset).replace('.npz', '')
