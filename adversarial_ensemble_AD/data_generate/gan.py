@@ -137,12 +137,15 @@ class Adversarial_Generator:
         for model in os.listdir(self.path_detector):
             detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
             detector.load_model_from_file()
+            detector.deepSAD.net.to('cuda')
             detectors.append(detector)
-            score, _ = detector.predict_score(X)
+            outputs = detector.deepSAD.net(X)
+            center = torch.tensor(detector.deepSAD.c, device='cuda')
+            score = torch.sum((outputs - center) ** 2, dim=1)
             scores.append(score)
-        scores = np.array(scores)
-        prob = np.exp(1/(scores * tau)) / np.sum(np.exp(1/(scores * tau)), axis=0)
-        entropys = -np.sum(prob * np.log(prob), axis=0)
+        scores = torch.stack(scores)
+        prob = torch.exp(1/(scores * tau)) / torch.sum(torch.exp(1/(scores * tau)), dim=0)
+        entropys = -torch.sum(prob * torch.log(prob), dim=0)
 
         return entropys
 
@@ -160,7 +163,7 @@ class Adversarial_Generator:
         # 按照标签绘制scores直方图
         for num, score in enumerate(scores):
             for i in range(0, 2):
-                plt.hist(score[y == i], bins=1000, alpha=0.5, label=str(i), density=True)
+                plt.hist(score[y == i], bins=100, alpha=0.5, label=str(i), density=False)
             plt.legend()
             plt.title("Scores Histogram")
             plt.xlabel("Scores")
@@ -238,8 +241,8 @@ class Adversarial_Generator:
 
                 # Loss measures generator's ability to fool the discriminator
                 adv_loss = self.adversarial_loss(self.discriminator(gen_samples), valid)
-                entropy_loss = self.calculate_entropy(X=gen_samples,  tau=self.tau)
-                g_loss = adv_loss - self.lam * torch.tensor(entropy_loss, requires_grad=True).cuda().mean()
+                entropy_loss = torch.mean(self.calculate_entropy(X=gen_samples,  tau=self.tau))
+                g_loss = adv_loss - self.lam * entropy_loss
 
                 g_loss.backward()
                 self.optimizer_G.step()

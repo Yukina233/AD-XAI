@@ -103,5 +103,5 @@ def group_results(base_dir):
     print("Group results finished!")
 
 
-base_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/ensemble/DeepSAD/K=2,gan_epoch=50,lam=3,tau=10/4')
+base_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/ensemble/DeepSAD/K=2,gan_epoch=50,lam=3,tau=5/4')
 group_results(base_dir)

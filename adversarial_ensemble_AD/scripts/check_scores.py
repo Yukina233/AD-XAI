@@ -14,6 +14,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+from tqdm import tqdm
 
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
 from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
@@ -28,7 +29,7 @@ X_train = np.load(os.path.join(path_train, 'features.npy'))
 y_train = np.load(os.path.join(path_train, 'labels.npy'))
 
 fault_list = ['ks', 'sf', 'lqs', 'rqs', 'T']
-for fault in fault_list:
+for fault in tqdm(fault_list):
     path_fault = os.path.join(path_test, fault)
     files = os.listdir(path_fault)
     for i in range(1, int(len(files) / 2 + 1)):
@@ -56,10 +57,14 @@ for fault in fault_list:
     # X = np.vstack([X_normal, X_anomaly])
     # y = np.hstack([y_normal, y_anomaly])
 
-    tau = 1
+    tau = 10
     cluster_num = 2
-    path_plot = os.path.join(path_project, f'adversarial_ensemble_AD/log/scores/n={cluster_num}/scores_fault={fault}_tau={tau}')
-    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/n={cluster_num}')
+    dir_plot = os.path.join(path_project, 'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=50,lam=3,tau=10',
+                            'scores')
+    os.makedirs(dir_plot, exist_ok=True)
+    path_plot = os.path.join(dir_plot, f'scores_fault={fault}_tau={tau}')
+    path_detector = os.path.join(path_project,
+                                 f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=50,lam=3,tau=10/4')
     params = {
         "path_detector": path_detector
     }

@@ -34,10 +34,10 @@ if __name__ == '__main__':
     seed = 3
     n_samples_threshold = 0
 
-    model_name = 'K=2,gan_epoch=50,lam=3,tau=10'
+    model_name = 'K=2,gan_epoch=50,lam=2,tau=1'
     model_path = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/{model_name}/4')
     train_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate/init')
-    test_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/DeepSAD_data')
+    test_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/DeepSAD_data+rqs_small')
     output_path = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/{model_name}/4')
     timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 

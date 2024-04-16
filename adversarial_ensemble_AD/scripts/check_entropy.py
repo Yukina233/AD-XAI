@@ -85,14 +85,14 @@ def check_test_data_entropy():
 
 def check_entropy():
     iteration = 4
-    path_data_check = os.path.join(path_project, f'data/banwuli_data/yukina_data/train_seperate/augment/{iteration}')
-    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=100,lam=2/{iteration}')
+    path_data_check = os.path.join(path_project, f'data/banwuli_data/yukina_data/train_seperate/augment/K=2,gan_epoch=50,lam=3,tau=10/{iteration}')
+    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=50,lam=3,tau=10/{iteration}')
 
     tau = 10
     cluster_num = 2
 
     path_plot = os.path.join(path_project,
-                             f'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=100,lam=2', 'entropys')
+                             f'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=50,lam=3,tau=10', 'entropys')
     os.makedirs(path_plot, exist_ok=True)
     path_plot = os.path.join(path_plot, f'{iteration}.png')
     params = {
@@ -142,5 +142,5 @@ def check_entropy():
         plt.show()
         plt.savefig(path_plot)
 
-check_test_data_entropy()
-# check_entropy()
+# check_test_data_entropy()
+check_entropy()

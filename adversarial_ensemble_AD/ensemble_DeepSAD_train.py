@@ -36,8 +36,8 @@ if __name__ == '__main__':
         "ae_n_epochs": 20
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "n_epochs": 50,
-        "lam": 3,
+        "n_epochs": 100,
+        "lam": 0.5,
         "tau": 10
     }, help="config of GAN")
 
