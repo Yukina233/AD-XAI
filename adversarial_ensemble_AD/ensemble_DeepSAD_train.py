@@ -32,13 +32,13 @@ if __name__ == '__main__':
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'adversarial_ensemble_AD/log/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 20,
-        "ae_n_epochs": 20
+        "n_epochs": 1,
+        "ae_n_epochs": 1
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "n_epochs": 100,
-        "lam": 0.5,
-        "tau": 1
+        "n_epochs": 1,
+        "lam": 15,
+        "tau": 10
     }, help="config of GAN")
 
     config = parser.parse_args()

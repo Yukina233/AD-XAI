@@ -59,12 +59,12 @@ for fault in tqdm(fault_list):
 
     tau = 10
     cluster_num = 2
-    dir_plot = os.path.join(path_project, 'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=50,lam=3,tau=10',
+    dir_plot = os.path.join(path_project, 'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=100,lam=10,tau=10',
                             'scores')
     os.makedirs(dir_plot, exist_ok=True)
     path_plot = os.path.join(dir_plot, f'scores_fault={fault}_tau={tau}')
     path_detector = os.path.join(path_project,
-                                 f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=50,lam=3,tau=10/4')
+                                 f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=100,lam=10,tau=10/4')
     params = {
         "path_detector": path_detector
     }

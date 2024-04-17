@@ -131,14 +131,31 @@ class Adversarial_Generator:
             self.adversarial_loss.cuda()
         self.Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
+    def calculate_entropy_numpy(self, X, tau=1):
+        detectors = []
+        scores = []
+        for model in os.listdir(self.path_detector):
+            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
+            detector.load_model_from_file()
+            detectors.append(detector)
+            score, _ = detector.predict_score(X)
+            scores.append(score)
+        scores = np.array(scores)
+        prob = np.exp(1/(scores * tau)) / np.sum(np.exp(1/(scores * tau)), axis=0)
+        entropys = -np.sum(prob * np.log(prob), axis=0)
+
+        return entropys
+
     def calculate_entropy(self, X, tau=1):
         detectors = []
         scores = []
         for model in os.listdir(self.path_detector):
             detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
             detector.load_model_from_file()
-            detector.deepSAD.net.to('cuda')
             detectors.append(detector)
+
+            detector.deepSAD.net.eval()
+            detector.deepSAD.net.to('cuda')
             outputs = detector.deepSAD.net(X)
             center = torch.tensor(detector.deepSAD.c, device='cuda')
             score = torch.sum((outputs - center) ** 2, dim=1)
@@ -163,7 +180,7 @@ class Adversarial_Generator:
         # 按照标签绘制scores直方图
         for num, score in enumerate(scores):
             for i in range(0, 2):
-                plt.hist(score[y == i], bins=100, alpha=0.5, label=str(i), density=False)
+                plt.hist(score[y == i], bins=50, alpha=0.5, label=str(i), density=False)
             plt.legend()
             plt.title("Scores Histogram")
             plt.xlabel("Scores")
@@ -244,7 +261,7 @@ class Adversarial_Generator:
                 entropy_loss = torch.mean(self.calculate_entropy(X=gen_samples,  tau=self.tau))
                 g_loss = adv_loss - self.lam * entropy_loss
 
-                g_loss.backward()
+                entropy_loss.backward()
                 self.optimizer_G.step()
 
                 # ---------------------
@@ -263,13 +280,13 @@ class Adversarial_Generator:
 
                 print(
                     "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [entr loss: %f]"
-                    % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(), entropy_loss.mean()
+                    % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(), entropy_loss.item()
                 ))
 
             loss_gen.append(g_loss.item())
             loss_dis.append(d_loss.item())
             loss_gen_adv.append(adv_loss.item())
-            loss_gen_entropy.append(entropy_loss.mean())
+            loss_gen_entropy.append(entropy_loss.item())
 
         loss_train = {
             'loss_gen': np.array(loss_gen),

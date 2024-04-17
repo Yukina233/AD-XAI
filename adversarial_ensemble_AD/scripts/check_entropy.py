@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import torch
 
 from matplotlib import pyplot as plt
 
@@ -42,16 +43,19 @@ def check_test_data_entropy():
         X = X_new
         y = y_new
 
-        tau = 10
+        tau = 1
         cluster_num = 2
         path_plot = os.path.join(path_project,
-                                 f'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=20,lam=3/entropys/after_train_fault={fault}_tau={tau}.png')
-        path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=100,lam=2/after_train')
+                                 f'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=100,lam=10,tau=10/entropys/after_train_fault={fault}_tau={tau}.png')
+        path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=100,lam=10,tau=10/0')
         params = {
             "path_detector": path_detector
         }
         ad = Adversarial_Generator(params)
-        entropys = ad.calculate_entropy(X, tau=tau)
+        X = torch.tensor(X, device='cuda', dtype=torch.float32)
+
+        entropys = ad.calculate_entropy(X, tau=tau).cpu().detach().numpy()
+        # entropys = ad.calculate_entropy_numpy(X, tau=tau)
 
         if path_plot is not None:
             # 按照标签绘制直方图
@@ -85,14 +89,15 @@ def check_test_data_entropy():
 
 def check_entropy():
     iteration = 4
-    path_data_check = os.path.join(path_project, f'data/banwuli_data/yukina_data/train_seperate/augment/K=2,gan_epoch=50,lam=3,tau=10/{iteration}')
-    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=50,lam=3,tau=10/{iteration}')
+    model_name = 'K=2,gan_epoch=100,lam=10,tau=10'
+    path_data_check = os.path.join(path_project, f'data/banwuli_data/yukina_data/train_seperate/augment/{model_name}/{iteration}')
+    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/{model_name}/{iteration}')
 
     tau = 10
     cluster_num = 2
 
     path_plot = os.path.join(path_project,
-                             f'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=50,lam=3,tau=10', 'entropys')
+                             f'adversarial_ensemble_AD/log/train_result/{model_name}', 'entropys')
     os.makedirs(path_plot, exist_ok=True)
     path_plot = os.path.join(path_plot, f'{iteration}.png')
     params = {
@@ -112,7 +117,7 @@ def check_entropy():
         y_anomaly = y_train[y_train == 1]
 
         # 随机抽取等量的正常样本和异常样本
-        num_samples = 10000
+        num_samples = 1000
         normal_indices = np.random.randint(0, len(X_normal), num_samples)
         anomaly_indices = np.random.randint(0, len(X_anomaly), num_samples)
 
@@ -125,7 +130,8 @@ def check_entropy():
         X = X_new
         y = y_new
 
-        entropys = ad.calculate_entropy(X, tau=tau)
+        X = torch.tensor(X, device='cuda',dtype=torch.float32)
+        entropys = ad.calculate_entropy(X, tau=tau).cpu().detach().numpy()
 
         # 按照标签绘制直方图
         plt.rcParams['font.sans-serif'] = ['SimSun']
@@ -142,5 +148,5 @@ def check_entropy():
         plt.show()
         plt.savefig(path_plot)
 
-# check_test_data_entropy()
-check_entropy()
+check_test_data_entropy()
+# check_entropy()
