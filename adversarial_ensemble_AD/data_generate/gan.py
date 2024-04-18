@@ -154,6 +154,26 @@ class Adversarial_Generator:
             detector.load_model_from_file()
             detectors.append(detector)
 
+            # detector.deepSAD.net.eval()
+            detector.deepSAD.net.to('cuda')
+            outputs = detector.deepSAD.net(X)
+            center = torch.tensor(detector.deepSAD.c, device='cuda')
+            score = torch.sum((outputs - center) ** 2, dim=1)
+            scores.append(score)
+        scores = torch.stack(scores)
+        prob = torch.exp(1/(scores * tau)) / torch.sum(torch.exp(1/(scores * tau)), dim=0)
+        entropys = -torch.sum(prob * torch.log(prob), dim=0)
+
+        return entropys
+
+    def calculate_entropy_test(self, X, tau=1):
+        detectors = []
+        scores = []
+        for model in os.listdir(self.path_detector):
+            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
+            detector.load_model_from_file()
+            detectors.append(detector)
+
             detector.deepSAD.net.eval()
             detector.deepSAD.net.to('cuda')
             outputs = detector.deepSAD.net(X)
@@ -261,7 +281,7 @@ class Adversarial_Generator:
                 entropy_loss = torch.mean(self.calculate_entropy(X=gen_samples,  tau=self.tau))
                 g_loss = adv_loss - self.lam * entropy_loss
 
-                entropy_loss.backward()
+                g_loss.backward()
                 self.optimizer_G.step()
 
                 # ---------------------

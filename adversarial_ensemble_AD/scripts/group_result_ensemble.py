@@ -110,5 +110,5 @@ def group_results(base_dir):
 # for experiment in os.listdir(log_path):
 #     base_dir = os.path.join(log_path, f'{experiment}/4')
 #     group_results(base_dir)
-base_dir = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/K=2,gan_epoch=100,lam=10,tau=10/0')
+base_dir = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/error3/K=2,gan_epoch=100,lam=10,tau=10/4')
 group_results(base_dir)

@@ -19,7 +19,6 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # 设置项目路径
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-print("All down!")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -32,12 +31,12 @@ if __name__ == '__main__':
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'adversarial_ensemble_AD/log/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 1,
-        "ae_n_epochs": 1
+        "n_epochs": 20,
+        "ae_n_epochs": 20
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "n_epochs": 1,
-        "lam": 15,
+        "n_epochs": 100,
+        "lam": 10,
         "tau": 10
     }, help="config of GAN")
 

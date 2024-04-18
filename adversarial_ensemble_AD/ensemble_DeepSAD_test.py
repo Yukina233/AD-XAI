@@ -34,11 +34,11 @@ if __name__ == '__main__':
     seed = 3
     n_samples_threshold = 0
 
-    model_name = 'K=2,gan_epoch=100,lam=20,tau=10'
-    model_path = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/{model_name}/4')
+    model_name = 'K=2,gan_epoch=100,lam=10,tau=10'
+    model_path = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/error3/{model_name}/3')
     train_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate/init')
     test_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/DeepSAD_data+rqs_small')
-    output_path = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/{model_name}/4')
+    output_path = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/error3/{model_name}/3')
     timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
     # 加载模型

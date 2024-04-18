@@ -46,15 +46,15 @@ def check_test_data_entropy():
         tau = 1
         cluster_num = 2
         path_plot = os.path.join(path_project,
-                                 f'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=100,lam=10,tau=10/entropys/after_train_fault={fault}_tau={tau}.png')
-        path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=100,lam=10,tau=10/0')
+                                 f'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=100,lam=10,tau=1/entropys/after_train_fault={fault}_tau={tau}.png')
+        path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=100,lam=10,tau=1/0')
         params = {
             "path_detector": path_detector
         }
         ad = Adversarial_Generator(params)
         X = torch.tensor(X, device='cuda', dtype=torch.float32)
 
-        entropys = ad.calculate_entropy(X, tau=tau).cpu().detach().numpy()
+        entropys = ad.calculate_entropy_test(X, tau=tau).cpu().detach().numpy()
         # entropys = ad.calculate_entropy_numpy(X, tau=tau)
 
         if path_plot is not None:
