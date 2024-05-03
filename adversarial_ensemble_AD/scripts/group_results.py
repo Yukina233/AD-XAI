@@ -53,6 +53,8 @@ def group_results(base_dir):
     FDR_at_threshold_output = []
     FAR_at_threshold_output = []
     for fault in fault_list:
+        if 'csv' in fault:
+            continue
         FDRs = []
         FARs = []
         AUCROCs = []
@@ -183,5 +185,5 @@ def group_results(base_dir):
     print("Group results finished!")
 
 
-base_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/DeepSAD', f'DeepSAD,n_epoch=20')
+base_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/real_data/DeepSAD', f'DeepSAD,n_epoch=20')
 group_results(base_dir)

@@ -16,25 +16,25 @@ class Fault_Detect_Train():
         # 获得数据
 
         nor_data = None
-        path_normal = os.path.join(path_project, 'data/yukina/normal')
+        path_normal = os.path.join(path_project, 'data/real_data/normal')
         for file in os.listdir(path_normal):
             path_file = os.path.join(path_normal, file)
             data = self.get_dat(path_file)
             if nor_data is None:
-                nor_data = data[2000:, :]
+                nor_data = data
             else:
-                nor_data = np.concatenate((nor_data, data[2000:, :]))
+                nor_data = np.concatenate((nor_data, data))
 
         # train_data = self.get_dat(os.path.join(path_project, 'data/banwuli_data/normal/zc1.dat'))[3000:, :]
         # test_data = self.get_dat(os.path.join(path_project, 'data/banwuli_data/normal/zc2.dat'))[3000:, :]
         self.Train_Data = nor_data
         self.Test_Data = nor_data
-        self.param = ['dOmega_ib_b[0]', 'dOmega_ib_b[1]', 'dOmega_ib_b[2]', 'Gama', 'Theta_k', 'Psi_t', 'fb[0]', 'fb[1]',
-           'fb[2]', 'Alfa', 'Beta', 'zmb', 'P']
+        self.param = ['滚转角', '俯仰角', '航向角', '滚转角速度', '俯仰角速度', '航向角速度', 'X轴加速度', 'Y轴加速度', 'Z轴加速度',
+         '6号舵机', '7号舵机', '8号舵机', '9号舵机']
 
 
         # 归一化
-        self.ts_length = 100  # 滑动窗口长度
+        self.ts_length = 10  # 滑动窗口长度
         self.Train_scaler = RobustScaler().fit(self.Train_Data[0:self.ts_length,:])
         self.Test_scaler = RobustScaler().fit(self.Test_Data[0:self.ts_length,:])
         self.Xtrain = self.Train_scaler.transform(self.Train_Data)
@@ -51,9 +51,9 @@ class Fault_Detect_Train():
         self.kmeans.fit_transform(self.lle_train_data)
 
     def get_dat(self, path):
-        a = pd.read_csv(path, delim_whitespace=True)
-        b = a[['dOmega_ib_b[0]', 'dOmega_ib_b[1]', 'dOmega_ib_b[2]', 'Gama', 'Theta_k', 'Psi_t', 'fb[0]', 'fb[1]',
-               'fb[2]', 'Alfa', 'Beta', 'zmb', 'P']]
+        a = pd.read_csv(path)
+        b = a[['滚转角', '俯仰角', '航向角', '滚转角速度', '俯仰角速度', '航向角速度', 'X轴加速度', 'Y轴加速度', 'Z轴加速度',
+         '6号舵机', '7号舵机', '8号舵机', '9号舵机']]
         b = np.array(b, dtype=float)
         return b
 
@@ -111,12 +111,12 @@ class Fault_Detect_Train():
         return train_distance * c, test_distance, center
 
     def Run(self):
-        np.save(os.path.join(path_project, 'fun_utils/origin_model/projection.npy'), self.A)
+        np.save(os.path.join(path_project, 'fun_utils/origin_model/real_data/projection.npy'), self.A)
         test_new = np.transpose(np.dot(self.A, np.transpose(self.Test_extract)))
         x_train_new = np.transpose(np.dot(self.A, np.transpose(self.Train_extract)))
         train_distance, test_distance ,center = self.km_cluster(test_new, x_train_new)
-        np.save(os.path.join(path_project, 'fun_utils/origin_model/center.npy'), center)
-        np.save(os.path.join(path_project, 'fun_utils/origin_model/train_distance.npy'), train_distance)
+        np.save(os.path.join(path_project, 'fun_utils/origin_model/real_data/center.npy'), center)
+        np.save(os.path.join(path_project, 'fun_utils/origin_model/real_data/train_distance.npy'), train_distance)
         print('Finish')
 
 

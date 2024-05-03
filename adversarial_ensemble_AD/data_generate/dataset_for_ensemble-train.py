@@ -59,8 +59,8 @@ def generate_train_data_seperate(path_output=None, path_normal=None, data_anomal
 
 
 if __name__ == '__main__':
-    path_normal = os.path.join(path_project, 'data/banwuli_data/yukina_data/cluster_normal/n=2')
-    path_output = os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate/init')
-    if not os.path.isdir(path_output):
-        os.mkdir(path_output)
+    K = 7
+    path_normal = os.path.join(path_project, f'data/real_data/yukina_data/cluster_normal/K={K}')
+    path_output = os.path.join(path_project, f'data/real_data/yukina_data/train_seperate/init/K={K}')
+    os.makedirs(path_output, exist_ok=True)
     generate_train_data_seperate(path_output=path_output, path_normal=path_normal, data_anomaly=None)

@@ -281,15 +281,15 @@ def data_flatten(X):
 
 
 def hhs_main():
-    fault_list = ['ks', 'sf', 'rqs', 'lqs', 'T']
+    fault_list = ['sf']
     window_length = 100
     # 读取SSLLE模型
-    A = np.load(os.path.join(path_project, 'fun_utils/origin_model/projection.npy'))
-    train_distance = np.load(os.path.join(path_project, 'fun_utils/origin_model/train_distance.npy'))
-    center = np.load(os.path.join(path_project, 'fun_utils/origin_model/center.npy'))
+    A = np.load(os.path.join(path_project, 'fun_utils/origin_model/real_data/projection.npy'))
+    train_distance = np.load(os.path.join(path_project, 'fun_utils/origin_model/real_data/train_distance.npy'))
+    center = np.load(os.path.join(path_project, 'fun_utils/origin_model/real_data/center.npy'))
 
     # 读取数据
-    path_dataset = os.path.join(path_project, "data/banwuli_data/yukina_data")
+    path_dataset = os.path.join(path_project, "data/real_missile_data/yukina_data")
 
     FDR_list = []
     FAR_list = []
@@ -310,12 +310,12 @@ def hhs_main():
         recall_at_thresholds = []
         precision_at_thresholds = []
 
-        path_fault = os.path.join(path_dataset, 'anomaly', fault)
+        path_fault = os.path.join(path_dataset, 'test', fault)
         files = os.listdir(path_fault)
 
         for i in range(1, int(len(files) / 2 + 1)):
-            X_test = np.load(os.path.join(path_dataset, 'anomaly', fault, f"features_{i}.npy"))
-            Y_test = np.load(os.path.join(path_dataset, 'anomaly', fault, f"labels_{i}.npy"))
+            X_test = np.load(os.path.join(path_dataset, 'test', fault, f"features_{i}.npy"))
+            Y_test = np.load(os.path.join(path_dataset, 'test', fault, f"labels_{i}.npy"))
             X_test = np.transpose(np.dot(A, np.transpose(X_test)))
             test_distance = np.sqrt(np.sum(np.square(X_test - center[0]), axis=1))
             FDR, FAR = detect_accurate(train_distance, test_distance, Y_test, mode='auto')
@@ -356,7 +356,7 @@ def hhs_main():
     result = pd.DataFrame(
         {'fault': fault_list, 'FDR': FDR_list, 'FAR': FAR_list, 'AUCROC': AUCROC_list, 'AUCPR': AUCPR_list,
          'FDR_at_threshold': recall_at_threshold_list, 'FARat_threshold': precision_at_threshold_list})
-    result.to_csv(os.path.join(path_project, "fun_utils/Fault_Detection/log/SSLLE_result.csv"), index=False)
+    result.to_csv(os.path.join(path_project, "fun_utils/Fault_Detection/log/real_data/SSLLE_result.csv"), index=False)
 
     # 异常分数保存到npy文件
     np.save(os.path.join(path_project, "data/scores/scores_SSLLE-AD.npy"), score_list)

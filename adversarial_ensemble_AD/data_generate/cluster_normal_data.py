@@ -12,7 +12,7 @@ from tqdm import tqdm
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 # Create the dataset
-root_dir = os.path.join(path_project, 'data/banwuli_data/yukina_data')
+root_dir = os.path.join(path_project, 'data/real_data/yukina_data')
 
 
 # Save as NPY
@@ -27,12 +27,11 @@ def kmeans_clustering(X_train, num_clusters):
     return centroids, labels
 
 
-num_clusters = 2
-output_path = os.path.join(root_dir, f'cluster_normal/n={num_clusters}')
-if not os.path.isdir(output_path):
-    os.mkdir(output_path)
+num_clusters = 7
+output_path = os.path.join(root_dir, f'cluster_normal/K={num_clusters}')
+os.makedirs(output_path, exist_ok=True)
 
-X_train = np.load(os.path.join(root_dir, 'normal/features.npy'))
+X_train = np.load(os.path.join(root_dir, 'train/features.npy'))
 
 # 调用Kmeans聚类函数
 centroids, cluster_labels = kmeans_clustering(X_train, num_clusters)
@@ -42,7 +41,7 @@ groups = [X_train[np.where(cluster_labels == i)] for i in range(num_clusters)]
 
 X = X_train
 y = cluster_labels
-tsne = TSNE(n_components=num_clusters, random_state=0)  # n_components表示目标维度
+tsne = TSNE(n_components=2, random_state=42)  # n_components表示目标维度
 
 X_2d = tsne.fit_transform(X)  # 对数据进行降维处理
 plt.figure(figsize=(8, 6))

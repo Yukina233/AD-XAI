@@ -19,35 +19,38 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # 设置项目路径
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    train_set_name = 'banwuli_data'
     parser.add_argument("--seed", type=int, default=0, help="seed")
+    parser.add_argument("--K", type=int, default=7, help="number of sub-models")
     parser.add_argument("--n_epochs", type=int, default=5, help="number of epochs of overall training")
     parser.add_argument("--path_train_data", type=str,
-                        default=os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate'))
+                        default=os.path.join(path_project, f'data/{train_set_name}/yukina_data/train_seperate'))
     parser.add_argument("--dir_model", type=str,
-                        default=os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble'))
+                        default=os.path.join(path_project, f'adversarial_ensemble_AD/models/{train_set_name}/ensemble'))
     parser.add_argument("--path_output", type=str,
-                        default=os.path.join(path_project, f'adversarial_ensemble_AD/log/train_result'))
+                        default=os.path.join(path_project, f'adversarial_ensemble_AD/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
         "n_epochs": 20,
         "ae_n_epochs": 20
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "n_epochs": 100,
-        "lam": 10,
-        "tau": 10
+        "n_epochs": 50,
+        "lam1": 1,
+        "lam2": 40,
+        "tau1": 0.001,
+        "tau2": 40,
     }, help="config of GAN")
 
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'K=2,gan_epoch={config.GAN_config["n_epochs"]},lam={config.GAN_config["lam"]},tau={config.GAN_config["tau"]}'
+    param_dir = f'right_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},tau1={config.GAN_config["tau1"]},tau2={config.GAN_config["tau2"]}'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 
-    path_data_init = os.path.join(config.path_train_data, 'init')
+    path_data_init = os.path.join(config.path_train_data, 'init', f'K={config.K}')
     X_train_init = None
     y_train_init = None
     for train_dataset in os.listdir(path_data_init):
@@ -59,12 +62,11 @@ if __name__ == '__main__':
             X_train_init = np.concatenate((X_train_init, data['X_train']))
             y_train_init = np.concatenate((y_train_init, data['y_train']))
 
-
     model_list = []
 
     for iteration in tqdm(range(0, config.n_epochs), desc='Main epochs'):
         if iteration == 0:
-            path_train = os.path.join(config.path_train_data, 'init')
+            path_train = os.path.join(config.path_train_data, 'init', f'K={config.K}')
         else:
             path_train = os.path.join(config.path_train_data, 'augment', param_dir, f'{iteration - 1}')
         # 遍历所有数据集文件，分别训练各子模型
@@ -97,6 +99,8 @@ if __name__ == '__main__':
                 # 训练模型
                 model.fit_encoder(X_train=X_train, y_train=y_train)
                 model.deepSAD.save_model(export_model=path_model_save, save_ae=True)
+
+            del model
 
         # 训练对抗样本生成器
         print("Train Adversarial Generator")
@@ -134,3 +138,7 @@ if __name__ == '__main__':
             np.savez(os.path.join(path_train_new, train_dataset), X_train=X_train_new, y_train=y_train_new)
 
         del ad_g
+        del gen_samples
+        del X_train_new
+        del y_train_new
+

@@ -53,6 +53,7 @@ class Generator(nn.Module):
         # )
 
     def forward(self, z):
+
         img = self.model(z)
         img = img.view(img.size(0), *self.img_shape)
         return img
@@ -97,8 +98,10 @@ class Adversarial_Generator:
         parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
         parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
         parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
-        parser.add_argument("--lam", type=float, default=2, help="lambda parameter for entropy loss")
-        parser.add_argument("--tau", type=float, default=1, help="tau for entropy calculation")
+        parser.add_argument("--lam1", type=float, default=2, help="lambda parameter for entropy loss")
+        parser.add_argument("--lam2", type=float, default=1, help="lambda parameter for mean ensemble loss")
+        parser.add_argument("--tau1", type=float, default=1, help="tau for entropy calculation")
+        parser.add_argument("--tau2", type=float, default=0.001, help="tau for mean ensemble loss calculation")
         parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
         parser.add_argument("--latent_dim", type=int, default=32, help="dimensionality of the latent space")
         parser.add_argument("--img_size", type=int, default=39, help="size of each image dimension")
@@ -146,7 +149,7 @@ class Adversarial_Generator:
 
         return entropys
 
-    def calculate_entropy(self, X, tau=1):
+    def calculate_regular_loss(self, X, tau1=1, tau2=0.001):
         detectors = []
         scores = []
         for model in os.listdir(self.path_detector):
@@ -161,10 +164,15 @@ class Adversarial_Generator:
             score = torch.sum((outputs - center) ** 2, dim=1)
             scores.append(score)
         scores = torch.stack(scores)
-        prob = torch.exp(1/(scores * tau)) / torch.sum(torch.exp(1/(scores * tau)), dim=0)
-        entropys = -torch.sum(prob * torch.log(prob), dim=0)
+        prob = torch.exp(1/(scores * tau1)) / torch.sum(torch.exp(1/(scores * tau1)), dim=0)
+        if torch.isnan(prob).any():
+            print('nan')
+            entropys = torch.tensor([0.0], device='cuda')
+        else:
+            entropys = -torch.sum(prob * torch.log(prob), dim=0)
 
-        return entropys
+        mean_ensemble_loss = torch.mean(torch.exp(-tau2 * scores), dim=0)
+        return entropys, mean_ensemble_loss
 
     def calculate_entropy_test(self, X, tau=1):
         detectors = []
@@ -211,41 +219,6 @@ class Adversarial_Generator:
 
         return scores
 
-    def calculate_reps(self, X, y, tau=1, path_plot=None):
-        detectors = []
-        scores = []
-        for num, model in enumerate(os.listdir(self.path_detector)):
-            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
-            detector.load_model_from_file()
-            detectors.append(detector)
-            score, outputs = detector.predict_score(X)
-
-            X_plot = np.concatenate((np.array(outputs), np.array(detector.deepSAD.c).reshape(1, -1)))
-            tsne = TSNE(n_components=2, random_state=0)  # n_components表示目标维度
-
-            X_2d = tsne.fit_transform(X_plot) # 对数据进行降维处理
-
-            center = X_2d[-1]
-            X_2d = X_2d[:-1]
-
-            plt.figure(figsize=(8, 6))
-            if y is not None:
-                # 如果有目标数组，根据不同的类别用不同的颜色绘制
-                for i in np.unique(y):
-                    plt.scatter(X_2d[y == i, 0], X_2d[y == i, 1], label=i, alpha=0.5)
-                plt.legend()
-            else:
-                # 如果没有目标数组，直接绘制
-                plt.scatter(X_2d[:, 0], X_2d[:, 1])
-            plt.scatter(center[0], center[1], c='red', marker='x', label='center')
-            plt.title('t-SNE Visualization of rep after training')
-            plt.xlabel('Dimension 1')
-            plt.ylabel('Dimension 2')
-            plt.show()
-            plt.savefig(path_plot + f'_model={num}.png')
-            plt.close()
-
-        return outputs
 
     def train(self, dataloader):
         loss_gen = []
@@ -254,9 +227,11 @@ class Adversarial_Generator:
         # 分别记录生成器的两部分loss
         loss_gen_adv = []
         loss_gen_entropy = []
+        loss_gen_mean_ensemble = []
         for epoch in range(self.n_epochs):
             for i, (samples, _) in enumerate(dataloader):
-
+                if samples.shape[0] != self.batch_size:
+                    continue
                 # Adversarial ground truths
                 valid = Variable(self.Tensor(samples.size(0), 1).fill_(1.0), requires_grad=False)
                 fake = Variable(self.Tensor(samples.size(0), 1).fill_(0.0), requires_grad=False)
@@ -278,8 +253,11 @@ class Adversarial_Generator:
 
                 # Loss measures generator's ability to fool the discriminator
                 adv_loss = self.adversarial_loss(self.discriminator(gen_samples), valid)
-                entropy_loss = torch.mean(self.calculate_entropy(X=gen_samples,  tau=self.tau))
-                g_loss = adv_loss - self.lam * entropy_loss
+                entropy_loss, mean_ensemble_loss = self.calculate_regular_loss(X=gen_samples,  tau1=self.tau1, tau2=self.tau2)
+                entropy_loss = torch.mean(entropy_loss)
+                mean_ensemble_loss = torch.mean(mean_ensemble_loss)
+
+                g_loss = adv_loss - self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss)
 
                 g_loss.backward()
                 self.optimizer_G.step()
@@ -299,20 +277,22 @@ class Adversarial_Generator:
                 self.optimizer_D.step()
 
                 print(
-                    "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [entr loss: %f]"
-                    % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(), entropy_loss.item()
+                    "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [entr loss: %f] [mean loss: %f]"
+                    % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(), entropy_loss.item(), mean_ensemble_loss.item()
                 ))
 
             loss_gen.append(g_loss.item())
             loss_dis.append(d_loss.item())
             loss_gen_adv.append(adv_loss.item())
             loss_gen_entropy.append(entropy_loss.item())
+            loss_gen_mean_ensemble.append(mean_ensemble_loss.item())
 
         loss_train = {
             'loss_gen': np.array(loss_gen),
             'loss_dis': np.array(loss_dis),
             'loss_gen_adv': np.array(loss_gen_adv),
-            'loss_gen_entropy': np.array(loss_gen_entropy)
+            'loss_gen_entropy': np.array(loss_gen_entropy),
+            'loss_gen_mean_ensemble': np.array(loss_gen_mean_ensemble)
         }
 
         return  loss_train

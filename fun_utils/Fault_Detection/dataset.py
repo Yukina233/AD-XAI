@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import RobustScaler, MinMaxScaler
 from tqdm import tqdm
 
 path_project = '/home/yukina/Missile_Fault_Detection/project'
@@ -50,7 +50,12 @@ if __name__ == '__main__':
         else:
             scaler_data = np.concatenate((scaler_data, data))
 
-    scaler = RobustScaler().fit(scaler_data)
+    robust_scaler = RobustScaler().fit(scaler_data)
+
+    scaler_data = robust_scaler.transform(scaler_data)
+
+    maxmin_scaler = MinMaxScaler().fit(scaler_data)
+
     del scaler_data
 
     nor_data = None
@@ -59,7 +64,8 @@ if __name__ == '__main__':
         path_file = os.path.join(path_normal, file)
         data = get_dat(path_file)
         data = data[normal_start:, :]
-        data = scaler.transform(data)
+        data = robust_scaler.transform(data)
+        data = maxmin_scaler.transform(data)
         data = timewindow(data, window_size)
         if nor_data is None:
             nor_data = data
@@ -68,9 +74,8 @@ if __name__ == '__main__':
 
     nor_label = [0] * nor_data.shape[0]
 
-    path_normal_save = os.path.join(path_all_data, "yukina_data/normal")
-    if not os.path.exists(path_normal_save):
-        os.makedirs(path_normal_save)
+    path_normal_save = os.path.join(path_all_data, "yukina_data/maxmin_scaler/train")
+    os.makedirs(path_normal_save, exist_ok=True)
     np.save(os.path.join(path_project, path_normal_save, "features.npy"), nor_data)
     np.save(os.path.join(path_project, path_normal_save, "labels.npy"), nor_label)
 
@@ -86,7 +91,8 @@ if __name__ == '__main__':
                 path_file = os.path.join(path_location, file)
                 data = get_dat(path_file)
                 data = data[normal_start:, :]
-                data = scaler.transform(data)
+                data = robust_scaler.transform(data)
+                data = maxmin_scaler.transform(data)
                 data = timewindow(data, window_size)
                 X_0 = data[:anomaly_start - normal_start - window_size,:]
                 X_1 = data[anomaly_start - normal_start - window_size:,:]
@@ -98,7 +104,7 @@ if __name__ == '__main__':
 
                 count += 1
 
-                path_anomaly_save = os.path.join(path_all_data, "yukina_data/anomaly", fault)
+                path_anomaly_save = os.path.join(path_all_data, "yukina_data/maxmin_scaler/test", fault)
                 if not os.path.exists(path_anomaly_save):
                     os.makedirs(path_anomaly_save)
                 np.save(os.path.join(path_anomaly_save, f"features_{count}.npy"), anomaly_data)

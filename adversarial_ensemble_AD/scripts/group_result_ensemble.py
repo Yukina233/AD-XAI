@@ -110,5 +110,8 @@ def group_results(base_dir):
 # for experiment in os.listdir(log_path):
 #     base_dir = os.path.join(log_path, f'{experiment}/4')
 #     group_results(base_dir)
-base_dir = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/error3/K=2,gan_epoch=100,lam=10,tau=10/4')
-group_results(base_dir)
+if __name__ == '__main__':
+
+    base_dir = os.path.join(path_project,
+                            f'adversarial_ensemble_AD/log/banwuli_data/ensemble/DeepSAD/right_K=7,deepsad_epoch=10,gan_epoch=50,lam1=0.1,lam2=40,tau1=10,tau2=20/4')
+    group_results(base_dir)

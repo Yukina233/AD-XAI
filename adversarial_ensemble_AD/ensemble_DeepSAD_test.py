@@ -16,6 +16,7 @@ from adbench_modified.myutils import Utils
 from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 from adbench_modified.run import RunPipeline
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
+from scripts.group_result_ensemble import group_results
 
 # logging.basicConfig(level=logging.INFO)
 
@@ -34,11 +35,13 @@ if __name__ == '__main__':
     seed = 3
     n_samples_threshold = 0
 
-    model_name = 'K=2,gan_epoch=100,lam=10,tau=10'
-    model_path = os.path.join(path_project, f'adversarial_ensemble_AD/models/ensemble/error3/{model_name}/3')
-    train_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate/init')
-    test_data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/DeepSAD_data+rqs_small')
-    output_path = os.path.join(path_project, f'adversarial_ensemble_AD/log/ensemble/DeepSAD/error3/{model_name}/3')
+    iteration = 4
+    test_set_name = 'real_data'
+    model_name = 'right_repeat_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=0.1,tau1=10,tau2=0.001'
+    model_path = os.path.join(path_project, f'adversarial_ensemble_AD/models/{test_set_name}/ensemble/{model_name}/{iteration}')
+    train_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/train_seperate/init/K=7')
+    test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data')
+    output_path = os.path.join(path_project, f'adversarial_ensemble_AD/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
     timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
     # 加载模型
@@ -150,4 +153,6 @@ if __name__ == '__main__':
     # 异常分数保存到npy文件
     np.save(os.path.join(path_project, "data/scores/scores_DeepSAD_Ensemble.npy"), score_ensemble_list)
     np.save(os.path.join(path_project, "data/scores/labels_DeepSAD_Ensemble.npy"), y_list)
+
+    group_results(output_path)
     print("All down!")

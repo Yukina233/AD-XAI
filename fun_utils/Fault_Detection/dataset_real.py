@@ -36,7 +36,7 @@ def timewindow(timeseries, ts_length):  # 滑动时间窗口法
 
 # 用来将原始数据处理成训练数据和测试数据，分别存储在yukina_data文件夹下的normal和anomaly文件夹下
 if __name__ == '__main__':
-    path_all_data = os.path.join(path_project, "data/real_missile_data")
+    path_all_data = os.path.join(path_project, "data/real_data")
     fault_list = ['sf']
     window_size = 10
     # 处理正常数据
@@ -97,9 +97,9 @@ if __name__ == '__main__':
                 anomaly_start = anomaly_idx[0].item()
                 anomaly_end = anomaly_idx[-1].item()
 
-                X_0_a = data[:(anomaly_start - window_size + 1), :]
-                X_0_b = data[(anomaly_end + 1):, :]
-                X_0 = np.concatenate((X_0_a, X_0_b))
+                X_0 = data[:(anomaly_start - window_size + 1), :]
+                # X_0_b = data[(anomaly_end + 1):, :]
+                # X_0 = np.concatenate((X_0_a, X_0_b))
                 X_1 = data[(anomaly_start - window_size + 1) : anomaly_end + 1, :]
 
                 Y_0 = [0] * X_0.shape[0]
