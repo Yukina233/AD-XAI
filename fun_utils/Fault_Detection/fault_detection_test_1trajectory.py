@@ -234,9 +234,9 @@ def detect_accurate(train_distance, test_distance, ts_length, train_end, fault_s
         aucpr = average_precision_score(y_true=Y_test, y_score=test_distance, pos_label=1)
 
         precision, recall, _ = precision_recall_curve(Y_test, test_distance)
-        precision_threshold = 0.99
+        precision_threshold = 0.999
         recall_at_threshold = recall[np.where(precision >= precision_threshold)[0][0]]
-        recall_threshold = 0.99
+        recall_threshold = 0.999
         precision_at_threshold = precision[np.where(recall >= recall_threshold)[0][-1]]
 
         print('故障误报率为:{:.3f}%'.format(fp_rate))
@@ -504,7 +504,8 @@ def hhs_main():
     # scaler = RobustScaler().fit(xtrain)
 
     nor_data = None
-    path_all_data = os.path.join(path_project, "data/banwuli_data")
+    test_set_name = 'banwuli_data'
+    path_all_data = os.path.join(path_project, f"data/{test_set_name}")
     path_normal = os.path.join(path_all_data, 'normal')
     for file in tqdm(os.listdir(path_normal), desc='Read data for robust scaler'):
         path_file = os.path.join(path_normal, file)
@@ -522,9 +523,9 @@ def hhs_main():
     t_std = np.std(nor_t)
     th1 = t_mean + 3 * t_std
 
-    A = np.load(os.path.join(path_project, 'fun_utils/origin_model/projection.npy'))
-    train_distance = np.load(os.path.join(path_project, 'fun_utils/origin_model/train_distance.npy'))
-    center = np.load(os.path.join(path_project, 'fun_utils/origin_model/center.npy'))
+    A = np.load(os.path.join(path_project, f'fun_utils/origin_model/{test_set_name}/projection.npy'))
+    train_distance = np.load(os.path.join(path_project, f'fun_utils/origin_model/{test_set_name}/train_distance.npy'))
+    center = np.load(os.path.join(path_project, f'fun_utils/origin_model/{test_set_name}/center.npy'))
 
     # path2 = 'D:\share\新建文件夹\T\T0.6.dat'
     for ratio in ['0.02', '0.04', '0.06', '0.08', '0.10']:
@@ -537,7 +538,7 @@ def hhs_main():
 
         for num in ['1', '2', '3', '4']:
 
-            path2 = os.path.join(path_project, f'data/banwuli_data/rqs/rqs-{num}/rqs-{num}-{ratio}.dat')  #
+            path2 = os.path.join(path_project, f'data/{test_set_name}/rqs/rqs-{num}/rqs-{num}-{ratio}.dat')  #
             fault_data = get_dat(path2)
             train_end = 2000  # 2000
 
@@ -562,7 +563,7 @@ def hhs_main():
         csv_data = {'FDR': FDRs, 'FAR': FARs, 'AUCROC': AUCROCs, 'AUCPR': AUCPRs, 'FDR_at_threshold': FDR_at_thresholds,
                     'FAR_at_threshold': FAR_at_thresholds}
         df = pd.DataFrame(csv_data)
-        df.to_csv(os.path.join(path_project, f'fun_utils/Fault_Detection/log/SSLLE_result_rqs_{ratio}.csv'), index=False)
+        df.to_csv(os.path.join(path_project, f'fun_utils/Fault_Detection/log/{test_set_name}/SSLLE_result_rqs_{ratio}.csv'), index=False)
 
 
 hhs_main()

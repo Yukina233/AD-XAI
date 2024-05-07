@@ -10,14 +10,15 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 
 def check_test_data_entropy():
-    path_train = os.path.join(path_project, 'data/real_data/yukina_data', 'train')
-    path_test = os.path.join(path_project, 'data/real_data/yukina_data', 'test')
+    test_set_name = 'banwuli_data'
+    path_train = os.path.join(path_project, f'data/{test_set_name}/yukina_data', 'train')
+    path_test = os.path.join(path_project, f'data/{test_set_name}/yukina_data', 'test')
 
     X_train = np.load(os.path.join(path_train, 'features.npy'))
     y_train = np.load(os.path.join(path_train, 'labels.npy'))
 
-    # fault_list = ['ks', 'sf', 'lqs', 'rqs', 'T']
-    fault_list = ['sf']
+    fault_list = ['ks', 'sf', 'lqs', 'rqs', 'T']
+    # fault_list = ['sf']
     for fault in fault_list:
         path_fault = os.path.join(path_test, fault)
         files = os.listdir(path_fault)
@@ -44,14 +45,15 @@ def check_test_data_entropy():
         X = X_new
         y = y_new
 
-        tau = 10
+        tau = 0.1
         iteration = 4
         cluster_num = 7
-        model_name = 'right_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=0.1,tau1=10,tau2=0.001'
-        dir_plot = os.path.join(path_project, f'adversarial_ensemble_AD/log/real_data/train_result/{model_name}/entropys')
+
+        model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1'
+        dir_plot = os.path.join(path_project, f'adversarial_ensemble_AD/log/{test_set_name}/train_result/{model_name}/entropys')
         os.makedirs(dir_plot, exist_ok=True)
         path_plot = os.path.join(path_project, dir_plot, f'after_train_{iteration}_fault={fault}_tau={tau}.png')
-        path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/real_data/ensemble/{model_name}/{iteration}')
+        path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/{test_set_name}/ensemble/{model_name}/{iteration}')
         params = {
             "path_detector": path_detector
         }
@@ -65,8 +67,8 @@ def check_test_data_entropy():
 
         if path_plot is not None:
             # 按照标签绘制直方图
-            plt.rcParams['font.sans-serif'] = ['SimSun']
             plt.cla()
+            plt.rcParams['font.sans-serif'] = ['SimSun']
             # plt.figure(figsize=(8, 6))
             plt.hist(x=entropys[y == 0], bins=50, alpha=0.5, label='正常', color='blue', range=(0, 2))
             plt.hist(x=entropys[y == 1], bins=50, alpha=0.5, label='故障', color='red', range=(0, 2))
@@ -94,17 +96,18 @@ def check_test_data_entropy():
 
 
 def check_entropy_aug():
-    iteration = 4
-    model_name = 'right_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=0.1,tau1=10,tau2=0.001'
+    iteration = 0
+    test_set_name = 'banwuli_data'
+    model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1'
     path_data_check = os.path.join(path_project,
-                                   f'data/real_data/yukina_data/train_seperate/augment/{model_name}/{iteration}')
-    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/real_data/ensemble/{model_name}/{iteration}')
+                                   f'data/{test_set_name}/yukina_data/train_seperate/augment/{model_name}/{iteration}')
+    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/{test_set_name}/ensemble/{model_name}/{iteration}')
 
-    tau = 10
+    tau = 0.1
     cluster_num = 7
 
     path_plot = os.path.join(path_project,
-                             f'adversarial_ensemble_AD/log/real_data/train_result/{model_name}', 'entropys')
+                             f'adversarial_ensemble_AD/log/{test_set_name}/train_result/{model_name}', 'entropys')
     os.makedirs(path_plot, exist_ok=True)
     path_plot = os.path.join(path_plot, f'{iteration}.png')
     params = {
@@ -140,12 +143,14 @@ def check_entropy_aug():
         X = torch.tensor(X, device='cuda', dtype=torch.float32)
         entropys = ad.calculate_entropy_test(X, tau=tau).cpu().detach().numpy()
 
+        entropys = np.nan_to_num(entropys, 0)
+
         # 按照标签绘制直方图
-        plt.rcParams['font.sans-serif'] = ['SimSun']
         plt.cla()
+        plt.rcParams['font.sans-serif'] = ['SimSun']
         # plt.figure(figsize=(8, 6))
-        plt.hist(x=entropys[y == 0], bins=50, alpha=0.5, label='正常', color='blue')
-        plt.hist(x=entropys[y == 1], bins=50, alpha=0.5, label='故障', color='red')
+        plt.hist(x=entropys[y == 0], bins=50, alpha=0.5, label='正常', color='blue', range=(0, 2))
+        plt.hist(x=entropys[y == 1], bins=50, alpha=0.5, label='故障', color='red', range=(0, 2))
 
         plt.title(f"正常样本和对抗样本的熵的频率分布")
         plt.xlabel("熵")

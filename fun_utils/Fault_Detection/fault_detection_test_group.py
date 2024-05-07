@@ -281,15 +281,16 @@ def data_flatten(X):
 
 
 def hhs_main():
-    fault_list = ['sf']
+    fault_list = ['ks','lqs','rqs','sf','T']
     window_length = 100
     # 读取SSLLE模型
-    A = np.load(os.path.join(path_project, 'fun_utils/origin_model/real_data/projection.npy'))
-    train_distance = np.load(os.path.join(path_project, 'fun_utils/origin_model/real_data/train_distance.npy'))
-    center = np.load(os.path.join(path_project, 'fun_utils/origin_model/real_data/center.npy'))
+    test_set_name = 'banwuli_data'
+    A = np.load(os.path.join(path_project, f'fun_utils/origin_model/{test_set_name}/projection.npy'))
+    train_distance = np.load(os.path.join(path_project, f'fun_utils/origin_model/{test_set_name}/train_distance.npy'))
+    center = np.load(os.path.join(path_project, f'fun_utils/origin_model/{test_set_name}/center.npy'))
 
     # 读取数据
-    path_dataset = os.path.join(path_project, "data/real_missile_data/yukina_data")
+    path_dataset = os.path.join(path_project, f"data/{test_set_name}/yukina_data")
 
     FDR_list = []
     FAR_list = []
@@ -323,9 +324,9 @@ def hhs_main():
             aucpr = average_precision_score(y_true=Y_test, y_score=test_distance, pos_label=1)
 
             precision, recall, _ = precision_recall_curve(Y_test, test_distance)
-            precision_threshold = 0.99
+            precision_threshold = 0.999
             recall_at_threshold = recall[np.where(precision >= precision_threshold)[0][0]]
-            recall_threshold = 0.99
+            recall_threshold = 0.999
             precision_at_threshold = precision[np.where(recall >= recall_threshold)[0][-1]]
 
             # print('故障{}检测率为:{:.3f}%'.format(fault, FDR))
@@ -355,8 +356,8 @@ def hhs_main():
     # 结果保存到csv文件
     result = pd.DataFrame(
         {'fault': fault_list, 'FDR': FDR_list, 'FAR': FAR_list, 'AUCROC': AUCROC_list, 'AUCPR': AUCPR_list,
-         'FDR_at_threshold': recall_at_threshold_list, 'FARat_threshold': precision_at_threshold_list})
-    result.to_csv(os.path.join(path_project, "fun_utils/Fault_Detection/log/real_data/SSLLE_result.csv"), index=False)
+         'FDR_at_threshold': recall_at_threshold_list, 'FAR_at_threshold': precision_at_threshold_list})
+    result.to_csv(os.path.join(path_project, f"fun_utils/Fault_Detection/log/{test_set_name}/SSLLE_result.csv"), index=False)
 
     # 异常分数保存到npy文件
     np.save(os.path.join(path_project, "data/scores/scores_SSLLE-AD.npy"), score_list)

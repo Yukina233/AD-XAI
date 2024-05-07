@@ -23,8 +23,8 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 iteration = 4
-test_set_name = 'real_data'
-model_name = 'right_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=40,tau1=0.1,tau2=1'
+test_set_name = 'banwuli_data'
+model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=0.01,tau1=0.1'
 path_plot = os.path.join(path_project, f'adversarial_ensemble_AD/log/{test_set_name}/train_result', model_name, 'generated_data')
 os.makedirs(path_plot, exist_ok=True)
 

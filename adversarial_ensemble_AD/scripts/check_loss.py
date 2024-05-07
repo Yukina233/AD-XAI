@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 path_loss_save = os.path.join(path_project,
-                              'adversarial_ensemble_AD/log/banwuli_data/train_result/right_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=1,tau1=10,tau2=0.001/loss/1.pkl')
+                              'adversarial_ensemble_AD/log/banwuli_data/train_result/no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=0.001,tau1=0.1/loss/4.pkl')
 
 # 从文件中加载字典对象
 with open(path_loss_save, 'rb') as file:

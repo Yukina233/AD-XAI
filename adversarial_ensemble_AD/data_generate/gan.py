@@ -171,7 +171,7 @@ class Adversarial_Generator:
         else:
             entropys = -torch.sum(prob * torch.log(prob), dim=0)
 
-        mean_ensemble_loss = torch.mean(torch.exp(-tau2 * scores), dim=0)
+        mean_ensemble_loss = torch.mean(scores, dim=0)
         return entropys, mean_ensemble_loss
 
     def calculate_entropy_test(self, X, tau=1):

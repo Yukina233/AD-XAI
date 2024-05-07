@@ -275,9 +275,9 @@ class RunPipeline:
             result['FAR'] = FAR
 
             precision, recall, _ = precision_recall_curve(self.data['y_test'], score_test)
-            precision_threshold = 0.99
+            precision_threshold = 0.999
             recall_at_threshold = recall[np.where(precision >= precision_threshold)[0][0]]
-            recall_threshold = 0.99
+            recall_threshold = 0.999
             precision_at_threshold = precision[np.where(recall >= recall_threshold)[0][-1]]
 
             result['FDR_at_threshold'] = recall_at_threshold

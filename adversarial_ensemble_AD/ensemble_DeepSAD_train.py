@@ -38,15 +38,14 @@ if __name__ == '__main__':
     parser.add_argument("--GAN_config", type=dict, default={
         "n_epochs": 50,
         "lam1": 1,
-        "lam2": 40,
-        "tau1": 0.001,
-        "tau2": 40,
+        "lam2": 100,
+        "tau1": 100,
     }, help="config of GAN")
 
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'right_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},tau1={config.GAN_config["tau1"]},tau2={config.GAN_config["tau2"]}'
+    param_dir = f'no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},tau1={config.GAN_config["tau1"]}'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 

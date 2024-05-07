@@ -35,9 +35,9 @@ if __name__ == '__main__':
     seed = 3
     n_samples_threshold = 0
 
-    iteration = 3
+    iteration = 0
     test_set_name = 'banwuli_data'
-    model_name = 'right_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=10,tau1=10,tau2=1'
+    model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1'
     model_path = os.path.join(path_project, f'adversarial_ensemble_AD/models/{test_set_name}/ensemble/{model_name}/{iteration}')
     train_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/train_seperate/init/K=7')
     test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data')
@@ -120,9 +120,9 @@ if __name__ == '__main__':
                     FAR = fp / (tp + fp)
 
                 precision, recall, _ = precision_recall_curve(dataset['y_test'], score_seperate)
-                precision_threshold = 0.99
+                precision_threshold = 0.999
                 recall_at_threshold = recall[np.where(precision >= precision_threshold)[0][0]]
-                recall_threshold = 0.99
+                recall_threshold = 0.999
                 precision_at_threshold = precision[np.where(recall >= recall_threshold)[0][-1]]
 
                 # performance

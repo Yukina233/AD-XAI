@@ -18,7 +18,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 seed = 3
 n_samples_threshold = 0
 
-data_path = os.path.join(path_project, 'data/real_missile_data/yukina_data/DeepSAD_data')
+data_path = os.path.join(path_project, 'data/banwuli_data/yukina_data/DeepSAD_data')
 timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
 # 遍历所有数据集文件
@@ -38,7 +38,7 @@ for fault in tqdm(os.listdir(data_path), desc='Total progress'):
         dataset = {'X': data['X'], 'y': data['y'], 'X_train': data['X_train'], 'y_train': data['y_train'],
                 'X_test': data['X_test'], 'y_test': data['y_test']}
 
-        path_save = os.path.join(path_project, f'adversarial_ensemble_AD/log/real_data/DeepSAD', 'DeepSAD,n_epoch=20',
+        path_save = os.path.join(path_project, f'adversarial_ensemble_AD/log/banwuli_data/DeepSAD', 'DeepSAD,n_epoch=20',
                                  base_name, f'{i}')
         os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 

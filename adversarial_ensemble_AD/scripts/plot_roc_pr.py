@@ -12,13 +12,14 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 label_SSLLE_AD = np.load(os.path.join(path_project, "data/scores/labels.npy"), allow_pickle=True)
 scores_SSLLE_AD = np.load(os.path.join(path_project, "data/scores/scores_SSLLE-AD.npy"), allow_pickle=True)
 
-faults = ['sf']
+test_set_name = 'banwuli_data'
+faults = ['ks', 'lqs', 'rqs', 'sf', 'T']
 scores_DeepSAD = []
 label_DeepSAD = []
 for fault in faults:
     scores_list = []
     label_list = []
-    path_fault_dir = os.path.join(path_project, 'adversarial_ensemble_AD/log/real_data/DeepSAD/DeepSAD,n_epoch=50', fault)
+    path_fault_dir = os.path.join(path_project, F'adversarial_ensemble_AD/log/{test_set_name}/DeepSAD/DeepSAD,n_epoch=20', fault)
     for trajectory_dir in os.listdir(path_fault_dir):
         scores = pd.read_csv(os.path.join(path_fault_dir, trajectory_dir, 'results.csv'))['scores']
         scores_list.append(np.array(scores))
