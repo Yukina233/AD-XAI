@@ -105,37 +105,90 @@ if use_train_cluster_label:
     y_plot = np.concatenate((np.concatenate([np.ones(num_samples) * (id + 1) for id, fault in enumerate(sampled_train_data)]), np.concatenate([np.ones(num_samples) * -(id + 1) for id, fault in enumerate(fault_data)])))
 else:
     # 不区分训练数据的聚类标签
-    X_plot = np.concatenate((sampled_init_train_data, np.concatenate(fault_data)))
-    y_plot = np.concatenate((np.ones(num_samples), np.concatenate([np.ones(num_samples) * -(id + 1) for id, fault in enumerate(fault_data)])))
+    X_plot = sampled_init_train_data
+    y_plot = np.ones(num_samples)
 
 sampled_generated = generated_data[np.random.choice(range(0, generated_data.shape[0]), num_samples, replace=True)]
-X_plot = np.concatenate((X_plot, sampled_generated))
-y_plot = np.concatenate((y_plot, np.zeros(sampled_generated.shape[0])))
 
+X_train = X_plot
+y_train = y_plot
 
-tsne = TSNE(n_components=2, random_state=0)  # n_components表示目标维度
+X_all = np.concatenate((X_plot, sampled_generated))
+y_all = np.concatenate((y_plot, np.zeros(sampled_generated.shape[0])))
 
-X_2d = tsne.fit_transform(X_plot)  # 对数据进行降维处理
+# import umap
+# umap_model = umap.UMAP(n_components=2, random_state=42)
+# X_2d = umap_model.fit_transform(X_train)
+
+tsne1 = TSNE(n_components=2, random_state=0)  # n_components表示目标维度
+
+X_2d = tsne1.fit_transform(X_train)  # 对数据进行降维处理
 
 plt.rcParams['font.sans-serif'] = ['SimSun']
 plt.figure(figsize=(12, 9))
 
 if use_train_cluster_label:
     for id, train_data in enumerate(sampled_train_data):
-        plt.scatter(X_2d[y_plot == (id + 1), 0], X_2d[y_plot == (id + 1), 1], label=f'正常数据_{id}', alpha=0.5)
+        plt.scatter(X_2d[y_train == (id + 1), 0], X_2d[y_train == (id + 1), 1], label=f'正常数据_{id}', alpha=0.5)
 else:
-    plt.scatter(X_2d[y_plot == 1, 0], X_2d[y_plot == 1, 1], label=f'正常数据', alpha=0.5)
+    plt.scatter(X_2d[y_train == 1, 0], X_2d[y_train == 1, 1], label=f'正常数据', alpha=0.5)
 
-plt.scatter(X_2d[y_plot == 0, 0], X_2d[y_plot == 0, 1], label='生成数据', alpha=0.5)
+plt.scatter(X_2d[y_train == 0, 0], X_2d[y_train == 0, 1], label='生成数据', alpha=0.5)
 
 for id, fault in enumerate(faults):
-    plt.scatter(X_2d[y_plot == -(id + 1), 0], X_2d[y_plot == -(id + 1), 1], label=fault, alpha=0.5)
+    plt.scatter(X_2d[y_train == -(id + 1), 0], X_2d[y_train == -(id + 1), 1], label=fault, alpha=0.5)
 
+# plt.xlim([-25, 25])
+# plt.ylim([-25, 25])
 plt.legend()
 
 plt.title('T-SNE 对真实数据和生成数据的可视化')
 plt.xlabel('Dimension 1')
 plt.ylabel('Dimension 2')
 plt.show()
-plt.savefig(os.path.join(path_plot, f'TSNE of Generated Data_train_{iteration}.png'))
+plt.savefig(os.path.join(path_plot, f'TSNE1 of Generated Data_train_{iteration}.png'))
+plt.close()
+
+
+plt.cla()
+
+# 准备初始化矩阵
+num_all_samples = X_all.shape[0]
+num_train_samples = X_train.shape[0]
+embedding_dim = X_2d.shape[1]
+
+# 初始化矩阵，将正常样本的嵌入结果放在前面，其余部分初始化为零（或其他选择）
+init_embeddings = np.zeros((num_all_samples, embedding_dim))
+init_embeddings[:num_train_samples] = X_2d
+
+
+# import umap
+# umap_model = umap.UMAP(n_components=2, random_state=42)
+# X_2d = umap_model.fit_transform(X_all)
+tsne2 = TSNE(n_components=2, random_state=0)  # n_components表示目标维度
+X_2d = tsne2.fit_transform(X_all)  # 对数据进行降维处理
+
+plt.rcParams['font.sans-serif'] = ['SimSun']
+plt.figure(figsize=(12, 9))
+
+if use_train_cluster_label:
+    for id, train_data in enumerate(sampled_train_data):
+        plt.scatter(X_2d[y_all == (id + 1), 0], X_2d[y_all == (id + 1), 1], label=f'正常数据_{id}', alpha=0.5)
+else:
+    plt.scatter(X_2d[y_all == 1, 0], X_2d[y_all == 1, 1], label=f'正常数据', alpha=0.5)
+
+plt.scatter(X_2d[y_all == 0, 0], X_2d[y_all == 0, 1], label='生成数据', alpha=0.5)
+
+# for id, fault in enumerate(faults):
+#     plt.scatter(X_2d[y_all == -(id + 1), 0], X_2d[y_all == -(id + 1), 1], label=fault, alpha=0.5)
+
+# plt.xlim([-25, 25])
+# plt.ylim([-25, 25])
+plt.legend()
+
+plt.title('T-SNE 对真实数据和生成数据的可视化')
+plt.xlabel('Dimension 1')
+plt.ylabel('Dimension 2')
+plt.show()
+plt.savefig(os.path.join(path_plot, f'TSNE2 of Generated Data_train_{iteration}.png'))
 plt.close()

@@ -53,18 +53,18 @@ for fault in fault_list:
     # X = np.vstack([X_normal, X_anomaly])
     # y = np.hstack([y_normal, y_anomaly])
 
-    tau = 10
+    tau = 0.1
     cluster_num = 7
     iteration = 4
-    model_name = 'right_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=0.1,tau1=10,tau2=0.001'
+    model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1'
     # path_plot = os.path.join(path_project,
     #                          f'adversarial_ensemble_AD/log/train_result/before_train/K=2/reps/reps_fault={fault}_tau={tau}')
-    dir_plot = os.path.join(path_project, 'adversarial_ensemble_AD/log/real_data/train_result', model_name, 'reps')
+    dir_plot = os.path.join(path_project, 'adversarial_ensemble_AD/log/banwuli_data/train_result', model_name, 'reps')
     os.makedirs(dir_plot, exist_ok=True)
     path_plot = os.path.join(dir_plot, f'reps_train_fault={fault}_tau={tau}')
-    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/real_data/ensemble', model_name, f'{iteration}')
+    path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/banwuli_data/ensemble', model_name, f'{iteration}')
 
-    path_train_new = os.path.join(path_project, 'data/real_data/yukina_data/train_seperate', 'augment', model_name, f'{iteration}')
+    path_train_new = os.path.join(path_project, 'data/banwuli_data/yukina_data/train_seperate', 'augment', model_name, f'{iteration}')
 
     train_datasets = []
     for dataset in os.listdir(path_train_new):

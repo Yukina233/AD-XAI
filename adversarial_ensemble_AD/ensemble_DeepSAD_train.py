@@ -38,8 +38,8 @@ if __name__ == '__main__':
     parser.add_argument("--GAN_config", type=dict, default={
         "n_epochs": 50,
         "lam1": 1,
-        "lam2": 100,
-        "tau1": 100,
+        "lam2": 250,
+        "tau1": 0.1,
     }, help="config of GAN")
 
     config = parser.parse_args()

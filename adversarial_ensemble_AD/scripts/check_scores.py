@@ -22,8 +22,8 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 
-path_train = os.path.join(path_project, 'data/banwuli_data/yukina_data', 'normal')
-path_test = os.path.join(path_project, 'data/banwuli_data/yukina_data', 'anomaly')
+path_train = os.path.join(path_project, 'data/banwuli_data/yukina_data', 'train')
+path_test = os.path.join(path_project, 'data/banwuli_data/yukina_data', 'test')
 
 X_train = np.load(os.path.join(path_train, 'features.npy'))
 y_train = np.load(os.path.join(path_train, 'labels.npy'))
@@ -57,14 +57,14 @@ for fault in tqdm(fault_list):
     # X = np.vstack([X_normal, X_anomaly])
     # y = np.hstack([y_normal, y_anomaly])
 
-    tau = 10
-    cluster_num = 2
-    dir_plot = os.path.join(path_project, 'adversarial_ensemble_AD/log/train_result/K=2,gan_epoch=100,lam=10,tau=10',
+    tau = 0.1
+    cluster_num = 7
+    dir_plot = os.path.join(path_project, 'adversarial_ensemble_AD/log/banwuli_Data/train_result/no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1',
                             'scores')
     os.makedirs(dir_plot, exist_ok=True)
     path_plot = os.path.join(dir_plot, f'scores_fault={fault}_tau={tau}')
     path_detector = os.path.join(path_project,
-                                 f'adversarial_ensemble_AD/models/ensemble/K=2,gan_epoch=100,lam=10,tau=10/4')
+                                 f'adversarial_ensemble_AD/models/banwuli_Data/ensemble/no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1/4')
     params = {
         "path_detector": path_detector
     }
