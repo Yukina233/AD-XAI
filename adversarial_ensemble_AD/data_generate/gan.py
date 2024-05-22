@@ -104,7 +104,7 @@ class Adversarial_Generator:
         parser.add_argument("--tau2", type=float, default=0.001, help="tau for mean ensemble loss calculation")
         parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
         parser.add_argument("--latent_dim", type=int, default=32, help="dimensionality of the latent space")
-        parser.add_argument("--img_size", type=int, default=39, help="size of each image dimension")
+        parser.add_argument("--img_size", type=int, default=180, help="size of each image dimension")
         parser.add_argument("--channels", type=int, default=1, help="number of image channels")
         parser.add_argument("--sample_interval", type=int, default=400, help="interval between image samples")
         parser.add_argument("--path_detector", type=str,
@@ -154,7 +154,7 @@ class Adversarial_Generator:
         scores = []
         for model in os.listdir(self.path_detector):
             detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
-            detector.load_model_from_file()
+            detector.load_model_from_file(input_size=self.img_shape[1])
             detectors.append(detector)
 
             # detector.deepSAD.net.eval()

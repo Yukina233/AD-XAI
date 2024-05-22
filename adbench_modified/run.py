@@ -414,7 +414,7 @@ class RunPipeline:
                 self.clf = clf
                 self.model_name = 'Customized'
                 # fit and test model
-                train_once = True
+                train_once = False
                 if train_once is True:
                     if not os.path.exists(os.path.join(path_project, f'adversarial_ensemble_AD/models',
                                                        f'DeepSAD_seed={self.seed}.pth')):

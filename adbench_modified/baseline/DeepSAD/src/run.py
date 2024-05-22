@@ -194,7 +194,7 @@ class DeepSAD():
 
         return self
 
-    def load_model_from_file(self):
+    def load_model_from_file(self, input_size=39):
         """
                 Deep SAD, a method for deep semi-supervised anomaly detection.
 
@@ -204,7 +204,6 @@ class DeepSAD():
                 """
 
 
-        input_size = 39
         self.net_name = 'dense'
         # Set seed (using myutils)
         self.utils.set_seed(self.seed)
