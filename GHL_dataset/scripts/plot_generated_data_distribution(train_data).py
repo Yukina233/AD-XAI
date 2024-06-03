@@ -24,21 +24,21 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 iteration = 0
-test_set_name = 'SMD'
+test_set_name = 'GHL'
 model_name = 'std, window=100, step=10, no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=1,tau1=1'
-output_dir = os.path.join(path_project, f'SMD_dataset/log/{test_set_name}/train_result', model_name)
+output_dir = os.path.join(path_project, f'GHL_dataset/log/{test_set_name}/train_result', model_name)
 
 train_new_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10', 'augment', model_name)
 
-detector_dir = os.path.join(path_project, f'SMD_dataset/models/{test_set_name}/ensemble', model_name)
+detector_dir = os.path.join(path_project, f'GHL_dataset/models/{test_set_name}/ensemble', model_name)
 
 test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10')
 
-for dataset_name in os.listdir(train_new_dir):
-    path_train_new = os.path.join(train_new_dir, dataset_name, f'{iteration}')
-    path_plot = os.path.join(output_dir, dataset_name, 'generated_data')
+for dataset_name in os.listdir(test_data_path):
+    path_train_new = os.path.join(train_new_dir, f'{iteration}')
+    path_plot = os.path.join(output_dir, 'generated_data', dataset_name)
     os.makedirs(path_plot, exist_ok=True)
-    path_detector = os.path.join(detector_dir, dataset_name, f'{iteration}')
+    path_detector = os.path.join(detector_dir, f'{iteration}')
 
     datasets = []
     for dataset in os.listdir(path_train_new):
@@ -47,14 +47,13 @@ for dataset_name in os.listdir(train_new_dir):
     generated_data = datasets[0]['X_train'][np.where(datasets[0]['y_train'] == 1)]
 
 
-
     # plot时是否考虑聚类标签
     use_train_cluster_label = False
     # 随机抽取的样本数
     num_samples = 2000
     np.random.seed(0)
 
-    data = np.load(os.path.join(test_data_path, f"{dataset_name}.npz"))
+    data = np.load(os.path.join(test_data_path, dataset_name))
     dataset = {'X': data['X'], 'y': data['y'], 'X_train': data['X_train'], 'y_train': data['y_train'],
                 'X_test': data['X_test'], 'y_test': data['y_test']}
     anomaly_data = dataset['X_test'][np.where(dataset['y_test'] == 1)]

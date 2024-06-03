@@ -49,7 +49,7 @@ def check_test_data_entropy():
         iteration = 4
         cluster_num = 7
 
-        model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1'
+        model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=1,tau1=0.1'
         dir_plot = os.path.join(path_project, f'adversarial_ensemble_AD/log/{test_set_name}/train_result/{model_name}/entropys')
         os.makedirs(dir_plot, exist_ok=True)
         path_plot = os.path.join(path_project, dir_plot, f'after_train_{iteration}_fault={fault}_tau={tau}.png')
@@ -98,7 +98,7 @@ def check_test_data_entropy():
 def check_entropy_aug():
     iteration = 0
     test_set_name = 'banwuli_data'
-    model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1'
+    model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=1,tau1=0.1'
     path_data_check = os.path.join(path_project,
                                    f'data/{test_set_name}/yukina_data/train_seperate/augment/{model_name}/{iteration}')
     path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/{test_set_name}/ensemble/{model_name}/{iteration}')
@@ -161,5 +161,5 @@ def check_entropy_aug():
         plt.savefig(path_plot)
 
 
-# check_test_data_entropy()
+check_test_data_entropy()
 check_entropy_aug()

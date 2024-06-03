@@ -1,3 +1,6 @@
+import csv
+import os
+
 from adbench.baseline.DeepSAD.src.base.base_trainer import BaseTrainer
 from adbench.baseline.DeepSAD.src.base import BaseADDataset
 from adbench.baseline.DeepSAD.src.base import BaseNet
@@ -15,7 +18,7 @@ class DeepSADTrainer(BaseTrainer):
 
     def __init__(self, c, eta: float, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 150,
                  lr_milestones: tuple = (), batch_size: int = 128, weight_decay: float = 1e-6, device: str = 'cuda',
-                 n_jobs_dataloader: int = 0, ae_dataset: BaseADDataset = None):
+                 n_jobs_dataloader: int = 0, ae_dataset: BaseADDataset = None, loss_output_path = None):
         super().__init__(optimizer_name, lr, n_epochs, lr_milestones, batch_size, weight_decay, device,
                          n_jobs_dataloader)
         self.ae_dataset = ae_dataset
@@ -32,6 +35,9 @@ class DeepSADTrainer(BaseTrainer):
         self.test_aucroc = None; self.test_aucpr = None
         self.test_time = None
         self.test_scores = None
+
+        self.loss_output_path = loss_output_path
+        self.loss_history = []
 
     def train(self, dataset: BaseADDataset, net: BaseNet):
         logger = logging.getLogger()
@@ -96,9 +102,14 @@ class DeepSADTrainer(BaseTrainer):
             logger.info(f'| Epoch: {epoch + 1:03}/{self.n_epochs:03} | Train Time: {epoch_train_time:.3f}s '
                         f'| Train Loss: {epoch_loss / n_batches:.6f} |')
 
+            self.loss_history.append(epoch_loss)
+
         self.train_time = time.time() - start_time
         logger.info('Training Time: {:.3f}s'.format(self.train_time))
         logger.info('Finished training.')
+
+        if self.loss_output_path is not None:
+            self.save_loss_history(os.path.join(self.loss_output_path, 'deep_sad_train_loss.csv'))
 
         return net
 
@@ -183,3 +194,10 @@ class DeepSADTrainer(BaseTrainer):
         c[(abs(c) < eps) & (c > 0)] = eps
 
         return c
+
+    def save_loss_history(self, filename):
+        with open(filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Epoch', 'Loss'])
+            for i, loss in enumerate(self.loss_history):
+                writer.writerow([i + 1, loss])

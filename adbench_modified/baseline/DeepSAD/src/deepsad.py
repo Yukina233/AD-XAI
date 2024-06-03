@@ -63,13 +63,14 @@ class deepsad(object):
 
     def train(self, dataset: BaseADDataset, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 50,
               lr_milestones: tuple = (), batch_size: int = 128, weight_decay: float = 1e-6, device: str = 'cuda',
-              n_jobs_dataloader: int = 0):
+              n_jobs_dataloader: int = 0, loss_output_path=None):
         """Trains the Deep SAD model on the training data."""
 
         self.optimizer_name = optimizer_name
         self.trainer = DeepSADTrainer(self.c, self.eta, optimizer_name=optimizer_name, lr=lr, n_epochs=n_epochs,
                                       lr_milestones=lr_milestones, batch_size=batch_size, weight_decay=weight_decay,
-                                      device=device, n_jobs_dataloader=n_jobs_dataloader, ae_dataset=self.ae_dataset)
+                                      device=device, n_jobs_dataloader=n_jobs_dataloader, ae_dataset=self.ae_dataset,
+                                      loss_output_path=loss_output_path)
         # Get the model
         self.net = self.trainer.train(dataset, self.net)
         self.results['train_time'] = self.trainer.train_time
@@ -91,9 +92,10 @@ class deepsad(object):
 
         return score, outputs
 
-    def pretrain(self, dataset: BaseADDataset, input_size ,optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 100,
+    def pretrain(self, dataset: BaseADDataset, input_size, optimizer_name: str = 'adam', lr: float = 0.001,
+                 n_epochs: int = 100,
                  lr_milestones: tuple = (), batch_size: int = 128, weight_decay: float = 1e-6, device: str = 'cuda',
-                 n_jobs_dataloader: int = 0):
+                 n_jobs_dataloader: int = 0, loss_output_path=None):
         """Pretrains the weights for the Deep SAD network phi via autoencoder."""
 
         # Set autoencoder network
@@ -103,7 +105,7 @@ class deepsad(object):
         self.ae_optimizer_name = optimizer_name
         self.ae_trainer = AETrainer(optimizer_name, lr=lr, n_epochs=n_epochs, lr_milestones=lr_milestones,
                                     batch_size=batch_size, weight_decay=weight_decay, device=device,
-                                    n_jobs_dataloader=n_jobs_dataloader)
+                                    n_jobs_dataloader=n_jobs_dataloader, loss_output_path=loss_output_path)
         self.ae_net = self.ae_trainer.train(dataset, self.ae_net)
 
         # Get train results

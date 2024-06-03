@@ -1,4 +1,5 @@
 import argparse
+import gc
 import pickle
 
 import torch
@@ -21,16 +22,18 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'banwuli_data'
+    train_set_name = 'GHL'
     parser.add_argument("--seed", type=int, default=0, help="seed")
     parser.add_argument("--K", type=int, default=7, help="number of sub-models")
     parser.add_argument("--n_epochs", type=int, default=5, help="number of epochs of overall training")
     parser.add_argument("--path_train_data", type=str,
-                        default=os.path.join(path_project, f'data/{train_set_name}/yukina_data/train_seperate'))
+                        default=os.path.join(path_project,
+
+                                             f'data/{train_set_name}/yukina_data/ensemble_data, window=100, step=10'))
     parser.add_argument("--dir_model", type=str,
-                        default=os.path.join(path_project, f'adversarial_ensemble_AD/models/{train_set_name}/ensemble'))
+                        default=os.path.join(path_project, f'GHL_dataset/models/{train_set_name}/ensemble'))
     parser.add_argument("--path_output", type=str,
-                        default=os.path.join(path_project, f'adversarial_ensemble_AD/log/{train_set_name}/train_result'))
+                        default=os.path.join(path_project, f'GHL_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
         "n_epochs": 20,
         "ae_n_epochs": 20
@@ -38,19 +41,20 @@ if __name__ == '__main__':
     parser.add_argument("--GAN_config", type=dict, default={
         "n_epochs": 50,
         "lam1": 1,
-        "lam2": 100,
-        "tau1": 0.1,
-        "img_size": 39
+        "lam2": 1,
+        "tau1": 1,
+        "img_size": 80
     }, help="config of GAN")
 
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},tau1={config.GAN_config["tau1"]}'
+    param_dir = f'std, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},tau1={config.GAN_config["tau1"]}'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 
     path_data_init = os.path.join(config.path_train_data, 'init', f'K={config.K}')
+
     X_train_init = None
     y_train_init = None
     for train_dataset in os.listdir(path_data_init):
@@ -102,43 +106,47 @@ if __name__ == '__main__':
 
             del model
 
-        # 训练对抗样本生成器
-        print("Train Adversarial Generator")
-        path_detector = os.path.join(config.dir_model, f'{iteration}')
-        config.GAN_config["path_detector"] = path_detector
-        ad_g = Adversarial_Generator(config=config.GAN_config)
+        # # 训练对抗样本生成器
+        # print("Train Adversarial Generator")
+        # path_detector = os.path.join(config.dir_model, f'{iteration}')
+        # config.GAN_config["path_detector"] = path_detector
+        # ad_g = Adversarial_Generator(config=config.GAN_config)
+        #
+        # train_dataset_GAN = torch.utils.data.TensorDataset(torch.Tensor(X_train_init), torch.Tensor(y_train_init))
+        # train_dataloader_GAN = torch.utils.data.DataLoader(train_dataset_GAN, batch_size=ad_g.batch_size, shuffle=True)
+        #
+        # loss_train = ad_g.train(dataloader=train_dataloader_GAN)
+        #
+        # # 将字典存储到文件中
+        # path_train_result_save = os.path.join(config.path_output, 'loss')
+        # os.makedirs(path_train_result_save, exist_ok=True)
+        # with open(os.path.join(path_train_result_save, f'{iteration}.pkl'), 'wb') as file:
+        #     pickle.dump(loss_train, file)
 
-        train_dataset_GAN = torch.utils.data.TensorDataset(torch.Tensor(X_train_init), torch.Tensor(y_train_init))
-        train_dataloader_GAN = torch.utils.data.DataLoader(train_dataset_GAN, batch_size=ad_g.batch_size, shuffle=True)
+        # # 构造新的训练数据集
+        # for train_dataset in tqdm(os.listdir(path_data_init), desc='Create new train data'):
+        #     data = np.load(os.path.join(path_data_init, train_dataset))
+        #     X_train = data['X_train']
+        #     y_train = data['y_train']
+        #
+        #     num_generate = y_train.shape[0]
+        #
+        #     gen_samples = ad_g.sample_generate(num=num_generate)
+        #
+        #     X_train_new = np.concatenate((X_train, np.array(gen_samples.detach().cpu()).squeeze(1)))
+        #     y_train_new = np.concatenate((y_train, np.ones(num_generate)))
+        #
+        #     # 保存新的训练数据集
+        #     path_train_new = os.path.join(config.path_train_data, 'augment', param_dir, f'{iteration}')
+        #     os.makedirs(path_train_new, exist_ok=True)
+        #     np.savez(os.path.join(path_train_new, train_dataset), X_train=X_train_new, y_train=y_train_new)
+        #
+        # del ad_g
+        # del gen_samples
+        # del X_train_new
+        # del y_train_new
+        # del loss_train
+        # del train_dataset_GAN
+        # del train_dataloader_GAN
 
-        loss_train = ad_g.train(dataloader=train_dataloader_GAN)
-
-        # 将字典存储到文件中
-        path_train_result_save = os.path.join(config.path_output, 'loss')
-        os.makedirs(path_train_result_save, exist_ok=True)
-        with open(os.path.join(path_train_result_save, f'{iteration}.pkl'), 'wb') as file:
-            pickle.dump(loss_train, file)
-
-        # 构造新的训练数据集
-        for train_dataset in tqdm(os.listdir(path_data_init), desc='Create new train data'):
-            data = np.load(os.path.join(path_data_init, train_dataset))
-            X_train = data['X_train']
-            y_train = data['y_train']
-
-            num_generate = y_train.shape[0]
-
-            gen_samples = ad_g.sample_generate(num=num_generate)
-
-            X_train_new = np.concatenate((X_train, np.array(gen_samples.detach().cpu()).squeeze(1)))
-            y_train_new = np.concatenate((y_train, np.ones(num_generate)))
-
-            # 保存新的训练数据集
-            path_train_new = os.path.join(config.path_train_data, 'augment', param_dir, f'{iteration}')
-            os.makedirs(path_train_new, exist_ok=True)
-            np.savez(os.path.join(path_train_new, train_dataset), X_train=X_train_new, y_train=y_train_new)
-
-        del ad_g
-        del gen_samples
-        del X_train_new
-        del y_train_new
-
+        gc.collect()

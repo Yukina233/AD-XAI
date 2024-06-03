@@ -46,8 +46,8 @@ def group_results(base_dir):
     noise_type = None
     group_seed_num = 3
     classes_output = []
-    # FDR_output = []
-    # FAR_output = []
+    FDR_output = []
+    FAR_output = []
     AUCROC_output = []
     AUCPR_output = []
     FDR_at_threshold_output = []
@@ -63,21 +63,20 @@ def group_results(base_dir):
         FAR_at_thresholds = []
         path_fault = os.path.join(base_dir, fault)
 
-        for file in os.listdir(path_fault):
-            result_path = os.path.join(path_fault, f'{file}')
-            result = pd.read_csv(result_path)
-            metrics = result['指标']
-            scores = result['分数']
-            df_result = {}
-            for i in range(0, metrics.__len__()):
-                df_result[metrics[i]] = scores[i]
+        result_path = os.path.join(path_fault, f'result.csv')
+        result = pd.read_csv(result_path)
+        metrics = result['指标']
+        scores = result['分数']
+        df_result = {}
+        for i in range(0, metrics.__len__()):
+            df_result[metrics[i]] = scores[i]
 
-            # FDRs.append(df_result['FDR'])
-            # FARs.append(df_result['FAR'])
-            AUCROCs.append(df_result['aucroc'])
-            AUCPRs.append(df_result['aucpr'])
-            FDR_at_thresholds.append(df_result['FDR_at_threshold'])
-            FAR_at_thresholds.append(df_result['FAR_at_threshold'])
+        # FDRs.append(df_result['FDR'])
+        # FARs.append(df_result['FAR'])
+        AUCROCs.append(df_result['aucroc'])
+        AUCPRs.append(df_result['aucpr'])
+        FDR_at_thresholds.append(df_result['FDR_at_threshold'])
+        FAR_at_thresholds.append(df_result['FAR_at_threshold'])
 
         classes_output.append(fault)
         # FDR_output.append(np.mean(FDRs) * 100)
@@ -112,5 +111,5 @@ def group_results(base_dir):
 if __name__ == '__main__':
 
     base_dir = os.path.join(path_project,
-                            f'SMD_dataset/log/SMD/ensemble/DeepSAD/window=100, step=10, no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=10,tau1=1/3')
+                            f'GHL_dataset/log/GHL/ensemble/DeepSAD/std, window=100, step=10, no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=1,tau1=1/4')
     group_results(base_dir)

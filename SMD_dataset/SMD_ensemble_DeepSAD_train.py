@@ -34,25 +34,30 @@ if __name__ == '__main__':
                         default=os.path.join(path_project, f'SMD_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
         "n_epochs": 20,
-        "ae_n_epochs": 20
+        "ae_n_epochs": 20,
+        "net_name": 'SMD_cnn'
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
         "n_epochs": 50,
-        "lam1": 1,
-        "lam2": 100,
-        "tau1": 0.1,
+        "lam1": 100,
+        "lam2": 0.1,
+        "tau1": 1,
+        "img_size": 180
     }, help="config of GAN")
 
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},tau1={config.GAN_config["tau1"]}'
+    param_dir = f'cnn, std, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},tau1={config.GAN_config["tau1"]}'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 
+
     path_data_init = os.path.join(config.path_train_data, 'init', f'K={config.K}')
-    for experiment_name in os.listdir(path_data_init):
+    for experiment_name in os.listdir(path_data_init)[:10]:
         experiment_path = os.path.join(path_data_init, experiment_name)
+        config.DeepSAD_config["loss_output_path"] = os.path.join(config.path_output, experiment_name, "deepsad_loss")
+        os.makedirs(config.DeepSAD_config["loss_output_path"], exist_ok=True)
 
         X_train_init = None
         y_train_init = None
@@ -109,10 +114,11 @@ if __name__ == '__main__':
                 gc.collect()
 
             # 训练对抗样本生成器
+
             print("Train Adversarial Generator")
             path_detector = os.path.join(config.dir_model, experiment_name, f'{iteration}')
             config.GAN_config["path_detector"] = path_detector
-            ad_g = Adversarial_Generator(config=config.GAN_config)
+            ad_g = Adversarial_Generator(config=config.GAN_config, DeepSAD_config=config.DeepSAD_config)
 
             train_dataset_GAN = torch.utils.data.TensorDataset(torch.Tensor(X_train_init), torch.Tensor(y_train_init))
             train_dataloader_GAN = torch.utils.data.DataLoader(train_dataset_GAN, batch_size=ad_g.batch_size, shuffle=True)

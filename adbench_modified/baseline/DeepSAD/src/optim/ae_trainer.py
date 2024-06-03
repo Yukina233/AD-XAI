@@ -1,3 +1,6 @@
+import csv
+import os
+
 from adbench.baseline.DeepSAD.src.base.base_trainer import BaseTrainer
 from adbench.baseline.DeepSAD.src.base import BaseADDataset
 from adbench.baseline.DeepSAD.src.base import BaseNet
@@ -15,14 +18,19 @@ from tqdm import tqdm
 class AETrainer(BaseTrainer):
 
     def __init__(self, optimizer_name: str = 'adam', lr: float = 0.001, n_epochs: int = 150, lr_milestones: tuple = (),
-                 batch_size: int = 128, weight_decay: float = 1e-6, device: str = 'cuda', n_jobs_dataloader: int = 0):
+                 batch_size: int = 128, weight_decay: float = 1e-6, device: str = 'cuda', n_jobs_dataloader: int = 0,
+                 loss_output_path=None):
         super().__init__(optimizer_name, lr, n_epochs, lr_milestones, batch_size, weight_decay, device,
                          n_jobs_dataloader)
 
         # Results
         self.train_time = None
-        self.test_aucroc = None; self.test_aucpr = None
+        self.test_aucroc = None
+        self.test_aucpr = None
         self.test_time = None
+
+        self.loss_output_path = loss_output_path
+        self.loss_history = []
 
     def train(self, dataset: BaseADDataset, ae_net: BaseNet):
         logger = logging.getLogger()
@@ -79,9 +87,14 @@ class AETrainer(BaseTrainer):
             logger.info(f'| Epoch: {epoch + 1:03}/{self.n_epochs:03} | Train Time: {epoch_train_time:.3f}s '
                         f'| Train Loss: {epoch_loss / n_batches:.6f} |')
 
+            self.loss_history.append(epoch_loss)
+
         self.train_time = time.time() - start_time
         logger.info('Pretraining Time: {:.3f}s'.format(self.train_time))
         logger.info('Finished pretraining.')
+
+        if self.loss_output_path is not None:
+            self.save_loss_history(os.path.join(self.loss_output_path, 'ae_train_loss.csv'))
 
         return ae_net
 
@@ -138,3 +151,10 @@ class AETrainer(BaseTrainer):
         logger.info('Test AUCPR: {:.2f}%'.format(100. * self.test_aucpr))
         logger.info('Test Time: {:.3f}s'.format(self.test_time))
         logger.info('Finished testing autoencoder.')
+
+    def save_loss_history(self, filename):
+        with open(filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Epoch', 'Loss'])
+            for i, loss in enumerate(self.loss_history):
+                writer.writerow([i + 1, loss])

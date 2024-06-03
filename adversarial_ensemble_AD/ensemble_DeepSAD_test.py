@@ -37,18 +37,20 @@ if __name__ == '__main__':
 
     iteration = 4
     test_set_name = 'banwuli_data'
-    model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=75,tau1=0.1'
+    model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=0.0001,tau1=0.1'
     model_path = os.path.join(path_project, f'adversarial_ensemble_AD/models/{test_set_name}/ensemble/{model_name}/{iteration}')
     train_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/train_seperate/init/K=7')
     test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data')
     output_path = os.path.join(path_project, f'adversarial_ensemble_AD/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
     timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
+    train_data_example = np.load(os.path.join(train_data_path, os.listdir(train_data_path)[0]))
+
     # 加载模型
     model_list = []
     for model_file in os.listdir(model_path):
         model = DeepSAD(seed=seed, load_model=os.path.join(model_path, model_file))
-        model.load_model_from_file()
+        model.load_model_from_file(input_size=train_data_example['X_train'].shape[1])
         model_list.append(model)
 
     # 计算阈值

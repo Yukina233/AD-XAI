@@ -25,19 +25,25 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 iteration = 4
 test_set_name = 'banwuli_data'
-model_name = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1'
-path_plot = os.path.join(path_project, f'adversarial_ensemble_AD/log/{test_set_name}/train_result', model_name, 'generated_data')
+model_name1 = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=10,tau1=0.1'
+model_name2 = 'no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=100,tau1=0.1'
+path_plot = os.path.join(path_project, f'adversarial_ensemble_AD/log/other')
 os.makedirs(path_plot, exist_ok=True)
 
-path_train_new = os.path.join(path_project, f'data/{test_set_name}/yukina_data/train_seperate', 'augment', model_name, f'{iteration}')
+path_train_new1 = os.path.join(path_project, f'data/{test_set_name}/yukina_data/train_seperate', 'augment', model_name1, f'{iteration}')
+path_train_new2 = os.path.join(path_project, f'data/{test_set_name}/yukina_data/train_seperate', 'augment', model_name2, f'{iteration}')
 
-path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/{test_set_name}/ensemble', model_name, f'{iteration}')
+# path_detector = os.path.join(path_project, f'adversarial_ensemble_AD/models/{test_set_name}/ensemble', model_name, f'{iteration}')
 
 datasets = []
-for dataset in os.listdir(path_train_new):
-    datasets.append(np.load(os.path.join(path_train_new, dataset)))
+for dataset in os.listdir(path_train_new1):
+    datasets.append(np.load(os.path.join(path_train_new1, dataset)))
+generated_data1 = datasets[0]['X_train'][np.where(datasets[0]['y_train'] == 1)]
 
-generated_data = datasets[0]['X_train'][np.where(datasets[0]['y_train'] == 1)]
+datasets = []
+for dataset in os.listdir(path_train_new2):
+    datasets.append(np.load(os.path.join(path_train_new2, dataset)))
+generated_data2 = datasets[0]['X_train'][np.where(datasets[0]['y_train'] == 1)]
 
 test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data')
 
@@ -112,13 +118,14 @@ else:
     X_plot = np.concatenate((sampled_init_train_data, np.concatenate(fault_data)))
     y_plot = np.concatenate((np.ones(num_samples), np.concatenate([np.ones(num_samples) * -(id + 1) for id, fault in enumerate(fault_data)])))
 
-sampled_generated = generated_data[np.random.choice(range(0, generated_data.shape[0]), num_samples, replace=True)]
+sampled_generated1 = generated_data1[np.random.choice(range(0, generated_data1.shape[0]), num_samples, replace=True)]
+sampled_generated2 = generated_data1[np.random.choice(range(0, generated_data2.shape[0]), num_samples, replace=True)]
 
 X_train = X_plot
 y_train = y_plot
 
-X_all = np.concatenate((X_plot, sampled_generated))
-y_all = np.concatenate((y_plot, np.zeros(sampled_generated.shape[0])))
+X_all = np.concatenate((X_plot, sampled_generated1, sampled_generated2))
+y_all = np.concatenate((y_plot, np.zeros(sampled_generated1.shape[0]), np.ones(sampled_generated2.shape[0]) * 10))
 
 # import umap
 # umap_model = umap.UMAP(n_components=2, random_state=42)
@@ -142,7 +149,8 @@ if use_train_cluster_label:
 else:
     plt.scatter(X_2d[y_train == 1, 0], X_2d[y_train == 1, 1], label=f'正常数据', alpha=0.5)
 
-plt.scatter(X_2d[y_train == 0, 0], X_2d[y_train == 0, 1], label='生成数据', alpha=0.5)
+plt.scatter(X_2d[y_all == 0, 0], X_2d[y_all == 0, 1], label='生成数据(lam2=10)', alpha=0.5)
+plt.scatter(X_2d[y_all == 10, 0], X_2d[y_all == 10, 1], label='生成数据(lam2=100)', alpha=0.5)
 
 for id, fault in enumerate(faults):
     plt.scatter(X_2d[y_train == -(id + 1), 0], X_2d[y_train == -(id + 1), 1], label=fault, alpha=0.5)
@@ -192,7 +200,8 @@ if use_train_cluster_label:
 else:
     plt.scatter(X_2d[y_all == 1, 0], X_2d[y_all == 1, 1], label=f'正常数据', alpha=0.5)
 
-plt.scatter(X_2d[y_all == 0, 0], X_2d[y_all == 0, 1], label='生成数据', alpha=0.5)
+plt.scatter(X_2d[y_all == 0, 0], X_2d[y_all == 0, 1], label='生成数据(lam2=10)', alpha=0.5)
+plt.scatter(X_2d[y_all == 10, 0], X_2d[y_all == 10, 1], label='生成数据(lam2=100)', alpha=0.5)
 
 for id, fault in enumerate(faults):
     plt.scatter(X_2d[y_all == -(id + 1), 0], X_2d[y_all == -(id + 1), 1], label=fault, alpha=0.5)

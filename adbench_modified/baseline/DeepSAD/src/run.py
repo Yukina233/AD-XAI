@@ -12,7 +12,7 @@ from adbench_modified.myutils import Utils
 
 
 class DeepSAD():
-    def __init__(self, seed, model_name='DeepSAD', load_model=None, config=None):
+    def __init__(self, seed, model_name='DeepSAD', net_name='Dense', load_model=None, config=None, output_dir=None):
         self.utils = Utils()
         self.device = self.utils.get_device(gpu_specific=True)  # get device
         self.seed = seed
@@ -36,6 +36,8 @@ class DeepSAD():
         self.ae_weight_decay = 1e-6
         self.num_threads = 0
         self.n_jobs_dataloader = 0
+
+        self.net_name = net_name
 
         if config is not None:
             for key, value in config.items():
@@ -70,14 +72,14 @@ class DeepSAD():
         # Initialize DeepSAD model and set neural network phi
         self.deepSAD = deepsad(self.eta, ae_dataset)
 
-        if X_train.ndim == 2:
-            # 对应use_preprocess==True时，即pretrain_encoder=ResNet18
-            self.net_name = 'dense'
-        else:
-            if X_train.shape[1] == 3:
-                self.net_name = 'cifar10_LeNet'
-            elif X_train.shape[1] == 1:
-                self.net_name = 'cifar10_LeNet_1'
+        # if X_train.ndim == 2:
+        #     # 对应use_preprocess==True时，即pretrain_encoder=ResNet18
+        #     self.net_name = 'dense'
+        # else:
+        #     if X_train.shape[1] == 3:
+        #         self.net_name = 'cifar10_LeNet'
+        #     elif X_train.shape[1] == 1:
+        #         self.net_name = 'cifar10_LeNet_1'
         self.deepSAD.set_network(self.net_name, input_size)
 
         # If specified, load Deep SAD model (center c, network weights, and possibly autoencoder weights)
@@ -98,7 +100,8 @@ class DeepSAD():
                                       batch_size=self.ae_batch_size,
                                       weight_decay=self.ae_weight_decay,
                                       device=self.device,
-                                      n_jobs_dataloader=self.n_jobs_dataloader)
+                                      n_jobs_dataloader=self.n_jobs_dataloader,
+                                      loss_output_path=self.loss_output_path)
 
             # Train model on dataset
             self.deepSAD.train(dataset,
@@ -109,7 +112,8 @@ class DeepSAD():
                                batch_size=self.batch_size,
                                weight_decay=self.weight_decay,
                                device=self.device,
-                               n_jobs_dataloader=self.n_jobs_dataloader)
+                               n_jobs_dataloader=self.n_jobs_dataloader,
+                               loss_output_path=self.loss_output_path)
 
         # Save results, model, and configuration
         # deepSAD.save_results(export_json=xp_path + '/results.json')
@@ -152,14 +156,14 @@ class DeepSAD():
         # Initialize DeepSAD model and set neural network phi
         self.deepSAD = deepsad(self.eta)
 
-        if X_train.ndim == 2:
-            # 对应use_preprocess==True时，即pretrain_encoder=ResNet18
-            self.net_name = 'dense'
-        else:
-            if X_train.shape[1] == 3:
-                self.net_name = 'cifar10_LeNet'
-            elif X_train.shape[1] == 1:
-                self.net_name = 'cifar10_LeNet_1'
+        # if X_train.ndim == 2:
+        #     # 对应use_preprocess==True时，即pretrain_encoder=ResNet18
+        #     self.net_name = 'dense'
+        # else:
+        #     if X_train.shape[1] == 3:
+        #         self.net_name = 'cifar10_LeNet'
+        #     elif X_train.shape[1] == 1:
+        #         self.net_name = 'cifar10_LeNet_1'
         self.deepSAD.set_network(self.net_name, input_size)
 
         # If specified, load Deep SAD model (center c, network weights, and possibly autoencoder weights)
@@ -204,7 +208,6 @@ class DeepSAD():
                 """
 
 
-        self.net_name = 'dense'
         # Set seed (using myutils)
         self.utils.set_seed(self.seed)
 

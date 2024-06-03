@@ -295,7 +295,7 @@ class RunPipeline:
         return time_inference, result
 
     # run the experiments in ADBench_modified
-    def run(self, dataset=None, clf=None):
+    def run(self, dataset=None, clf=None, **kwargs):
         if dataset is None:
             #  filteting dataset that does not meet the experimental requirements
             dataset_list = self.dataset_filter()
@@ -414,15 +414,15 @@ class RunPipeline:
                 self.clf = clf
                 self.model_name = 'Customized'
                 # fit and test model
-                train_once = False
-                if train_once is True:
-                    if not os.path.exists(os.path.join(path_project, f'adversarial_ensemble_AD/models',
+                if 'model_save' in kwargs.keys():
+                    os.makedirs(kwargs['model_save'], exist_ok=True)
+                    if not os.path.exists(os.path.join(kwargs['model_save'],
                                                        f'DeepSAD_seed={self.seed}.pth')):
                         time_fit = self.model_fit()
-                        self.clf.deepSAD.save_model(export_model=os.path.join(path_project, 'adversarial_ensemble_AD/models',
+                        self.clf.deepSAD.save_model(export_model=os.path.join(kwargs['model_save'],
                                                                       f'DeepSAD_seed={self.seed}.pth'), save_ae=True)
                     else:
-                        time_fit = self.model_fit(load_model=os.path.join(path_project, 'adversarial_ensemble_AD/models',
+                        time_fit = self.model_fit(load_model=os.path.join(kwargs['model_save'],
                                                                     f'DeepSAD_seed={self.seed}.pth'))
                 else:
                     time_fit = self.model_fit()

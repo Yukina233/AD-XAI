@@ -53,7 +53,6 @@ class Generator(nn.Module):
         # )
 
     def forward(self, z):
-
         img = self.model(z)
         img = img.view(img.size(0), *self.img_shape)
         return img
@@ -89,7 +88,7 @@ class Discriminator(nn.Module):
 
 
 class Adversarial_Generator:
-    def __init__(self, config=None):
+    def __init__(self, config=None, DeepSAD_config=None):
         # 默认参数
         parser = argparse.ArgumentParser()
         parser.add_argument("--seed", type=int, default=0)
@@ -104,7 +103,7 @@ class Adversarial_Generator:
         parser.add_argument("--tau2", type=float, default=0.001, help="tau for mean ensemble loss calculation")
         parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
         parser.add_argument("--latent_dim", type=int, default=32, help="dimensionality of the latent space")
-        parser.add_argument("--img_size", type=int, default=180, help="size of each image dimension")
+        parser.add_argument("--img_size", type=int, default=39, help="size of each image dimension")
         parser.add_argument("--channels", type=int, default=1, help="number of image channels")
         parser.add_argument("--sample_interval", type=int, default=400, help="interval between image samples")
         parser.add_argument("--path_detector", type=str,
@@ -119,6 +118,8 @@ class Adversarial_Generator:
         if config is not None:
             for key, value in config.items():
                 setattr(self, key, value)
+
+        self.DeepSAD_config = DeepSAD_config
 
         self.img_shape = (self.channels, self.img_size)
         self.generator = Generator(self.latent_dim, self.img_shape)
@@ -144,7 +145,7 @@ class Adversarial_Generator:
             score, _ = detector.predict_score(X)
             scores.append(score)
         scores = np.array(scores)
-        prob = np.exp(1/(scores * tau)) / np.sum(np.exp(1/(scores * tau)), axis=0)
+        prob = np.exp(1 / (scores * tau)) / np.sum(np.exp(1 / (scores * tau)), axis=0)
         entropys = -np.sum(prob * np.log(prob), axis=0)
 
         return entropys
@@ -153,7 +154,8 @@ class Adversarial_Generator:
         detectors = []
         scores = []
         for model in os.listdir(self.path_detector):
-            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
+            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model),
+                               config=self.DeepSAD_config)
             detector.load_model_from_file(input_size=self.img_shape[1])
             detectors.append(detector)
 
@@ -164,21 +166,29 @@ class Adversarial_Generator:
             score = torch.sum((outputs - center) ** 2, dim=1)
             scores.append(score)
         scores = torch.stack(scores)
-        prob = torch.exp(1/(scores * tau1)) / torch.sum(torch.exp(1/(scores * tau1)), dim=0)
+        prob = torch.exp(1 / (scores * tau1)) / torch.sum(torch.exp(1 / (scores * tau1)), dim=0)
         if torch.isnan(prob).any():
-            print('nan')
+            print('prob nan')
             entropys = torch.tensor([0.0], device='cuda')
         else:
             entropys = -torch.sum(prob * torch.log(prob), dim=0)
+            if torch.isnan(entropys).any():
+                print('entropys nan')
+                entropys = torch.tensor([0.0], device='cuda')
 
-        mean_ensemble_loss = torch.mean(scores, dim=0)
-        return entropys, mean_ensemble_loss
+        var_ensemble_loss = torch.std(scores, dim=0)
+
+        mean_ensemble_loss = -torch.mean(scores, dim=0)
+        # return entropys, mean_ensemble_loss
+
+        return var_ensemble_loss, mean_ensemble_loss
 
     def calculate_entropy_test(self, X, tau=1):
         detectors = []
         scores = []
         for model in os.listdir(self.path_detector):
-            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
+            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model),
+                               config=self.DeepSAD_config)
             detector.load_model_from_file()
             detectors.append(detector)
 
@@ -189,7 +199,7 @@ class Adversarial_Generator:
             score = torch.sum((outputs - center) ** 2, dim=1)
             scores.append(score)
         scores = torch.stack(scores)
-        prob = torch.exp(1/(scores * tau)) / torch.sum(torch.exp(1/(scores * tau)), dim=0)
+        prob = torch.exp(1 / (scores * tau)) / torch.sum(torch.exp(1 / (scores * tau)), dim=0)
         entropys = -torch.sum(prob * torch.log(prob), dim=0)
 
         return entropys
@@ -198,7 +208,8 @@ class Adversarial_Generator:
         detectors = []
         scores = []
         for model in os.listdir(self.path_detector):
-            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model))
+            detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model),
+                               config=self.DeepSAD_config)
             detector.load_model_from_file()
             detectors.append(detector)
             score, _ = detector.predict_score(X)
@@ -218,7 +229,6 @@ class Adversarial_Generator:
             plt.close()
 
         return scores
-
 
     def train(self, dataloader):
         loss_gen = []
@@ -253,11 +263,12 @@ class Adversarial_Generator:
 
                 # Loss measures generator's ability to fool the discriminator
                 adv_loss = self.adversarial_loss(self.discriminator(gen_samples), valid)
-                entropy_loss, mean_ensemble_loss = self.calculate_regular_loss(X=gen_samples,  tau1=self.tau1, tau2=self.tau2)
+                entropy_loss, mean_ensemble_loss = self.calculate_regular_loss(X=gen_samples, tau1=self.tau1,
+                                                                               tau2=self.tau2)
                 entropy_loss = torch.mean(entropy_loss)
                 mean_ensemble_loss = torch.mean(mean_ensemble_loss)
 
-                g_loss = adv_loss - self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss)
+                g_loss = adv_loss + self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss)
 
                 g_loss.backward()
                 self.optimizer_G.step()
@@ -278,8 +289,9 @@ class Adversarial_Generator:
 
                 print(
                     "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [entr loss: %f] [mean loss: %f]"
-                    % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(), entropy_loss.item(), mean_ensemble_loss.item()
-                ))
+                    % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(),
+                       entropy_loss.item(), mean_ensemble_loss.item()
+                       ))
 
             loss_gen.append(g_loss.item())
             loss_dis.append(d_loss.item())
@@ -295,13 +307,13 @@ class Adversarial_Generator:
             'loss_gen_mean_ensemble': np.array(loss_gen_mean_ensemble)
         }
 
-        return  loss_train
+        return loss_train
 
-                # batches_done = epoch * len(dataloader) + i
-                # if batches_done % self.sample_interval == 0:
-                #     path_save = os.path.join(path_project, 'adversarial_ensemble_AD/log/gan', "samples")
-                #     save_image(gen_samples.data[:25], os.path.join(path_save, "%d.png" % batches_done), nrow=5,
-                #                normalize=True)
+        # batches_done = epoch * len(dataloader) + i
+        # if batches_done % self.sample_interval == 0:
+        #     path_save = os.path.join(path_project, 'adversarial_ensemble_AD/log/gan', "samples")
+        #     save_image(gen_samples.data[:25], os.path.join(path_save, "%d.png" % batches_done), nrow=5,
+        #                normalize=True)
 
     def sample_generate(self, num):
         z = Variable(self.Tensor(np.random.normal(0, 1, (num, self.latent_dim))))
