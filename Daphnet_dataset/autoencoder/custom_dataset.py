@@ -10,9 +10,11 @@ import numpy as np
 
 from glob import glob
 
-data_path = os.path.join(path_project, 'data/GHL/yukina_data/DeepSAD_data, window=100, step=10')
+dataset_params = 'window=100, step=10'
 
-output_path = os.path.join(path_project, f'data/GHL/csv/window=100, step=10')
+data_path = os.path.join(path_project, f'data/Daphnet/yukina_data/DeepSAD_data, {dataset_params}')
+
+output_path = os.path.join(path_project, f'data/Daphnet/csv/{dataset_params}')
 os.makedirs(output_path, exist_ok=True)  # 创建结果文件夹
 
 train_data = np.load(os.path.join(data_path, 'train.npz'))

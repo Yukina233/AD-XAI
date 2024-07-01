@@ -34,11 +34,12 @@ def extract_features(windows):
         for col in range(num_features):
             series = window[:, col]
             window_features.extend([
-                np.mean(series),
-                np.std(series),
-                np.min(series),
-                np.max(series),
-                np.median(series),
+                # np.mean(series),
+                # np.std(series),
+                # np.min(series),
+                # np.max(series),
+                # np.median(series),
+                series
                 # You can add more features here if needed
             ])
         feature_list.append(window_features)
@@ -177,10 +178,10 @@ def process_datasets(input_path, output_path, plot_path, window_size, step_size)
 
 # Example usage
 window_size = 100  # Define your window size
-step_size = 1  # Define your step size
+step_size = 10  # Define your step size
 input_path = os.path.join(path_project, 'data/SMD')
-output_path = os.path.join(path_project, f'data/SMD/yukina_data/DeepSAD_data, window={window_size}, step={step_size}')
-plot_path = os.path.join(path_project, f'data/SMD/plot/DeepSAD_data, window={window_size}, step={step_size}')
+output_path = os.path.join(path_project, f'data/SMD/yukina_data/DeepSAD_data, window={window_size}, step={step_size}, raw')
+plot_path = os.path.join(path_project, f'data/SMD/plot/DeepSAD_data, window={window_size}, step={step_size}, raw')
 os.makedirs(output_path, exist_ok=True)
 os.makedirs(plot_path, exist_ok=True)
 

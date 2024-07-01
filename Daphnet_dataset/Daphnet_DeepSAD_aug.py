@@ -31,30 +31,36 @@ def metric(y_true, y_score, pos_label=1):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'GHL'
+    train_set_name = 'Daphnet'
     parser.add_argument("--seed", type=int, default=3, help="seed")
     # parser.add_argument("--path_train_data", type=str,
     #                     default=os.path.join(path_project,
     #                                          f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10'))
+    parser.add_argument("--iteration", type=int, default=1, help="iteration of augment data")
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
-                                             f'data/GHL/yukina_data/DeepSAD_data, window=100, step=10'))
+                                             f'data/Daphnet/yukina_data/DeepSAD_aug_data/no_GAN, std, window=100, step=10, no_tau2_K=7,deepsad_epoch=50,gan_epoch=20,lam1=0.9,lam2=0.1,tau1=1'))
     parser.add_argument("--path_test", type=str,
                         default=os.path.join(path_project,
                                              f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10'))
     parser.add_argument("--dir_model", type=str,
-                        default=os.path.join(path_project, f'GHL_dataset/models/{train_set_name}/DeepSAD'))
+                        default=os.path.join(path_project, f'Daphnet_dataset/models/{train_set_name}/DeepSAD'))
     parser.add_argument("--path_output", type=str,
-                        default=os.path.join(path_project, f'GHL_dataset/log/{train_set_name}/train_result'))
+                        default=os.path.join(path_project, f'Daphnet_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 20,
-        "ae_n_epochs": 20,
+        "n_epochs": 50,
+        "ae_n_epochs": 50,
         "lr": 0.001,
         "ae_lr": 0.001,
+        "eta": 0,
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     config = parser.parse_args()
-    param_dir = f'fix_pretrain, net=Dense, std, window=100, step=10, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
+    # param_dir = f'fix_pretrain, net=Dense, std, window=100, step=10, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
+    config.path_train_data = os.path.join(config.path_train_data, f'{config.iteration}')
+    augment_param = config.path_train_data.split('/')[-2]
+    param_dir = f'aug, fix_pretrain, net=Dense, std, window=100, step=10, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}, eta={config.DeepSAD_config["eta"]}/{augment_param}/iteration={config.iteration}'
+
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 
@@ -64,9 +70,6 @@ if __name__ == '__main__':
     else:
         X_train = data['X_train']
     y_train = data['y_train']
-
-
-
 
     test_files = glob(os.path.join(config.path_test, '*test.npz'))
 
@@ -86,7 +89,7 @@ if __name__ == '__main__':
             config.DeepSAD_config["loss_output_path"] = os.path.join(config.path_output, 'deepsad_loss', f'seed={seed}')
             os.makedirs(config.DeepSAD_config["loss_output_path"], exist_ok=True)
 
-            path_save = os.path.join(path_project, f'GHL_dataset/log/GHL/DeepSAD', param_dir,
+            path_save = os.path.join(path_project, f'Daphnet_dataset/log/Daphnet/DeepSAD', param_dir,
                                      base_name, f'seed={seed}')
             os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 
@@ -110,12 +113,6 @@ if __name__ == '__main__':
 
 
             # 评估集成模型
-            # 计算阈值
-
-            score_train, outputs = model.predict_score(X_train)
-            score_train = np.array(score_train)
-            thresholds = np.percentile(score_train, 95)
-
             if config.DeepSAD_config['net_name'] == 'Dense' or config.DeepSAD_config['net_name'] == 'Simple_Dense':
                 X_test = data['X_test'].reshape(data['X_test'].shape[0], -1)
             else:
@@ -131,31 +128,16 @@ if __name__ == '__main__':
             end_time = time.time()
             time_inference = end_time - start_time
 
-            id_anomaly_pred = np.where(scores > thresholds)[0]
-            id_normal_pred = np.where(scores <= thresholds)[0]
-
-            end_time = time.time()
-            time_inference = end_time - start_time
-
-            tp = np.size(np.where(y_test[id_anomaly_pred] == 1)[0], 0)
-            fp = np.size(np.where(y_test[id_anomaly_pred] == 0)[0], 0)
-            fn = np.size(np.where(y_test[id_normal_pred] == 1)[0], 0)
-
-            precision = tp / (tp + fp)
-            recall = tp / (tp + fn)
-
-            precision_list, recall_list, _ = precision_recall_curve(y_test, scores)
+            precision, recall, _ = precision_recall_curve(y_test, scores)
             precision_threshold = 0.99
-            recall_at_threshold = recall_list[np.where(precision_list >= precision_threshold)[0][0]]
+            recall_at_threshold = recall[np.where(precision >= precision_threshold)[0][0]]
             recall_threshold = 0.99
-            precision_at_threshold = precision_list[np.where(recall_list >= recall_threshold)[0][-1]]
+            precision_at_threshold = precision[np.where(recall >= recall_threshold)[0][-1]]
 
             # performance
             result_1 = metric(y_true=y_test, y_score=scores, pos_label=1)
             result = {'aucroc': result_1['aucroc'],
                       'aucpr': result_1['aucpr'],
-                      'precision': precision,
-                      'recall': recall,
                       'FDR_at_threshold': recall_at_threshold,
                       'FAR_at_threshold': 1 - precision_at_threshold,
                       'time_inference': time_inference
@@ -174,4 +156,4 @@ if __name__ == '__main__':
         np.save(os.path.join(path_score_output, f"scores_DeepSAD.npy"), np.array(scores_seed).mean(axis=0))
         np.save(os.path.join(path_score_output, f"labels_DeepSAD.npy"), np.array(ys).mean(axis=0))
 
-    group_results(os.path.join(path_project, f'GHL_dataset/log/GHL/DeepSAD', param_dir))
+    group_results(os.path.join(path_project, f'Daphnet_dataset/log/Daphnet/DeepSAD', param_dir))

@@ -183,6 +183,35 @@ class Adversarial_Generator:
 
         return var_ensemble_loss, mean_ensemble_loss
 
+    def calculate_pull_away_loss(self, X):
+        """
+            Calculate the pull-away term for a batch of features.
+
+            Args:
+                features (torch.Tensor): A tensor of shape (batch_size, feature_dim).
+
+            Returns:
+                torch.Tensor: The pull-away term.
+            """
+        batch_size = X.size(0)
+
+        X = X.view(batch_size, -1)
+
+        # Normalize the features
+        normalized_features = F.normalize(X, p=2, dim=1)
+
+        # Calculate the cosine similarity matrix
+        cosine_similarity = torch.mm(normalized_features, normalized_features.t())
+
+        # Subtract the identity matrix to remove self-similarity
+        identity_matrix = torch.eye(batch_size, device=X.device)
+        cosine_similarity = cosine_similarity - identity_matrix
+
+        # Calculate the pull-away term
+        pull_away_term = torch.sum(cosine_similarity ** 2) / (batch_size * (batch_size - 1))
+
+        return pull_away_term
+
     def calculate_entropy_test(self, X, tau=1):
         detectors = []
         scores = []
@@ -230,6 +259,7 @@ class Adversarial_Generator:
 
         return scores
 
+
     def train(self, dataloader):
         loss_gen = []
         loss_dis = []
@@ -238,7 +268,16 @@ class Adversarial_Generator:
         loss_gen_adv = []
         loss_gen_entropy = []
         loss_gen_mean_ensemble = []
+        loss_gen_pull_away = []
         for epoch in range(self.n_epochs):
+            loss_gen_batch = []
+            loss_dis_batch = []
+
+            # 分别记录生成器的两部分loss
+            loss_gen_adv_batch = []
+            loss_gen_entropy_batch = []
+            loss_gen_mean_ensemble_batch = []
+            loss_gen_pull_away_batch = []
             for i, (samples, _) in enumerate(dataloader):
                 if samples.shape[0] != self.batch_size:
                     continue
@@ -261,6 +300,8 @@ class Adversarial_Generator:
                 # Generate a batch of images
                 gen_samples = self.generator(z)
 
+                pull_away_loss = self.calculate_pull_away_loss(gen_samples)
+
                 # Loss measures generator's ability to fool the discriminator
                 adv_loss = self.adversarial_loss(self.discriminator(gen_samples), valid)
                 entropy_loss, mean_ensemble_loss = self.calculate_regular_loss(X=gen_samples, tau1=self.tau1,
@@ -269,6 +310,7 @@ class Adversarial_Generator:
                 mean_ensemble_loss = torch.mean(mean_ensemble_loss)
 
                 g_loss = adv_loss + self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss)
+                # g_loss = self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss)
 
                 g_loss.backward()
                 self.optimizer_G.step()
@@ -288,23 +330,33 @@ class Adversarial_Generator:
                 self.optimizer_D.step()
 
                 print(
-                    "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [entr loss: %f] [mean loss: %f]"
+                    "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [entr loss: %f] [mean loss: %f] [pull away loss: %f]"
                     % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(),
-                       entropy_loss.item(), mean_ensemble_loss.item()
+                       entropy_loss.item(), mean_ensemble_loss.item(), pull_away_loss.item()
                        ))
 
-            loss_gen.append(g_loss.item())
-            loss_dis.append(d_loss.item())
-            loss_gen_adv.append(adv_loss.item())
-            loss_gen_entropy.append(entropy_loss.item())
-            loss_gen_mean_ensemble.append(mean_ensemble_loss.item())
+
+                loss_gen_batch.append(g_loss.item())
+                loss_dis_batch.append(d_loss.item())
+                loss_gen_adv_batch.append(adv_loss.item())
+                loss_gen_entropy_batch.append(entropy_loss.item())
+                loss_gen_mean_ensemble_batch.append(mean_ensemble_loss.item())
+                loss_gen_pull_away_batch.append(pull_away_loss.item())
+
+            loss_gen.append(np.mean(loss_gen_batch))
+            loss_dis.append(np.mean(loss_dis_batch))
+            loss_gen_adv.append(np.mean(loss_gen_adv_batch))
+            loss_gen_entropy.append(np.mean(loss_gen_entropy_batch))
+            loss_gen_mean_ensemble.append(np.mean(loss_gen_mean_ensemble_batch))
+            loss_gen_pull_away.append(np.mean(loss_gen_pull_away_batch))
 
         loss_train = {
             'loss_gen': np.array(loss_gen),
             'loss_dis': np.array(loss_dis),
             'loss_gen_adv': np.array(loss_gen_adv),
             'loss_gen_entropy': np.array(loss_gen_entropy),
-            'loss_gen_mean_ensemble': np.array(loss_gen_mean_ensemble)
+            'loss_gen_mean_ensemble': np.array(loss_gen_mean_ensemble),
+            'loss_gen_pull_away': np.array(loss_gen_pull_away)
         }
 
         return loss_train
@@ -314,6 +366,84 @@ class Adversarial_Generator:
         #     path_save = os.path.join(path_project, 'adversarial_ensemble_AD/log/gan', "samples")
         #     save_image(gen_samples.data[:25], os.path.join(path_save, "%d.png" % batches_done), nrow=5,
         #                normalize=True)
+
+
+    def train_no_GAN(self, dataloader):
+        loss_gen = []
+
+        # 分别记录生成器的两部分loss
+        loss_gen_entropy = []
+        loss_gen_mean_ensemble = []
+        loss_gen_pull_away = []
+        for epoch in range(self.n_epochs):
+            loss_gen_batch = []
+            loss_dis_batch = []
+
+            # 分别记录生成器的两部分loss
+            loss_gen_adv_batch = []
+            loss_gen_entropy_batch = []
+            loss_gen_mean_ensemble_batch = []
+            loss_gen_pull_away_batch = []
+            for i, (samples, _) in enumerate(dataloader):
+                if samples.shape[0] != self.batch_size:
+                    continue
+                # Adversarial ground truths
+                valid = Variable(self.Tensor(samples.size(0), 1).fill_(1.0), requires_grad=False)
+                fake = Variable(self.Tensor(samples.size(0), 1).fill_(0.0), requires_grad=False)
+
+                # Configure input
+                real_samples = Variable(samples.type(self.Tensor))
+
+                # -----------------
+                #  Train Generator
+                # -----------------
+
+                self.optimizer_G.zero_grad()
+
+                # Sample noise as generator input
+                z = Variable(self.Tensor(np.random.normal(0, 1, (samples.shape[0], self.latent_dim))))
+
+                # Generate a batch of images
+                gen_samples = self.generator(z)
+
+                pull_away_loss = self.calculate_pull_away_loss(gen_samples)
+
+                # Loss measures generator's ability to fool the discriminator
+                entropy_loss, mean_ensemble_loss = self.calculate_regular_loss(X=gen_samples, tau1=self.tau1,
+                                                                               tau2=self.tau2)
+                entropy_loss = torch.mean(entropy_loss)
+                mean_ensemble_loss = torch.mean(mean_ensemble_loss)
+
+                g_loss = self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss) + self.lam3 * pull_away_loss
+
+                g_loss.backward()
+                self.optimizer_G.step()
+
+                print(
+                    "[Epoch %d/%d] [Batch %d/%d] [G loss: %f] [entr loss: %f] [mean loss: %f] [pull away loss: %f] "
+                    % (epoch, self.n_epochs, i, len(dataloader), g_loss.item(),
+                       entropy_loss.item(), mean_ensemble_loss.item(), pull_away_loss.item()
+                       ))
+
+                loss_gen_batch.append(g_loss.item())
+                loss_gen_entropy_batch.append(entropy_loss.item())
+                loss_gen_mean_ensemble_batch.append(mean_ensemble_loss.item())
+                loss_gen_pull_away_batch.append(pull_away_loss.item())
+
+            loss_gen.append(np.mean(loss_gen_batch))
+            loss_gen_entropy.append(np.mean(loss_gen_entropy_batch))
+            loss_gen_mean_ensemble.append(np.mean(loss_gen_mean_ensemble_batch))
+            loss_gen_pull_away.append(np.mean(loss_gen_pull_away_batch))
+
+        loss_train = {
+            'loss_gen': np.array(loss_gen),
+            'loss_gen_entropy': np.array(loss_gen_entropy),
+            'loss_gen_mean_ensemble': np.array(loss_gen_mean_ensemble),
+            'loss_gen_pull_away': np.array(loss_gen_pull_away)
+        }
+
+        return loss_train
+
 
     def sample_generate(self, num):
         z = Variable(self.Tensor(np.random.normal(0, 1, (num, self.latent_dim))))

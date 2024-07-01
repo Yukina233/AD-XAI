@@ -67,6 +67,16 @@ def pred(args):
     pred = np.mean(np.abs(pred - xte), axis=1)
     np.savetxt(args.dataOutput, pred, delimiter= ",")
 
+def predict_threshold(args):
+    # 计算阈值
+    xtr, ytr = load_data(args)
+    model = AutoEn.load(args.modelInput)
+    pred = model.predict(xtr)
+    score_train = np.mean(np.abs(pred - xtr), axis=1)
+    thresholds = np.percentile(score_train, 95)
+    return thresholds
+
+
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 if __name__=="__main__":
@@ -101,13 +111,18 @@ if __name__=="__main__":
 
         if args.executionType == "train":
             train(args)
+            thresholds = predict_threshold(args)
         elif args.executionType == "execute":
             pred(args)
         else:
             raise ValueError(f"No executionType '{args.executionType}' available! Choose either 'train' or 'execute'.")
 
+
+
     auc_roc_list = []
     auc_pr_list = []
+    precision_list = []
+    recall_list = []
     for id, file in enumerate(test_files):
         print(f"Test file {id}: {file}")
         mock_args = {
@@ -135,6 +150,19 @@ if __name__=="__main__":
 
         scores = np.loadtxt(args.dataOutput, delimiter=",")
 
+        id_anomaly_pred = np.where(scores > thresholds)[0]
+        id_normal_pred = np.where(scores <= thresholds)[0]
+
+        tp = np.size(np.where(labels[id_anomaly_pred] == 1)[0], 0)
+        fp = np.size(np.where(labels[id_anomaly_pred] == 0)[0], 0)
+        fn = np.size(np.where(labels[id_normal_pred] == 1)[0], 0)
+
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+
+        precision_list.append(precision)
+        recall_list.append(recall)
+
         # 计算AUC-ROC和AUC-PR
         auc_roc = roc_auc_score(labels, scores)
         auc_pr = average_precision_score(labels, scores)
@@ -144,14 +172,17 @@ if __name__=="__main__":
 
 
     # 创建包含AUC-ROC和AUC-PR值的DataFrame
-    result = pd.DataFrame({'AUC-ROC': auc_roc_list, 'AUC-PR': auc_pr_list})
+    result = pd.DataFrame({'AUC-ROC': auc_roc_list, 'AUC-PR': auc_pr_list, 'Precision': precision_list, 'Recall': recall_list})
 
     # 计算均值
     mean_auc_roc = result['AUC-ROC'].mean()
     mean_auc_pr = result['AUC-PR'].mean()
 
+    mean_precision = result['Precision'].mean()
+    mean_recall = result['Recall'].mean()
+
     # 将均值添加为DataFrame的新行
-    mean_row = pd.DataFrame({'AUC-ROC': [mean_auc_roc], 'AUC-PR': [mean_auc_pr]}, index=['Mean'])
+    mean_row = pd.DataFrame({'AUC-ROC': [mean_auc_roc], 'AUC-PR': [mean_auc_pr], 'Precision': [mean_precision], 'Recall': [mean_recall]}, index=['Mean'])
     result = pd.concat([result, mean_row])
 
     # 保存结果到CSV文件

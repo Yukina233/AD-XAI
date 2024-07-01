@@ -129,7 +129,7 @@ class deepsad(object):
         ae_net_dict = self.ae_net.state_dict()
 
         # Filter out decoder network keys
-        ae_net_dict = {k: v for k, v in ae_net_dict.items() if k in net_dict}
+        ae_net_dict = {k.replace('encoder.', ''): v for k, v in ae_net_dict.items() if k.replace('encoder.', '') in net_dict}
         # Overwrite values in the existing state_dict
         net_dict.update(ae_net_dict)
         # Load the new state_dict

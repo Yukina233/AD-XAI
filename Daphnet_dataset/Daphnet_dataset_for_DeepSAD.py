@@ -76,6 +76,7 @@ def windowed_features(data, labels, window_size, step_size):
 
     return windowed_data, windowed_labels
 
+
 # def windowed_features(data, labels, window_size, step_size):
 #     """
 #     Extract windowed features and labels from the data.
@@ -102,88 +103,106 @@ def windowed_features(data, labels, window_size, step_size):
 #     return windows.reshape(windows.shape[0], -1), windowed_labels
 
 def process_datasets(input_path, output_path, plot_path, window_size, step_size):
-    # Get all training and testing files
-    train_file = glob(os.path.join(input_path, '*train.csv'))[0]
-    train_df = pd.read_csv(train_file)
-
-    # Remove the first column (timestamp) and separate the labels
-    train_data = train_df.iloc[:, 1:-1].values
-    train_labels = train_df.iloc[:, -1].values
-
-    # Apply windowing to the data
-    train_windows, train_window_labels = windowed_features(train_data, train_labels, window_size, step_size)
-
-    np.savez(os.path.join(output_path, 'train.npz'), X=[0], y=[0], X_train=train_windows, y_train=train_window_labels, X_test=[0],
-             y_test=[0])
-
-
     test_files = glob(os.path.join(input_path, '*test.csv'))
 
-    for test_file in test_files:
+    data_list = []
+    for test_file in tqdm(test_files):
         # Derive the corresponding test file name
 
         # Load the training and test data
 
-        test_df = pd.read_csv(test_file)
+        data_df = pd.read_csv(test_file)
 
-        test_data = test_df.iloc[:, 1:-1].values
-        test_labels = test_df.iloc[:, -1].values
+        data = data_df.iloc[:, 1:-1].values
+        labels = data_df.iloc[:, -1].values
 
-        test_windows, test_window_labels = windowed_features(test_data, test_labels, window_size, step_size)
+        windows, window_labels = windowed_features(data, labels, window_size, step_size)
 
-        # Save to npz file
-        base_name = os.path.basename(test_file).replace('.test.csv', '')
-        npz_filename = os.path.join(output_path, f'{base_name}.test.npz')
-        np.savez(npz_filename, X=[0], y=[0], X_train=[0], y_train=[0], X_test=test_windows,
-                 y_test=test_window_labels)
+        data_list.append((windows, window_labels))
 
-        print(f"Processed and saved {npz_filename}")
 
-        # # 用TSNE打印训练集和测试集的数据分布
-        # # 随机抽取一部分数据进行可视化
-        # num_samples = 5000
-        # np.random.seed(0)
-        # # x_normal = train_windows[np.where(train_window_labels == 0)]
-        # # x_anomaly = test_windows[np.where(test_window_labels == 1)]
-        # # sampled_normal = x_normal[np.random.choice(range(0, x_normal.shape[0]), num_samples, replace=True)]
-        # # sampled_anomaly = x_anomaly[np.random.choice(range(0, x_anomaly.shape[0]), num_samples, replace=True)]
-        # # X = np.concatenate((sampled_normal, sampled_anomaly))
-        # # y = np.concatenate((np.zeros(num_samples), np.ones(num_samples)))
-        # # tsne = TSNE(n_components=2, random_state=42)
-        # # X_2d = tsne.fit_transform(X)
-        # # plt.figure(figsize=(12, 9))
-        # # if y is not None:
-        # #     for i in range(2):
-        # #         plt.scatter(X_2d[y == i, 0], X_2d[y == i, 1], label=f'Label {i}')
-        # #     plt.title(f'{base_name}: Train data distribution')
-        # #     plt.legend()
-        # #     # plt.show()
-        # #     plt.savefig(os.path.join(plot_path, f'{base_name}_train.png'))
-        #
-        # x_normal = test_windows[np.where(test_window_labels == 0)]
-        # x_anomaly = test_windows[np.where(test_window_labels == 1)]
-        # sampled_normal = x_normal[np.random.choice(range(0, x_normal.shape[0]), num_samples, replace=True)]
-        # sampled_anomaly = x_anomaly[np.random.choice(range(0, x_anomaly.shape[0]), num_samples, replace=True)]
-        # X = np.concatenate((sampled_normal, sampled_anomaly))
-        # y = np.concatenate((np.zeros(num_samples), np.ones(num_samples)))
-        # tsne = TSNE(n_components=2, random_state=42)
-        # X_2d = tsne.fit_transform(X)
-        # plt.figure(figsize=(12, 9))
-        # if y is not None:
-        #     for i in range(2):
-        #         plt.scatter(X_2d[y == i, 0], X_2d[y == i, 1], label=f'Label {i}')
-        #     plt.title(f'{base_name}: Test data distribution')
-        #     plt.legend()
-        #     # plt.show()
-        #     plt.savefig(os.path.join(plot_path, f'{base_name}_test.png'))
+    # Combine all data
+
+    all_windows = np.concatenate([data[0] for data in data_list], axis=0)
+    all_labels = np.concatenate([data[1] for data in data_list], axis=0)
+
+    all_normal_windows = all_windows[all_labels == 0]
+    all_normal_labels = all_labels[all_labels == 0]
+
+    all_anomaly_windows = all_windows[all_labels == 1]
+    all_anomaly_labels = all_labels[all_labels == 1]
+    # Split the data into training and test sets
+    train_normal_windows, test_normal_windows, train_normal_labels, test_normal_labels = train_test_split(all_normal_windows, all_normal_labels,
+                                                                                            test_size=0.2,
+                                                                                            random_state=42)
+    train_windows = train_normal_windows
+    train_labels = train_normal_labels
+
+    test_windows = np.concatenate((test_normal_windows, all_anomaly_windows))
+    test_labels = np.concatenate((test_normal_labels, all_anomaly_labels))
+
+    # Normalize the data
+    scaler = MinMaxScaler()
+    scaler.fit(train_windows)
+    scaled_train_windows = scaler.transform(train_windows)
+    scaled_test_windows = scaler.transform(test_windows)
+
+    # Save to npz file
+
+    np.savez(os.path.join(output_path, f'train.npz'), X=[0], y=[0], X_train=scaled_train_windows, y_train=train_labels, X_test=[0],
+             y_test=[0])
+
+    np.savez(os.path.join(output_path, f'test.npz'), X=[0], y=[0], X_train=[0], y_train=[0], X_test=scaled_test_windows,
+             y_test=test_labels)
+
+    print(f"Processed and saved.")
+
+    # # 用TSNE打印训练集和测试集的数据分布
+    # # 随机抽取一部分数据进行可视化
+    num_samples = 5000
+    np.random.seed(0)
+    x_normal = train_windows[np.where(train_labels == 0)]
+    x_anomaly = test_windows[np.where(test_labels == 1)]
+    sampled_normal = x_normal[np.random.choice(range(0, x_normal.shape[0]), num_samples, replace=True)]
+    sampled_anomaly = x_anomaly[np.random.choice(range(0, x_anomaly.shape[0]), num_samples, replace=True)]
+    X = np.concatenate((sampled_normal, sampled_anomaly))
+    y = np.concatenate((np.zeros(num_samples), np.ones(num_samples)))
+    tsne = TSNE(n_components=2, random_state=42)
+    X_2d = tsne.fit_transform(X)
+    plt.figure(figsize=(12, 9))
+    if y is not None:
+        for i in range(2):
+            plt.scatter(X_2d[y == i, 0], X_2d[y == i, 1], label=f'Label {i}')
+        plt.title(f'Train data distribution')
+        plt.legend()
+        # plt.show()
+        plt.savefig(os.path.join(plot_path, f'train.png'))
+
+    x_normal = test_windows[np.where(test_labels == 0)]
+    x_anomaly = test_windows[np.where(test_labels == 1)]
+    sampled_normal = x_normal[np.random.choice(range(0, x_normal.shape[0]), num_samples, replace=True)]
+    sampled_anomaly = x_anomaly[np.random.choice(range(0, x_anomaly.shape[0]), num_samples, replace=True)]
+    X = np.concatenate((sampled_normal, sampled_anomaly))
+    y = np.concatenate((np.zeros(num_samples), np.ones(num_samples)))
+    tsne = TSNE(n_components=2, random_state=42)
+    X_2d = tsne.fit_transform(X)
+    plt.figure(figsize=(12, 9))
+    if y is not None:
+        for i in range(2):
+            plt.scatter(X_2d[y == i, 0], X_2d[y == i, 1], label=f'Label {i}')
+        plt.title(f'Test data distribution')
+        plt.legend()
+        # plt.show()
+        plt.savefig(os.path.join(plot_path, f'test.png'))
 
 
 # Example usage
 window_size = 100  # Define your window size
 step_size = 10  # Define your step size
-input_path = os.path.join(path_project, 'data/GHL')
-output_path = os.path.join(path_project, f'data/GHL/yukina_data/DeepSAD_data, window={window_size}, step={step_size}')
-plot_path = os.path.join(path_project, f'data/GHL/plot/DeepSAD_data, window={window_size}, step={step_size}')
+input_path = os.path.join(path_project, 'data/Daphnet')
+output_path = os.path.join(path_project,
+                           f'data/Daphnet/yukina_data/DeepSAD_data, window={window_size}, step={step_size}')
+plot_path = os.path.join(path_project, f'data/Daphnet/plot/DeepSAD_data, window={window_size}, step={step_size}')
 os.makedirs(output_path, exist_ok=True)
 os.makedirs(plot_path, exist_ok=True)
 

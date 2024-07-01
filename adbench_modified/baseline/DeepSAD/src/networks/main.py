@@ -1,3 +1,5 @@
+from .GRU import SMD_GRU_Encoder, SMD_GRU_Autoencoder
+from .LSTM import LSTM_Encoder, LSTM_Autoencoder
 from .mnist_LeNet import MNIST_LeNet, MNIST_LeNet_Autoencoder
 from .fmnist_LeNet import FashionMNIST_LeNet, FashionMNIST_LeNet_Autoencoder
 from .cifar10_LeNet import CIFAR10_LeNet, CIFAR10_LeNet_Autoencoder, CIFAR10_LeNet_1, CIFAR10_LeNet_1_Autoencoder
@@ -35,13 +37,24 @@ def build_network(net_name, input_size ,ae_net=None):
 
     elif net_name == 'Dense':
         net = MLP(x_dim=input_size, h_dims=h_dims, rep_dim=rep_dim, bias=False)
+
+    elif net_name == 'Simple_Dense':
+        net = Simple_Dense(x_dim=input_size, h_dims=h_dims, rep_dim=rep_dim, bias=False)
+
     elif net_name == 'SMD_cnn':
         net = SMD_Custom_LeNet()
+
     elif net_name == 'GHL_cnn':
         net = GHL_Custom_LeNet()
+
+    elif net_name == 'SMD_GRU':
+        net = SMD_GRU_Encoder(input_dim=input_size, bias=False)
+
+    elif net_name == 'LSTM':
+        net = LSTM_Encoder(input_dim=input_size, bias=False)
+
     else:
         assert NotImplementedError
-        # net = Simple_Dense(x_dim=input_size, h_dims=h_dims, rep_dim=rep_dim, bias=False)
     return net
 
 def build_autoencoder(net_name, input_size):
@@ -62,11 +75,22 @@ def build_autoencoder(net_name, input_size):
 
     elif net_name == 'Dense':
         ae_net = MLP_Autoencoder(x_dim=input_size, h_dims=h_dims, rep_dim=rep_dim, bias=False)
+
+    elif net_name == 'Simple_Dense':
+        ae_net = Simple_Dense_Autoencoder(x_dim=input_size, h_dims=h_dims, rep_dim=rep_dim, bias=False)
+
     elif net_name == 'SMD_cnn':
         ae_net = SMD_Custom_LeNet_Autoencoder()
+
     elif net_name == 'GHL_cnn':
         ae_net = GHL_Custom_LeNet_Autoencoder()
+
+    elif net_name == 'SMD_GRU':
+        ae_net = SMD_GRU_Autoencoder(input_dim=input_size, bias=False)
+
+    elif net_name == 'LSTM':
+        ae_net = LSTM_Autoencoder(input_dim=input_size, bias=False)
+
     else:
         assert NotImplementedError
-        # ae_net = Simple_Dense_Autoencoder(x_dim=input_size, h_dims=h_dims, rep_dim=rep_dim, bias=False)
     return ae_net

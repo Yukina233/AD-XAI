@@ -46,8 +46,8 @@ def group_results(base_dir):
     noise_type = None
     group_seed_num = 3
     classes_output = []
-    precision_output = []
-    recall_output = []
+    FDR_output = []
+    FAR_output = []
     AUCROC_output = []
     AUCPR_output = []
     FDR_at_threshold_output = []
@@ -55,8 +55,8 @@ def group_results(base_dir):
     for fault in fault_list:
         if '.csv' in fault:
             continue
-        precisions = []
-        recalls = []
+        # FDRs = []
+        # FARs = []
         AUCROCs = []
         AUCPRs = []
         FDR_at_thresholds = []
@@ -71,24 +71,24 @@ def group_results(base_dir):
         for i in range(0, metrics.__len__()):
             df_result[metrics[i]] = scores[i]
 
-        precisions.append(df_result['precision'])
-        recalls.append(df_result['recall'])
+        # FDRs.append(df_result['FDR'])
+        # FARs.append(df_result['FAR'])
         AUCROCs.append(df_result['aucroc'])
         AUCPRs.append(df_result['aucpr'])
         FDR_at_thresholds.append(df_result['FDR_at_threshold'])
         FAR_at_thresholds.append(df_result['FAR_at_threshold'])
 
         classes_output.append(fault)
-        precision_output.append(np.mean(precisions) * 100)
-        recall_output.append(np.mean(recalls) * 100)
+        # FDR_output.append(np.mean(FDRs) * 100)
+        # FAR_output.append(np.mean(FARs) * 100)
         AUCROC_output.append(np.mean(AUCROCs) * 100)
         AUCPR_output.append(np.mean(AUCPRs) * 100)
         FDR_at_threshold_output.append(np.mean(FDR_at_thresholds) * 100)
         FAR_at_threshold_output.append(np.mean(FAR_at_thresholds) * 100)
 
     classes_output.append('mean')
-    precision_output.append(np.mean(precision_output))
-    recall_output.append(np.mean(recall_output))
+    # FDR_output.append(np.mean(FDR_output))
+    # FAR_output.append(np.mean(FAR_output))
     AUCROC_output.append(np.mean(AUCROC_output))
     AUCPR_output.append(np.mean(AUCPR_output))
     FDR_at_threshold_output.append(np.mean(FDR_at_threshold_output))
@@ -96,7 +96,7 @@ def group_results(base_dir):
 
     df_output = pd.DataFrame(
         data={'class': classes_output, 'AUCROC': AUCROC_output,
-              'AUCPR': AUCPR_output, 'precision': precision_output, 'recall': recall_output, 'FDR_at_threshold': FDR_at_threshold_output,
+              'AUCPR': AUCPR_output, 'FDR_at_threshold': FDR_at_threshold_output,
               'FAR_at_threshold': FAR_at_threshold_output})
     df_output.to_csv(os.path.join(base_dir, f'FDR_FAR_AUCROC_AUCPR_ensemble-{suffix}_grouped.csv'), index=False)
 

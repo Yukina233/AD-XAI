@@ -48,7 +48,6 @@ def load_data(args):
     labels = df.iloc[:, -1].values
     return data, labels
 
-
 def train(args):
     xtr, ytr = load_data(args)
     ii = (ytr == 0)
@@ -69,26 +68,27 @@ def pred(args):
 
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-if __name__=="__main__":
-    suffix = 'window=100, step=10'
-    input_path = os.path.join(path_project, "data/SMD/csv/window=100, step=10")
+
+def run(seed=0, suffix='window=100, step=10', dataset_name='Daphnet'):
+
+    input_path = os.path.join(path_project, f"data/{dataset_name}/csv/{suffix}")
 
     train_files = glob(os.path.join(input_path, '*train.csv'))
     test_files = glob(os.path.join(input_path, '*test.csv'))
 
-    path_results = os.path.join(path_project, f'SMD_dataset/autoencoder/results/{suffix}')
-    os.makedirs(os.path.join(path_results, 'models'), exist_ok=True)
-    os.makedirs(os.path.join(path_results, 'scores'), exist_ok=True)
+    path_results = os.path.join(path_project, f'{dataset_name}_dataset/autoencoder/results/{suffix}')
+    os.makedirs(os.path.join(path_results, f'{seed}/models'), exist_ok=True)
+    os.makedirs(os.path.join(path_results, f'{seed}/scores'), exist_ok=True)
     for id, file in enumerate(train_files):
         print(f"Train file {id}: {file}")
         # 模拟传递参数
         mock_args = {
             "executionType": "train",  # 或 "execute"
             "dataInput": os.path.join(path_project, file),
-            "modelOutput": os.path.join(path_results, f"models/model-{id}.h5"),
-            "modelInput": os.path.join(path_results, f"models/model-{id}.h5"),  # 仅在 execute 时需要
-            "dataOutput": os.path.join(path_results, f"scores/anomaly_scores-{id}.csv"),  # 仅在 execute 时需要
-            "customParameters": {}
+            "modelOutput": os.path.join(path_results, f"{seed}/models/model.h5"),
+            "modelInput": os.path.join(path_results, f"{seed}/models/model.h5"),  # 仅在 execute 时需要
+            "dataOutput": os.path.join(path_results, f"{seed}/scores/anomaly_scores-{id}.csv"),  # 仅在 execute 时需要
+            "customParameters": {'random_state': seed}
         }
         sys.argv = [sys.argv[0], json.dumps(mock_args)]
 
@@ -109,9 +109,9 @@ if __name__=="__main__":
         mock_args = {
             "executionType": "execute",  # 或 "execute"
             "dataInput": os.path.join(path_project, file),
-            "modelOutput": os.path.join(path_results, f"models/model-{id}.h5"),
-            "modelInput": os.path.join(path_results, f"models/model-{id}.h5"),  # 仅在 execute 时需要
-            "dataOutput": os.path.join(path_results, f"scores/anomaly_scores-{id}.csv"),
+            "modelOutput": os.path.join(path_results, f"{seed}/models/model.h5"),
+            "modelInput": os.path.join(path_results, f"{seed}/models/model.h5"),  # 仅在 execute 时需要
+            "dataOutput": os.path.join(path_results, f"{seed}/scores/anomaly_scores-{id}.csv"),
             # 仅在 execute 时需要
             "customParameters": {}
         }
@@ -151,9 +151,45 @@ if __name__=="__main__":
     result = pd.concat([result, mean_row])
 
     # 保存结果到CSV文件
-    results_csv_path = os.path.join(path_project, f'SMD_dataset/autoencoder/results/{suffix}/results.csv')
+    results_csv_path = os.path.join(path_project, f'Daphnet_dataset/autoencoder/results/{suffix}/{seed}/results.csv')
     result.to_csv(results_csv_path, index=True)  # index=True保留索引，这样'Mean'也会被写入文件
 
     print('Results saved.')
+
+
+if __name__ == '__main__':
+    suffix = 'window=100, step=10'
+    dataset_name = 'Daphnet'
+
+    path_results = os.path.join(path_project, f'{dataset_name}_dataset/autoencoder/results/{suffix}')
+    all_aucroc= []
+    all_aucpr = []
+    all_scores= []
+    for seed in range(3):
+        # run(seed, suffix, dataset_name)
+        result = pd.read_csv(os.path.join(path_results, f'{seed}/results.csv'), index_col=0)
+        for index, row in result.iterrows():
+            if index == 'Mean':
+                all_aucroc.append(row['AUC-ROC'])
+                all_aucpr.append(row['AUC-PR'])
+
+        scores = pd.read_csv(os.path.join(path_results, f'{seed}/scores/anomaly_scores-0.csv'), header=None)
+        scores = scores.to_numpy().mean(axis=1)
+        all_scores.append(scores)
+
+    all_scores = np.array(all_scores)
+    mean_scores = all_scores.mean(axis=0)
+
+    # 计算AUC-ROC和AUC-PR
+    all_aucroc = np.array(all_aucroc)
+    all_aucpr = np.array(all_aucpr)
+    mean_aucroc = all_aucroc.mean()
+    mean_aucpr = all_aucpr.mean()
+
+    # 输出为csv文件
+    np.save(os.path.join(path_results, 'scores.npy'), mean_scores)
+
+    result = pd.DataFrame({'AUC-ROC': mean_aucroc, 'AUC-PR': mean_aucpr}, index=[0])
+    result.to_csv(os.path.join(path_results, 'results.csv'), index=True)
 
 

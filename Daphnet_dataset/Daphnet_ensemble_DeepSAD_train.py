@@ -23,7 +23,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'GHL'
+    train_set_name = 'Daphnet'
     parser.add_argument("--seed", type=int, default=0, help="seed")
     parser.add_argument("--K", type=int, default=7, help="number of sub-models")
     parser.add_argument("--n_epochs", type=int, default=5, help="number of epochs of overall training")
@@ -32,27 +32,27 @@ if __name__ == '__main__':
 
                                              f'data/{train_set_name}/yukina_data/ensemble_data, window=100, step=10'))
     parser.add_argument("--dir_model", type=str,
-                        default=os.path.join(path_project, f'GHL_dataset/models/{train_set_name}/ensemble'))
+                        default=os.path.join(path_project, f'Daphnet_dataset/models/{train_set_name}/ensemble'))
     parser.add_argument("--path_output", type=str,
-                        default=os.path.join(path_project, f'GHL_dataset/log/{train_set_name}/train_result'))
+                        default=os.path.join(path_project, f'Daphnet_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 20,
-        "ae_n_epochs": 20,
+        "n_epochs": 50,
+        "ae_n_epochs": 50,
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
         "n_epochs": 20,
         "lam1": 10,
-        "lam2": 1,
-        "lam3": 10,
+        "lam2": 0.1,
         "tau1": 1,
-        "img_size": 80
+        "img_size": 45
     }, help="config of GAN")
 
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'GAN, std, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},tau1={config.GAN_config["tau1"]},seed={config.seed}'
+    param_dir = f'GAN, std, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},tau1={config.GAN_config["tau1"]}'
+    # param_dir = 'baseline, window=100, step=10, deepsad_epoch=100'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 
@@ -112,9 +112,6 @@ if __name__ == '__main__':
 
             del model
 
-        # 跳过最后一次迭代
-        if iteration == config.n_epochs - 1:
-            break
         # 训练对抗样本生成器
         print("Train Adversarial Generator")
         path_detector = os.path.join(config.dir_model, f'{iteration}')

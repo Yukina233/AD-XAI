@@ -23,14 +23,14 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # 设置项目路径
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-iteration = 2
-test_set_name = 'GHL'
-model_name = 'no_GAN, std, window=100, step=10, no_tau2_K=7,deepsad_epoch=20,gan_epoch=20,lam1=0.99,lam2=0.01,lam3=10,tau1=1,seed=0'
-output_dir = os.path.join(path_project, f'GHL_dataset/log/{test_set_name}/train_result', model_name)
+iteration = 0
+test_set_name = 'Daphnet'
+model_name = 'no_GAN, std, window=100, step=10, no_tau2_K=7,deepsad_epoch=50,gan_epoch=20,lam1=0.1,lam2=0.9,tau1=1'
+output_dir = os.path.join(path_project, f'Daphnet_dataset/log/{test_set_name}/train_result', model_name)
 
 train_new_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10', 'augment', model_name)
 
-detector_dir = os.path.join(path_project, f'GHL_dataset/models/{test_set_name}/ensemble', model_name)
+detector_dir = os.path.join(path_project, f'Daphnet_dataset/models/{test_set_name}/ensemble', model_name)
 
 test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10')
 
@@ -53,7 +53,7 @@ for dataset_name in os.listdir(test_data_path):
     # plot时是否考虑聚类标签
     use_train_cluster_label = False
     # 随机抽取的样本数
-    num_samples = 2000
+    num_samples = 5000
     np.random.seed(0)
 
     data = np.load(os.path.join(test_data_path, dataset_name))

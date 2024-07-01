@@ -48,12 +48,12 @@ fpr3, tpr3, _ = roc_curve(y_true3, y_scores_model3)
 
 # 绘制ROC曲线
 plt.rcParams['font.sans-serif'] = ['SimSun']
-plt.figure()
+plt.figure(figsize=(8, 8))
 lw = 2
 # plt.plot(fpr, tpr, color='darkorange', lw=lw, label='ROC curve (area = %0.3f)' % roc_auc)
 plt.plot(fpr1, tpr1, lw=lw, label='SSLLE-AD')
-plt.plot(fpr2, tpr2, lw=lw, label='DeepSAD')
-plt.plot(fpr3, tpr3, lw=lw, label='DeepSAD-Ensemble')
+# plt.plot(fpr2, tpr2, lw=lw, label='DeepSAD')
+plt.plot(fpr3, tpr3, lw=lw, label='DAE-AD')
 plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
@@ -80,11 +80,11 @@ precision3_at_threshold = precision1[np.where(recall3 >= recall_threshold)[0][-1
 
 # pr_auc = auc(recall, precision)
 # 绘制PR曲线
-plt.figure()
+plt.figure(figsize=(8, 8))
 # plt.plot(recall, precision, color='darkorange', lw=lw, label='PR curve (area = %0.3f)' % pr_auc)
 plt.plot(recall1, precision1, lw=lw, label='SSLLE-AD')
-plt.plot(recall2, precision2, lw=lw, label='DeepSAD')
-plt.plot(recall3, precision3, lw=lw, label='DeepSAD-Ensemble')
+# plt.plot(recall2, precision2, lw=lw, label='DeepSAD')
+plt.plot(recall3, precision3, lw=lw, label='DAE-SAD')
 plt.plot([0, 1], [1, 0], color='navy', lw=lw, linestyle='--')
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
