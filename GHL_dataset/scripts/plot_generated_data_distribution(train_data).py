@@ -23,9 +23,9 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # 设置项目路径
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-iteration = 0
+iteration = 2
 test_set_name = 'GHL'
-model_name = 'std, window=100, step=10, no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=1,lam2=1,tau1=1'
+model_name = 'no_GAN, std, window=100, step=10, no_tau2_K=7,deepsad_epoch=20,gan_epoch=20,lam1=0.99,lam2=0.01,lam3=0.1,tau1=1,seed=0'
 output_dir = os.path.join(path_project, f'GHL_dataset/log/{test_set_name}/train_result', model_name)
 
 train_new_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10', 'augment', model_name)
@@ -44,7 +44,10 @@ for dataset_name in os.listdir(test_data_path):
     for dataset in os.listdir(path_train_new):
         datasets.append(np.load(os.path.join(path_train_new, dataset)))
 
-    generated_data = datasets[0]['X_train'][np.where(datasets[0]['y_train'] == 1)]
+    generated_data = []
+    for dataset in datasets:
+        generated_data.append(dataset['X_train'][np.where(dataset['y_train'] == 1)])
+    generated_data = np.concatenate(generated_data)
 
 
     # plot时是否考虑聚类标签
@@ -138,7 +141,7 @@ for dataset_name in os.listdir(test_data_path):
     # 创建MinMaxScaler对象
     scaler1 = MinMaxScaler()
     # 对数据进行归一化
-    normalized_data = scaler1.fit_transform(X_train)
+    normalized_data = scaler1.fit_transform(X_all)
     X_2d = tsne1.fit_transform(normalized_data)  # 对数据进行降维处理
 
     plt.rcParams['font.sans-serif'] = ['SimSun']
@@ -146,11 +149,11 @@ for dataset_name in os.listdir(test_data_path):
 
     if use_train_cluster_label:
         for id, train_data in enumerate(sampled_train_data):
-            plt.scatter(X_2d[y_train == (id + 1), 0], X_2d[y_train == (id + 1), 1], label=f'正常数据_{id}', alpha=0.5)
+            plt.scatter(X_2d[y_all == (id + 1), 0], X_2d[y_all == (id + 1), 1], label=f'正常数据_{id}', alpha=0.5)
     else:
-        plt.scatter(X_2d[y_train == 1, 0], X_2d[y_train == 1, 1], label=f'正常数据', alpha=0.5)
+        plt.scatter(X_2d[y_all == 1, 0], X_2d[y_all == 1, 1], label=f'正常数据', alpha=0.5)
 
-    plt.scatter(X_2d[y_train == 0, 0], X_2d[y_train == 0, 1], label='生成数据', alpha=0.5)
+    plt.scatter(X_2d[y_all == 0, 0], X_2d[y_all == 0, 1], label='生成数据', alpha=0.5)
 
     # for id, fault in enumerate(faults):
     #     plt.scatter(X_2d[y_train == -(id + 1), 0], X_2d[y_train == -(id + 1), 1], label=fault, alpha=0.5)
@@ -169,14 +172,14 @@ for dataset_name in os.listdir(test_data_path):
 
     plt.cla()
 
-    # 准备初始化矩阵
-    num_all_samples = X_all.shape[0]
-    num_train_samples = X_train.shape[0]
-    embedding_dim = X_2d.shape[1]
-
-    # 初始化矩阵，将正常样本的嵌入结果放在前面，其余部分初始化为零（或其他选择）
-    init_embeddings = np.zeros((num_all_samples, embedding_dim))
-    init_embeddings[:num_train_samples] = X_2d
+    # # 准备初始化矩阵
+    # num_all_samples = X_all.shape[0]
+    # num_train_samples = X_train.shape[0]
+    # embedding_dim = X_2d.shape[1]
+    #
+    # # 初始化矩阵，将正常样本的嵌入结果放在前面，其余部分初始化为零（或其他选择）
+    # init_embeddings = np.zeros((num_all_samples, embedding_dim))
+    # init_embeddings[:num_train_samples] = X_2d
 
 
     # import umap
