@@ -23,37 +23,39 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'Daphnet'
+    train_set_name = 'gaussian'
     parser.add_argument("--seed", type=int, default=0, help="seed")
-    parser.add_argument("--K", type=int, default=7, help="number of sub-models")
+    parser.add_argument("--K", type=int, default=2, help="number of sub-models")
     parser.add_argument("--n_epochs", type=int, default=2, help="number of epochs of overall training")
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
 
-                                             f'data/{train_set_name}/yukina_data/ensemble_data, window=100, step=10'))
+                                             f'data/{train_set_name}/yukina_data/ensemble_data'))
     parser.add_argument("--dir_model", type=str,
-                        default=os.path.join(path_project, f'Daphnet_dataset/models/{train_set_name}/ensemble'))
+                        default=os.path.join(path_project, f'gaussian_data/models/{train_set_name}/ensemble'))
     parser.add_argument("--path_output", type=str,
-                        default=os.path.join(path_project, f'Daphnet_dataset/log/{train_set_name}/train_result'))
+                        default=os.path.join(path_project, f'gaussian_data/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 50,
-        "ae_n_epochs": 50,
+        "n_epochs": 20,
+        "ae_n_epochs": 20,
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "latent_dim": 32,
-        "n_epochs": 200,
+        "latent_dim": 100,
+        "batch_size": 400,
+        "n_epochs": 100,
+        "lr": 0.002,
         "lam1": 0,
         "lam2": 0,
         "lam3": 0,
         "tau1": 1,
-        "img_size": 45
+        "img_size": 2
     }, help="config of GAN")
 
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'GAN1, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},latent_dim={config.GAN_config["latent_dim"]}'
+    param_dir = f'GAN, pos=4, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},tau1={config.GAN_config["tau1"]},latent_dim={config.GAN_config["latent_dim"]}, betterG1D2,lr={config.GAN_config["lr"]}'
     # param_dir = 'baseline, window=100, step=10, deepsad_epoch=100'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)

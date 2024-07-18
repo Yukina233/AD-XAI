@@ -180,7 +180,8 @@ class DeepSAD():
                                batch_size=self.batch_size,
                                weight_decay=self.weight_decay,
                                device=self.device,
-                               n_jobs_dataloader=self.n_jobs_dataloader)
+                               n_jobs_dataloader=self.n_jobs_dataloader,
+                               loss_output_path=self.loss_output_path)
         else:
             raise NotImplemented
 

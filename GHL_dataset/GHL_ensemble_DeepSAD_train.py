@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
+from GHL_ensemble_DeepSAD_test import ensemble_test
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
 
 from torch.utils.data import Dataset, DataLoader
@@ -24,9 +25,9 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     train_set_name = 'GHL'
-    parser.add_argument("--seed", type=int, default=0, help="seed")
+    parser.add_argument("--seed", type=int, default=2, help="seed")
     parser.add_argument("--K", type=int, default=7, help="number of sub-models")
-    parser.add_argument("--n_epochs", type=int, default=5, help="number of epochs of overall training")
+    parser.add_argument("--n_epochs", type=int, default=50, help="number of epochs of overall training")
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
 
@@ -36,15 +37,17 @@ if __name__ == '__main__':
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'GHL_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 20,
-        "ae_n_epochs": 20,
+        "n_epochs": 1,
+        "ae_n_epochs": 50,
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "n_epochs": 20,
-        "lam1": 10,
-        "lam2": 1,
-        "lam3": 10,
+        "latent_dim": 80,
+        "lr": 0.002,
+        "n_epochs": 1,
+        "lam1": 0,
+        "lam2": 0,
+        "lam3": 0,
         "tau1": 1,
         "img_size": 80
     }, help="config of GAN")
@@ -52,7 +55,7 @@ if __name__ == '__main__':
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'GAN, std, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},tau1={config.GAN_config["tau1"]},seed={config.seed}'
+    param_dir = f'GAN1_continue, euc, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},seed={config.seed}'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 
@@ -121,10 +124,13 @@ if __name__ == '__main__':
         config.GAN_config["path_detector"] = path_detector
         ad_g = Adversarial_Generator(config=config.GAN_config)
 
+        if iteration != 0:
+            ad_g.load_model(os.path.join(config.dir_model, f'{iteration - 1}'))
         train_dataset_GAN = torch.utils.data.TensorDataset(torch.Tensor(X_train_init), torch.Tensor(y_train_init))
         train_dataloader_GAN = torch.utils.data.DataLoader(train_dataset_GAN, batch_size=ad_g.batch_size, shuffle=True)
 
         loss_train = ad_g.train(dataloader=train_dataloader_GAN)
+        ad_g.save_model(os.path.join(config.dir_model, f'{iteration}'))
         # loss_train = ad_g.train_no_GAN(dataloader=train_dataloader_GAN)
 
         # 将字典存储到文件中
@@ -162,3 +168,5 @@ if __name__ == '__main__':
         del train_dataloader_GAN
 
         gc.collect()
+
+    ensemble_test(param_dir)

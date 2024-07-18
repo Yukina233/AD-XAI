@@ -23,9 +23,9 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # 设置项目路径
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
-iteration = 2
+iteration = 0
 test_set_name = 'GHL'
-model_name = 'no_GAN, std, window=100, step=10, no_tau2_K=7,deepsad_epoch=20,gan_epoch=20,lam1=0.99,lam2=0.01,lam3=10,tau1=1,seed=0'
+model_name = 'GAN1_continue, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=30,gan_epoch=20,lam1=0,lam2=0,lam3=0,latent_dim=80,lr=0.002,seed=0'
 output_dir = os.path.join(path_project, f'GHL_dataset/log/{test_set_name}/train_result', model_name)
 
 train_new_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10', 'augment', model_name)
@@ -141,7 +141,8 @@ for dataset_name in os.listdir(test_data_path):
     # 创建MinMaxScaler对象
     scaler1 = MinMaxScaler()
     # 对数据进行归一化
-    normalized_data = scaler1.fit_transform(X_all)
+    # normalized_data = scaler1.fit_transform(X_all)
+    normalized_data = X_all
     X_2d = tsne1.fit_transform(normalized_data)  # 对数据进行降维处理
 
     plt.rcParams['font.sans-serif'] = ['SimSun']
@@ -189,7 +190,8 @@ for dataset_name in os.listdir(test_data_path):
     # 创建MinMaxScaler对象
     scaler1 = MinMaxScaler()
     # 对数据进行归一化
-    normalized_data = scaler1.fit_transform(X_all)
+    # normalized_data = scaler1.fit_transform(X_all)
+    normalized_data = X_all
     X_2d = tsne2.fit_transform(normalized_data)  # 对数据进行降维处理
 
     plt.rcParams['font.sans-serif'] = ['SimSun']

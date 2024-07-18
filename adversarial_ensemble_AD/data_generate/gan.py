@@ -21,36 +21,66 @@ from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 
+# class Generator(nn.Module):
+#     def __init__(self, latent_dim, img_shape):
+#         super(Generator, self).__init__()
+#         self.latent_dim = latent_dim
+#         self.img_shape = img_shape
+#
+#         self.model = nn.Sequential(
+#             nn.Linear(self.latent_dim, 500),
+#             nn.ReLU(),
+#             nn.Linear(500, 500),
+#             nn.ReLU(),
+#             nn.Linear(500, int(np.prod(self.img_shape)))
+#         )
+#
+#     def forward(self, z):
+#         img = self.model(z)
+#         img = img.view(img.size(0), *self.img_shape)
+#         return img
+#
+#
+# class Discriminator(nn.Module):
+#     def __init__(self, img_shape):
+#         super(Discriminator, self).__init__()
+#         self.img_shape = img_shape
+#
+#         self.model = nn.Sequential(
+#             nn.Linear(int(np.prod(self.img_shape)), 500),
+#             nn.ReLU(),
+#             nn.Linear(500, 500),
+#             nn.ReLU(),
+#             nn.Linear(500, 1),
+#             nn.Sigmoid()
+#         )
+#
+#     def forward(self, img):
+#         img_flat = img.view(img.size(0), -1)
+#         validity = self.model(img_flat)
+#         return validity
+
 class Generator(nn.Module):
     def __init__(self, latent_dim, img_shape):
         super(Generator, self).__init__()
         self.latent_dim = latent_dim
         self.img_shape = img_shape
 
-        def block(in_feat, out_feat, normalize=True):
-            layers = [nn.Linear(in_feat, out_feat)]
-            if normalize:
-                layers.append(nn.BatchNorm1d(out_feat, 0.8))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
-            return layers
-
         self.model = nn.Sequential(
-            nn.Linear(self.latent_dim, 64),
-            nn.BatchNorm1d(64),
-            nn.ReLU(inplace=True),
-            nn.Linear(64, int(64 / 2)),
-            nn.BatchNorm1d(int(64 / 2)),
-            nn.ReLU(inplace=True),
-            nn.Linear(int(64 / 2), int(np.prod(self.img_shape)))
+            nn.Linear(self.latent_dim, 128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(128, 256),
+            nn.BatchNorm1d(256, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 512),
+            nn.BatchNorm1d(512, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 1024),
+            nn.BatchNorm1d(1024, 0.8),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(1024, int(np.prod(self.img_shape))),
+            nn.Tanh()
         )
-        # self.model = nn.Sequential(
-        #     *block(self.latent_dim, 64, normalize=False),
-        #     *block(64, 128),
-        #     *block(128, 256),
-        #     # *block(512, 1024),
-        #     nn.Linear(256, int(np.prod(self.img_shape))),
-        #     nn.Tanh()
-        # )
 
     def forward(self, z):
         img = self.model(z)
@@ -64,27 +94,86 @@ class Discriminator(nn.Module):
         self.img_shape = img_shape
 
         self.model = nn.Sequential(
-            nn.Linear(int(np.prod(self.img_shape)), 64),
-            nn.LeakyReLU(0.1, inplace=True),
-            nn.Linear(64, int(64 / 2)),
-            nn.LeakyReLU(0.1, inplace=True),
-            nn.Linear(int(64 / 2), 1),
+            nn.Linear(int(np.prod(self.img_shape)), 512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 1),
             nn.Sigmoid()
         )
-        # self.model = nn.Sequential(
-        #     nn.Linear(int(np.prod(self.img_shape)), 128),
-        #     nn.LeakyReLU(0.01, inplace=True),
-        #     nn.Linear(128, 64),
-        #     nn.LeakyReLU(0.01, inplace=True),
-        #     nn.Linear(64, 1),
-        #     nn.Sigmoid(),
-        # )
 
     def forward(self, img):
         img_flat = img.view(img.size(0), -1)
         validity = self.model(img_flat)
-
         return validity
+
+# class Generator(nn.Module):
+#     def __init__(self, latent_dim, img_shape):
+#         super(Generator, self).__init__()
+#         self.latent_dim = latent_dim
+#         self.img_shape = img_shape
+#
+#         def block(in_feat, out_feat, normalize=True):
+#             layers = [nn.Linear(in_feat, out_feat)]
+#             if normalize:
+#                 layers.append(nn.BatchNorm1d(out_feat, 0.8))
+#             layers.append(nn.LeakyReLU(0.2, inplace=True))
+#             return layers
+#
+#         self.model = nn.Sequential(
+#             nn.Linear(self.latent_dim, 64),
+#             nn.BatchNorm1d(64),
+#             nn.ReLU(inplace=True),
+#             nn.Linear(64, int(64)),
+#             nn.BatchNorm1d(int(64)),
+#             nn.ReLU(inplace=True),
+#             nn.Linear(int(64), int(np.prod(self.img_shape)))
+#         )
+#         # for layer in self.model:
+#         #     if isinstance(layer, nn.Linear):
+#         #         layer.bias = None
+#         # self.model = nn.Sequential(
+#         #     *block(self.latent_dim, 64, normalize=False),
+#         #     *block(64, 128),
+#         #     *block(128, 256),
+#         #     # *block(512, 1024),
+#         #     nn.Linear(256, int(np.prod(self.img_shape))),
+#         #     nn.Tanh()
+#         # )
+#
+#     def forward(self, z):
+#         img = self.model(z)
+#         img = img.view(img.size(0), *self.img_shape)
+#         return img
+#
+#
+# class Discriminator(nn.Module):
+#     def __init__(self, img_shape):
+#         super(Discriminator, self).__init__()
+#         self.img_shape = img_shape
+#
+#         self.model = nn.Sequential(
+#             nn.Linear(int(np.prod(self.img_shape)), 128),
+#             nn.LeakyReLU(0.1, inplace=True),
+#             nn.Linear(128, int(128)),
+#             nn.LeakyReLU(0.1, inplace=True),
+#             nn.Linear(int(128), 1),
+#             nn.Sigmoid()
+#         )
+#         # self.model = nn.Sequential(
+#         #     nn.Linear(int(np.prod(self.img_shape)), 128),
+#         #     nn.LeakyReLU(0.01, inplace=True),
+#         #     nn.Linear(128, 64),
+#         #     nn.LeakyReLU(0.01, inplace=True),
+#         #     nn.Linear(64, 1),
+#         #     nn.Sigmoid(),
+#         # )
+#
+#     def forward(self, img):
+#         img_flat = img.view(img.size(0), -1)
+#         validity = self.model(img_flat)
+#
+#         return validity
 
 
 class Adversarial_Generator:
@@ -135,6 +224,14 @@ class Adversarial_Generator:
             self.adversarial_loss.cuda()
         self.Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
+    def load_model(self, path):
+        self.generator.load_state_dict(torch.load(os.path.join(path, 'generator.pth')))
+        self.discriminator.load_state_dict(torch.load(os.path.join(path, 'discriminator.pth')))
+
+    def save_model(self, path):
+        torch.save(self.generator.state_dict(), os.path.join(path, 'generator.pth'))
+        torch.save(self.discriminator.state_dict(), os.path.join(path, 'discriminator.pth'))
+
     def calculate_entropy_numpy(self, X, tau=1):
         detectors = []
         scores = []
@@ -154,6 +251,8 @@ class Adversarial_Generator:
         detectors = []
         scores = []
         for model in os.listdir(self.path_detector):
+            if not model.startswith('DeepSAD'):
+                continue
             detector = DeepSAD(seed=self.seed, load_model=os.path.join(self.path_detector, model),
                                config=self.DeepSAD_config)
             detector.load_model_from_file(input_size=self.img_shape[1])
@@ -166,15 +265,15 @@ class Adversarial_Generator:
             score = torch.sum((outputs - center) ** 2, dim=1)
             scores.append(score)
         scores = torch.stack(scores)
-        prob = torch.exp(1 / (scores * tau1)) / torch.sum(torch.exp(1 / (scores * tau1)), dim=0)
-        if torch.isnan(prob).any():
-            print('prob nan')
-            entropys = torch.tensor([0.0], device='cuda')
-        else:
-            entropys = -torch.sum(prob * torch.log(prob), dim=0)
-            if torch.isnan(entropys).any():
-                print('entropys nan')
-                entropys = torch.tensor([0.0], device='cuda')
+        # prob = torch.exp(1 / (scores * tau1)) / torch.sum(torch.exp(1 / (scores * tau1)), dim=0)
+        # if torch.isnan(prob).any():
+        #     print('prob nan')
+        #     entropys = torch.tensor([0.0], device='cuda')
+        # else:
+        #     entropys = -torch.sum(prob * torch.log(prob), dim=0)
+        #     if torch.isnan(entropys).any():
+        #         print('entropys nan')
+        #         entropys = torch.tensor([0.0], device='cuda')
 
         var_ensemble_loss = torch.std(scores, dim=0)
 
@@ -200,17 +299,28 @@ class Adversarial_Generator:
         # Normalize the features
         normalized_features = F.normalize(X, p=2, dim=1)
 
-        # Calculate the cosine similarity matrix
-        cosine_similarity = torch.mm(normalized_features, normalized_features.t())
+        # # Calculate the cosine similarity matrix
+        # cosine_similarity = torch.mm(normalized_features, normalized_features.t())
+        #
+        # # Subtract the identity matrix to remove self-similarity
+        # identity_matrix = torch.eye(batch_size, device=X.device)
+        # cosine_similarity = cosine_similarity - identity_matrix
+        #
+        # # Calculate the pull-away term
+        # pull_away_term = torch.sum(cosine_similarity ** 2) / (batch_size * (batch_size - 1))
 
-        # Subtract the identity matrix to remove self-similarity
-        identity_matrix = torch.eye(batch_size, device=X.device)
-        cosine_similarity = cosine_similarity - identity_matrix
+        # Calculate the Euclidean distance matrix
+        dist_matrix = torch.cdist(normalized_features, normalized_features, p=2)
+
+        # Subtract the identity matrix to remove self-similarity by setting diagonal to infinity
+        mask = torch.eye(batch_size, device=X.device).bool()
+        # dist_matrix = dist_matrix.masked_fill(mask, float('inf'))
+        dist_matrix = dist_matrix.masked_fill(mask, float(0))
 
         # Calculate the pull-away term
-        pull_away_term = torch.sum(cosine_similarity ** 2) / (batch_size * (batch_size - 1))
+        pull_away_term = torch.sum((dist_matrix ** 2)) / (batch_size * (batch_size - 1))
 
-        return pull_away_term
+        return - pull_away_term
 
     def calculate_entropy_test(self, X, tau=1):
         detectors = []
@@ -266,7 +376,7 @@ class Adversarial_Generator:
 
         # 分别记录生成器的两部分loss
         loss_gen_adv = []
-        loss_gen_entropy = []
+        loss_gen_var_ensemble = []
         loss_gen_mean_ensemble = []
         loss_gen_pull_away = []
         for epoch in range(self.n_epochs):
@@ -275,7 +385,7 @@ class Adversarial_Generator:
 
             # 分别记录生成器的两部分loss
             loss_gen_adv_batch = []
-            loss_gen_entropy_batch = []
+            loss_gen_var_ensemble_batch = []
             loss_gen_mean_ensemble_batch = []
             loss_gen_pull_away_batch = []
             for i, (samples, _) in enumerate(dataloader):
@@ -304,12 +414,12 @@ class Adversarial_Generator:
 
                 # Loss measures generator's ability to fool the discriminator
                 adv_loss = self.adversarial_loss(self.discriminator(gen_samples), valid)
-                entropy_loss, mean_ensemble_loss = self.calculate_regular_loss(X=gen_samples, tau1=self.tau1,
+                var_ensemble_loss, mean_ensemble_loss = self.calculate_regular_loss(X=gen_samples, tau1=self.tau1,
                                                                                tau2=self.tau2)
-                entropy_loss = torch.mean(entropy_loss)
+                var_ensemble_loss = torch.mean(var_ensemble_loss)
                 mean_ensemble_loss = torch.mean(mean_ensemble_loss)
 
-                g_loss = adv_loss + self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss)
+                g_loss = adv_loss + self.lam1 * var_ensemble_loss + self.lam2 * torch.mean(mean_ensemble_loss) + self.lam3 * pull_away_loss
                 # g_loss = self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss)
 
                 g_loss.backward()
@@ -332,21 +442,21 @@ class Adversarial_Generator:
                 print(
                     "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [entr loss: %f] [mean loss: %f] [pull away loss: %f]"
                     % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(),
-                       entropy_loss.item(), mean_ensemble_loss.item(), pull_away_loss.item()
+                       var_ensemble_loss.item(), mean_ensemble_loss.item(), pull_away_loss.item()
                        ))
 
 
                 loss_gen_batch.append(g_loss.item())
                 loss_dis_batch.append(d_loss.item())
                 loss_gen_adv_batch.append(adv_loss.item())
-                loss_gen_entropy_batch.append(entropy_loss.item())
+                loss_gen_var_ensemble_batch.append(var_ensemble_loss.item())
                 loss_gen_mean_ensemble_batch.append(mean_ensemble_loss.item())
                 loss_gen_pull_away_batch.append(pull_away_loss.item())
 
             loss_gen.append(np.mean(loss_gen_batch))
             loss_dis.append(np.mean(loss_dis_batch))
             loss_gen_adv.append(np.mean(loss_gen_adv_batch))
-            loss_gen_entropy.append(np.mean(loss_gen_entropy_batch))
+            loss_gen_var_ensemble.append(np.mean(loss_gen_var_ensemble_batch))
             loss_gen_mean_ensemble.append(np.mean(loss_gen_mean_ensemble_batch))
             loss_gen_pull_away.append(np.mean(loss_gen_pull_away_batch))
 
@@ -354,7 +464,7 @@ class Adversarial_Generator:
             'loss_gen': np.array(loss_gen),
             'loss_dis': np.array(loss_dis),
             'loss_gen_adv': np.array(loss_gen_adv),
-            'loss_gen_entropy': np.array(loss_gen_entropy),
+            'loss_gen_entropy': np.array(loss_gen_var_ensemble),
             'loss_gen_mean_ensemble': np.array(loss_gen_mean_ensemble),
             'loss_gen_pull_away': np.array(loss_gen_pull_away)
         }

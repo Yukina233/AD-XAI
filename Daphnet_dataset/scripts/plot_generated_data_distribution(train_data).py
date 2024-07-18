@@ -25,7 +25,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 iteration = 0
 test_set_name = 'Daphnet'
-model_name = 'no_GAN, std, window=100, step=10, no_tau2_K=7,deepsad_epoch=50,gan_epoch=20,lam1=0.1,lam2=0.9,tau1=1'
+model_name = 'GAN1, window=100, step=10, no_tau2_K=7,deepsad_epoch=50,gan_epoch=200,lam1=0,lam2=0,lam3=0,latent_dim=32'
 output_dir = os.path.join(path_project, f'Daphnet_dataset/log/{test_set_name}/train_result', model_name)
 
 train_new_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10', 'augment', model_name)

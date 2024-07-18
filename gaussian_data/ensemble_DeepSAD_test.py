@@ -35,15 +35,16 @@ if __name__ == '__main__':
     seed = 3
     n_samples_threshold = 0
 
-    iteration = 4
-    test_set_name = 'Daphnet'
-    model_name = 'no_GAN, std, window=100, step=10, no_tau2_K=7,deepsad_epoch=50,gan_epoch=20,lam1=0.9,lam2=0.1,lam3=0,tau1=1'
-    model_path = os.path.join(path_project, f'Daphnet_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
+    iteration = 1
+    dataset_name = 'gaussian_data'
+    test_set_name = 'gaussian'
+    model_name = 'no_GAN, std, no_tau2_K=7,deepsad_epoch=20,gan_epoch=50,lam1=0.99,lam2=0.01,lam3=0,tau1=1'
+    model_path = os.path.join(path_project, f'{dataset_name}/models/{test_set_name}/ensemble/{model_name}/{iteration}')
     train_data_path = os.path.join(path_project,
-                                   f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10/init/K=7')
-    test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10')
+                                   f'data/{test_set_name}/yukina_data/ensemble_data/init/K=7')
+    test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD')
     output_path = os.path.join(path_project,
-                               f'Daphnet_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
+                               f'{dataset_name}/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
     timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
     train_data_example = np.load(os.path.join(train_data_path, os.listdir(train_data_path)[0]))
@@ -149,7 +150,7 @@ if __name__ == '__main__':
     score_ensemble_list.append(scores_ensemble)
     y_list.append(ys)
 
-    path_score_output = os.path.join(path_project, f'Daphnet_dataset/log/{test_set_name}/train_result', f'{model_name}/scores/{iteration}')
+    path_score_output = os.path.join(path_project, f'{dataset_name}/log/{test_set_name}/train_result', f'{model_name}/scores/{iteration}')
     os.makedirs(path_score_output, exist_ok=True)
     # 异常分数保存到npy文件
     np.save(os.path.join(path_score_output, f"scores_DeepSAD.npy"), np.array(scores_ensemble).mean(axis=0))
