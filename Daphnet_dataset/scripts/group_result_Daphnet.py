@@ -50,6 +50,8 @@ def group_results(base_dir):
     recall_output = []
     AUCROC_output = []
     AUCPR_output = []
+    AUCROC_std = []
+    AUCPR_std = []
     FDR_at_threshold_output = []
     FAR_at_threshold_output = []
     Adjust_AUCROC_output = []
@@ -86,6 +88,8 @@ def group_results(base_dir):
         classes_output.append(fault)
         AUCROC_output.append(np.mean(AUCROCs) * 100)
         AUCPR_output.append(np.mean(AUCPRs) * 100)
+        AUCROC_std.append(np.std(AUCROCs) * 100)
+        AUCPR_std.append(np.std(AUCPRs) * 100)
         FDR_at_threshold_output.append(np.mean(FDR_at_thresholds) * 100)
         FAR_at_threshold_output.append(np.mean(FAR_at_thresholds) * 100)
         Adjust_AUCROC_output.append(np.mean(Adjust_AUCROCs) * 100)
@@ -96,6 +100,8 @@ def group_results(base_dir):
     recall_output.append(np.mean(recall_output))
     AUCROC_output.append(np.mean(AUCROC_output))
     AUCPR_output.append(np.mean(AUCPR_output))
+    AUCROC_std.append(np.mean(AUCROC_std))
+    AUCPR_std.append(np.mean(AUCPR_std))
     FDR_at_threshold_output.append(np.mean(FDR_at_threshold_output))
     FAR_at_threshold_output.append(np.mean(FAR_at_threshold_output))
     Adjust_AUCROC_output.append(np.mean(Adjust_AUCROC_output))
@@ -105,6 +111,8 @@ def group_results(base_dir):
         data={'class': classes_output,
               'AUCROC': AUCROC_output,
               'AUCPR': AUCPR_output,
+              'AUCROC_std': AUCROC_std,
+              'AUCPR_std': AUCPR_std,
               'FDR_at_threshold': FDR_at_threshold_output,
               'FAR_at_threshold': FAR_at_threshold_output,
               'Adjust_AUCROC': Adjust_AUCROC_output,

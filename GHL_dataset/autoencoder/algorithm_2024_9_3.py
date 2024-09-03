@@ -69,14 +69,13 @@ def pred(args):
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 
-def run(seed=0, suffix='window=1, step=1', dataset_name='Metro'):
+def run(seed=0, suffix='window=100, step=10', dataset_name='GHL', epoch=20, path_results=''):
 
     input_path = os.path.join(path_project, f"data/{dataset_name}/csv/{suffix}")
 
     train_files = glob(os.path.join(input_path, '*train.csv'))
     test_files = glob(os.path.join(input_path, '*test.csv'))
 
-    path_results = os.path.join(path_project, f'{dataset_name}_dataset/autoencoder/results/{suffix}')
     os.makedirs(os.path.join(path_results, f'{seed}/models'), exist_ok=True)
     os.makedirs(os.path.join(path_results, f'{seed}/scores'), exist_ok=True)
     for id, file in enumerate(train_files):
@@ -88,7 +87,7 @@ def run(seed=0, suffix='window=1, step=1', dataset_name='Metro'):
             "modelOutput": os.path.join(path_results, f"{seed}/models/model.h5"),
             "modelInput": os.path.join(path_results, f"{seed}/models/model.h5"),  # 仅在 execute 时需要
             "dataOutput": os.path.join(path_results, f"{seed}/scores/anomaly_scores-{id}.csv"),  # 仅在 execute 时需要
-            "customParameters": {'random_state': seed, 'epochs': 5}
+            "customParameters": {'random_state': seed, 'epochs': epoch}
         }
         sys.argv = [sys.argv[0], json.dumps(mock_args)]
 
@@ -151,47 +150,48 @@ def run(seed=0, suffix='window=1, step=1', dataset_name='Metro'):
     result = pd.concat([result, mean_row])
 
     # 保存结果到CSV文件
-    results_csv_path = os.path.join(path_project, f'{dataset_name}_dataset/autoencoder/results/{suffix}/{seed}/results.csv')
+    results_csv_path = os.path.join(path_results, f'{seed}/results.csv')
     result.to_csv(results_csv_path, index=True)  # index=True保留索引，这样'Mean'也会被写入文件
 
     print('Results saved.')
 
 
 if __name__ == '__main__':
-    suffix = 'window=1, step=1'
-    dataset_name = 'Metro'
+    suffix = 'window=100, step=10'
+    dataset_name = 'GHL'
+    epoch = 40
+    path_results = os.path.join(path_project, f'{dataset_name}_dataset/autoencoder/results/{suffix}, epoch={epoch}')
 
-    path_results = os.path.join(path_project, f'{dataset_name}_dataset/autoencoder/results/{suffix}')
-    all_aucroc= []
-    all_aucpr = []
-    all_scores= []
+    all_scores = []
+    AUCROC_seed = []
+    AUCPR_seed = []
     for seed in range(3):
-        run(seed, suffix, dataset_name)
+        run(seed, suffix, dataset_name, epoch, path_results)
         result = pd.read_csv(os.path.join(path_results, f'{seed}/results.csv'), index_col=0)
-        for index, row in result.iterrows():
-            if index == 'Mean':
-                all_aucroc.append(row['AUC-ROC'])
-                all_aucpr.append(row['AUC-PR'])
+        AUCROC_seed.append(result['AUC-ROC'].values)
+        AUCPR_seed.append(result['AUC-PR'].values)
 
         scores = pd.read_csv(os.path.join(path_results, f'{seed}/scores/anomaly_scores-0.csv'), header=None)
         scores = scores.to_numpy().mean(axis=1)
         all_scores.append(scores)
-
     all_scores = np.array(all_scores)
     mean_scores = all_scores.mean(axis=0)
 
     # 计算AUC-ROC和AUC-PR
-    all_aucroc = np.array(all_aucroc)
-    all_aucpr = np.array(all_aucpr)
-    mean_aucroc = all_aucroc.mean()
-    mean_aucpr = all_aucpr.mean()
-    std_aucroc = all_aucroc.std()
-    std_aucpr = all_aucpr.std()
+    mean_aucroc = np.mean(AUCROC_seed, axis=0)[:-1]
+    std_aucroc = np.std(AUCROC_seed, axis=0)[:-1]
+    mean_aucpr = np.mean(AUCPR_seed, axis=0)[:-1]
+    std_aucpr = np.std(AUCPR_seed, axis=0)[:-1]
 
     # 输出为csv文件
     np.save(os.path.join(path_results, 'scores.npy'), mean_scores)
 
-    result = pd.DataFrame({'mean_AUCROC': mean_aucroc, 'std_AUCROC':std_aucroc, 'mean_AUCPR': mean_aucpr, 'std_AUCPR':std_aucpr}, index=[0])
+    result = pd.DataFrame({'mean_AUCROC': mean_aucroc, 'std_AUCROC':std_aucroc, 'mean_AUCPR': mean_aucpr, 'std_AUCPR':std_aucpr})
+
+    # 将均值添加为DataFrame的新行
+    mean_row = pd.DataFrame({'mean_AUCROC': [np.mean(mean_aucroc)], 'std_AUCROC': [np.mean(std_aucroc)], 'mean_AUCPR':[np.mean(mean_aucpr)], 'std_AUCPR':[np.mean(std_aucpr)]}, index=['Mean'])
+    result = pd.concat([result, mean_row])
+
     result.to_csv(os.path.join(path_results, 'results.csv'), index=True)
 
 

@@ -82,8 +82,8 @@ if __name__ == '__main__':
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 20,
-        "ae_n_epochs": 20,
+        "n_epochs": 200,
+        "ae_n_epochs": 200,
         "lr": 0.001,
         "ae_lr": 0.001,
         "net_name": 'Dense'

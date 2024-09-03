@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from GHL_ensemble_DeepSAD_test import ensemble_test
+from SMD_ensemble_DeepSAD_test import ensemble_test
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
 
 from torch.utils.data import Dataset, DataLoader
@@ -16,7 +16,7 @@ import time
 import glob
 
 # from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
-from data_generate.wgan_gp import Adversarial_Generator
+from GHL_dataset.data_generate.wgan_gp import Adversarial_Generator
 
 # logging.basicConfig(level=logging.INFO)
 
@@ -26,7 +26,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 if __name__ == '__main__':
     seed = 0
     parser = argparse.ArgumentParser()
-    train_set_name = 'GHL'
+    train_set_name = 'SMD'
     parser.add_argument("--seed", type=int, default=seed, help="seed")
     parser.add_argument("--K", type=int, default=7, help="number of sub-models")
     parser.add_argument("--n_epochs", type=int, default=30, help="number of epochs of overall training")
