@@ -17,7 +17,8 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 from adbench_modified.run import RunPipeline
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
 from scripts.group_result_ensemble import group_results
-from scripts.combine_epoch_result import combine_epoch_results
+# from scripts.combine_seed_result import combine_seed_results
+# from scripts.combine_epoch_result import combine_epoch_results
 
 # logging.basicConfig(level=logging.INFO)
 
@@ -36,7 +37,7 @@ def ensemble_test(model_name):
     seed = 0
     n_samples_threshold = 0
 
-    iterations = range(0, 49)
+    iterations = range(0, 30)
 
     for iteration in iterations:
         print(f"Start iteration {iteration}")
@@ -44,9 +45,9 @@ def ensemble_test(model_name):
         model_path = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
         train_data_path = os.path.join(path_project,
                                        f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10/init/K=7')
-        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10')
+        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10, type2')
         output_path = os.path.join(path_project,
-                                   f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
+                                   f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/type2/{model_name}/{iteration}')
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
         train_data_example = np.load(os.path.join(train_data_path, os.listdir(train_data_path)[0]))
@@ -120,7 +121,10 @@ def ensemble_test(model_name):
             fp = np.size(np.where(dataset['y_test'][id_anomaly_pred] == 0)[0], 0)
             fn = np.size(np.where(dataset['y_test'][id_normal_pred] == 1)[0], 0)
 
-            precision = tp / (tp + fp)
+            if tp + fp == 0:
+                precision = 0
+            else:
+                precision = tp / (tp + fp)
             recall = tp / (tp + fn)
 
             precision_list, recall_list, _ = precision_recall_curve(dataset['y_test'], score_ensemble)
@@ -159,11 +163,17 @@ def ensemble_test(model_name):
 
         group_results(output_path)
 
-    base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD', model_name)
-    combine_epoch_results(base_dir)
+    # base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD')
+    # prefix = model_name.rsplit(',', 1)[0]
+    #
+    # combine_seed_results(base_dir, prefix)
+    #
+    # seed_dir = os.path.join(base_dir, 'seed_group', prefix)
+    # combine_epoch_results(seed_dir)
+
 
     print("All down!")
 
 if __name__ == '__main__':
-    model_name = f'GAN1_continue, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=100,lam2=10,lam3=0,latent_dim=80,lr=0.002,seed=2'
+    model_name = f'WGAN-GP, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=2000,lam2=300,lam3=0,latent_dim=80,lr=0.0002,clip_value=0.01,lambda_gp=1000000,seed=2'
     ensemble_test(model_name)

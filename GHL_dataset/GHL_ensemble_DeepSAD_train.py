@@ -1,7 +1,7 @@
 import argparse
 import gc
 import pickle
-
+import shutil
 import pandas as pd
 import torch
 from tqdm import tqdm
@@ -15,7 +15,8 @@ import numpy as np
 import time
 import glob
 
-from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
+# from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
+from data_generate.wgan_gp import Adversarial_Generator
 
 # logging.basicConfig(level=logging.INFO)
 
@@ -23,11 +24,12 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 if __name__ == '__main__':
+    seed = 0
     parser = argparse.ArgumentParser()
     train_set_name = 'GHL'
-    parser.add_argument("--seed", type=int, default=2, help="seed")
+    parser.add_argument("--seed", type=int, default=seed, help="seed")
     parser.add_argument("--K", type=int, default=7, help="number of sub-models")
-    parser.add_argument("--n_epochs", type=int, default=50, help="number of epochs of overall training")
+    parser.add_argument("--n_epochs", type=int, default=30, help="number of epochs of overall training")
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
 
@@ -42,11 +44,14 @@ if __name__ == '__main__':
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
+        "seed": seed,
         "latent_dim": 80,
-        "lr": 0.002,
+        "lr": 0.0002,
+        "clip_value": 0.01,
+        "lambda_gp": 1000000,
         "n_epochs": 1,
         "lam1": 0,
-        "lam2": 0,
+        "lam2": 2000,
         "lam3": 0,
         "tau1": 1,
         "img_size": 80
@@ -55,7 +60,7 @@ if __name__ == '__main__':
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'GAN1_continue, euc, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},seed={config.seed}'
+    param_dir = f'WGAN-GP, euc, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},clip_value={config.GAN_config["clip_value"]},lambda_gp={config.GAN_config["lambda_gp"]},seed={config.seed}'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 
@@ -75,10 +80,7 @@ if __name__ == '__main__':
     model_list = []
 
     for iteration in tqdm(range(0, config.n_epochs), desc='Main epochs'):
-        if iteration == 0:
-            path_train = os.path.join(config.path_train_data, 'init', f'K={config.K}')
-        else:
-            path_train = os.path.join(config.path_train_data, 'augment', param_dir, f'{iteration - 1}')
+        path_train = os.path.join(config.path_train_data, 'init', f'K={config.K}')
         # 遍历所有数据集文件，分别训练各子模型
         for train_dataset in tqdm(os.listdir(path_train), desc='Seperate model train'):
             base_name = os.path.basename(train_dataset).replace('.npz', '')
@@ -88,8 +90,20 @@ if __name__ == '__main__':
 
             # 加载数据集
             data = np.load(os.path.join(path_train, train_dataset))
-            X_train = data['X_train']
-            y_train = data['y_train']
+
+            if iteration == 0:
+                X_train = data['X_train']
+                y_train = data['y_train']
+            else:
+                # 加载生成模型
+                generator = Adversarial_Generator(config=config.GAN_config)
+                generator.load_model(os.path.join(config.dir_model, f'{iteration - 1}'))
+                num_generate = data['y_train'].shape[0]
+                gen_samples = generator.sample_generate(num=num_generate)
+
+                X_train = np.concatenate((data['X_train'], np.array(gen_samples.detach().cpu()).squeeze(1)))
+                y_train = np.concatenate((data['y_train'], np.ones(num_generate)))
+
 
             dir_model_save = os.path.join(config.dir_model, f'{iteration}')
             os.makedirs(dir_model_save, exist_ok=True)
@@ -141,28 +155,8 @@ if __name__ == '__main__':
         # 导出为 CSV 文件
         df.to_csv(os.path.join(path_train_result_save, f'{iteration}.csv'), index=False)
 
-        # 构造新的训练数据集
-        for train_dataset in tqdm(os.listdir(path_data_init), desc='Create new train data'):
-            data = np.load(os.path.join(path_data_init, train_dataset))
-            X_train = data['X_train']
-            y_train = data['y_train']
-
-            num_generate = y_train.shape[0]
-
-            gen_samples = ad_g.sample_generate(num=num_generate)
-
-            X_train_new = np.concatenate((X_train, np.array(gen_samples.detach().cpu()).squeeze(1)))
-            y_train_new = np.concatenate((y_train, np.ones(num_generate)))
-
-            # 保存新的训练数据集
-            path_train_new = os.path.join(config.path_train_data, 'augment', param_dir, f'{iteration}')
-            os.makedirs(path_train_new, exist_ok=True)
-            np.savez(os.path.join(path_train_new, train_dataset), X_train=X_train_new, y_train=y_train_new)
 
         del ad_g
-        del gen_samples
-        del X_train_new
-        del y_train_new
         del loss_train
         del train_dataset_GAN
         del train_dataloader_GAN

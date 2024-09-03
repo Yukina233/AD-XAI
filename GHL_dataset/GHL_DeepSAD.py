@@ -41,13 +41,13 @@ if __name__ == '__main__':
                                              f'data/GHL/yukina_data/DeepSAD_data, window=100, step=10'))
     parser.add_argument("--path_test", type=str,
                         default=os.path.join(path_project,
-                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10'))
+                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10, type2'))
     parser.add_argument("--dir_model", type=str,
                         default=os.path.join(path_project, f'GHL_dataset/models/{train_set_name}/DeepSAD'))
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'GHL_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 20,
+        "n_epochs": 5,
         "ae_n_epochs": 20,
         "lr": 0.001,
         "ae_lr": 0.001,
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     y_train = data['y_train']
 
 
-
+    dir_save = os.path.join(path_project, f'GHL_dataset/log/GHL/DeepSAD/type2', param_dir)
 
     test_files = glob(os.path.join(config.path_test, '*test.npz'))
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
         data = np.load(os.path.join(config.path_train_data, test_path))
 
-        path_save = os.path.join(path_project, f'GHL_dataset/log/GHL/DeepSAD', param_dir,
+        path_save = os.path.join(dir_save,
                                  base_name)
         os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 
@@ -86,7 +86,7 @@ if __name__ == '__main__':
             config.DeepSAD_config["loss_output_path"] = os.path.join(config.path_output, 'deepsad_loss', f'seed={seed}')
             os.makedirs(config.DeepSAD_config["loss_output_path"], exist_ok=True)
 
-            path_save = os.path.join(path_project, f'GHL_dataset/log/GHL/DeepSAD', param_dir,
+            path_save = os.path.join(dir_save,
                                      base_name, f'seed={seed}')
             os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 
@@ -174,4 +174,4 @@ if __name__ == '__main__':
         np.save(os.path.join(path_score_output, f"scores_DeepSAD.npy"), np.array(scores_seed).mean(axis=0))
         np.save(os.path.join(path_score_output, f"labels_DeepSAD.npy"), np.array(ys).mean(axis=0))
 
-    group_results(os.path.join(path_project, f'GHL_dataset/log/GHL/DeepSAD', param_dir))
+    group_results(dir_save)

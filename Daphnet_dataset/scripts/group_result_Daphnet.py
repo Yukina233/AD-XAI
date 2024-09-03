@@ -52,6 +52,9 @@ def group_results(base_dir):
     AUCPR_output = []
     FDR_at_threshold_output = []
     FAR_at_threshold_output = []
+    Adjust_AUCROC_output = []
+    Adjust_AUCPR_output = []
+
     for fault in fault_list:
         if '.csv' in fault:
             continue
@@ -59,6 +62,9 @@ def group_results(base_dir):
         AUCPRs = []
         FDR_at_thresholds = []
         FAR_at_thresholds = []
+        Adjust_AUCROCs = []
+        Adjust_AUCPRs = []
+
         path_fault = os.path.join(base_dir, fault)
 
         for seed in os.listdir(path_fault):
@@ -70,17 +76,20 @@ def group_results(base_dir):
             for i in range(0, metrics.__len__()):
                 df_result[metrics[i]] = scores[i]
 
-
             AUCROCs.append(df_result['aucroc'])
             AUCPRs.append(df_result['aucpr'])
             FDR_at_thresholds.append(df_result['FDR_at_threshold'])
             FAR_at_thresholds.append(df_result['FAR_at_threshold'])
+            Adjust_AUCROCs.append(df_result['adjust_aucroc'])
+            Adjust_AUCPRs.append(df_result['adjust_aucpr'])
 
         classes_output.append(fault)
         AUCROC_output.append(np.mean(AUCROCs) * 100)
         AUCPR_output.append(np.mean(AUCPRs) * 100)
         FDR_at_threshold_output.append(np.mean(FDR_at_thresholds) * 100)
         FAR_at_threshold_output.append(np.mean(FAR_at_thresholds) * 100)
+        Adjust_AUCROC_output.append(np.mean(Adjust_AUCROCs) * 100)
+        Adjust_AUCPR_output.append(np.mean(Adjust_AUCPRs) * 100)
 
     classes_output.append('mean')
     precision_output.append(np.mean(precision_output))
@@ -89,13 +98,17 @@ def group_results(base_dir):
     AUCPR_output.append(np.mean(AUCPR_output))
     FDR_at_threshold_output.append(np.mean(FDR_at_threshold_output))
     FAR_at_threshold_output.append(np.mean(FAR_at_threshold_output))
+    Adjust_AUCROC_output.append(np.mean(Adjust_AUCROC_output))
+    Adjust_AUCPR_output.append(np.mean(Adjust_AUCPR_output))
 
     df_output = pd.DataFrame(
         data={'class': classes_output,
               'AUCROC': AUCROC_output,
               'AUCPR': AUCPR_output,
               'FDR_at_threshold': FDR_at_threshold_output,
-              'FAR_at_threshold': FAR_at_threshold_output})
+              'FAR_at_threshold': FAR_at_threshold_output,
+              'Adjust_AUCROC': Adjust_AUCROC_output,
+              'Adjust_AUCPR': Adjust_AUCPR_output})
     df_output.to_csv(os.path.join(base_dir, f'FDR_FAR_AUCROC_AUCPR_ensemble-{suffix}_grouped.csv'), index=False)
 
     print("Group results finished!")
@@ -107,12 +120,9 @@ def group_results(base_dir):
 #     base_dir = os.path.join(log_path, f'{experiment}/4')
 #     group_results(base_dir)
 if __name__ == '__main__':
-
     base_dir = os.path.join(path_project,
                             f'GHL_dataset/log/GHL/DeepSAD/cnn, std, window=100, step=10, n_epochs=20')
     group_results(base_dir)
-
-
 
 # import os
 # import math

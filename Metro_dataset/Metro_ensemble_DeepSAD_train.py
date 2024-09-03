@@ -25,7 +25,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     train_set_name = 'Metro'
-    parser.add_argument("--seed", type=int, default=2, help="seed")
+    parser.add_argument("--seed", type=int, default=1, help="seed")
     parser.add_argument("--K", type=int, default=7, help="number of sub-models")
     parser.add_argument("--n_epochs", type=int, default=50, help="number of epochs of overall training")
     parser.add_argument("--path_train_data", type=str,
@@ -45,8 +45,8 @@ if __name__ == '__main__':
         "latent_dim": 5,
         "n_epochs": 1,
         "lr": 0.002,
-        "lam1": 10000,
-        "lam2": 0,
+        "lam1": 0,
+        "lam2": 1000,
         "lam3": 0,
         "tau1": 1,
         "img_size": 5

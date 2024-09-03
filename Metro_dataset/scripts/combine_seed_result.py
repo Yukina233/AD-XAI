@@ -47,6 +47,6 @@ def combine_epoch_results(base_dir, prefix):
 if __name__ == '__main__':
     # 定义根目录
     base_dir = os.path.join(path_project, 'Metro_dataset/log/Metro/ensemble/DeepSAD')
-    prefix = 'GAN1_continue, window=1, step=1, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=10000,lam2=0,lam3=0,latent_dim=5,lr=0.002'
+    prefix = 'GAN1_continue, window=1, step=1, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=0,lam2=1000,lam3=0,latent_dim=5,lr=0.002'
     # 调用函数
     combine_epoch_results(base_dir, prefix)

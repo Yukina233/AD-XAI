@@ -1,15 +1,18 @@
+import gc
 import os
 import numpy as np
 import pandas as pd
 
+from combine_epoch_result import combine_epoch_results
+
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 
-def combine_epoch_results(base_dir, prefix):
+def combine_seed_results(base_dir, prefix):
     # 初始化一个空的列表来存储所有结果
-    all_results = []
 
     for iteration in range(0, 49):
+        all_results = []
         # 遍历所有实验文件夹
         for seed_folder in os.listdir(base_dir):
             if not seed_folder.startswith(prefix):
@@ -72,11 +75,17 @@ def combine_epoch_results(base_dir, prefix):
 
         print(f"Iteration {iteration}: mean and standard deviation results have been saved to CSV files.")
 
+        del all_results
+        gc.collect()
+
 
 if __name__ == '__main__':
     test_set_name = 'GHL'
     # 定义根目录
-    base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD')
-    prefix = 'GAN1_continue, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=100,lam2=10,lam3=0,latent_dim=80,lr=0.002'
+    base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/type2')
+    prefix = 'WGAN-GP, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=2000,lam2=300,lam3=0,latent_dim=80,lr=0.0002,clip_value=0.01,lambda_gp=1000000,seed'
     # 调用函数
-    combine_epoch_results(base_dir, prefix)
+    combine_seed_results(base_dir, prefix)
+
+    seed_dir = os.path.join(base_dir, 'seed_group', prefix)
+    combine_epoch_results(seed_dir)

@@ -29,6 +29,41 @@ def metric(y_true, y_score, pos_label=1):
 
     return {'aucroc': aucroc, 'aucpr': aucpr, 'scores': y_score, 'labels': y_true}
 
+def adjust_scores(label, score):
+    """
+    adjust the score for segment detection. i.e., for each ground-truth anomaly segment,
+    use the maximum score as the score of all points in that segment. This corresponds to point-adjust f1-score.
+    ** This function is copied/modified from the source code in [Zhihan Li et al. KDD21]
+
+    Parameters
+    ----------
+        score: np.ndarray
+            anomaly score, higher score indicates higher likelihoods to be anomaly
+        label: np.ndarray
+            ground-truth label
+
+    Return
+    ----------
+        score: np.ndarray
+            adjusted score
+
+    """
+
+    score = score.copy()
+    assert len(score) == len(label)
+    splits = np.where(label[1:] != label[:-1])[0] + 1
+    is_anomaly = label[0] == 1
+    pos = 0
+    for sp in splits:
+        if is_anomaly:
+            score[pos:sp] = np.max(score[pos:sp])
+        is_anomaly = not is_anomaly
+        pos = sp
+    sp = len(label)
+    if is_anomaly:
+        score[pos:sp] = np.max(score[pos:sp])
+    return score
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     train_set_name = 'Metro'
@@ -127,11 +162,15 @@ if __name__ == '__main__':
 
             # performance
             result_1 = metric(y_true=y_test, y_score=scores, pos_label=1)
+            result_2 = metric(y_true=y_test, y_score=adjust_scores(y_test, scores),
+                              pos_label=1)
             result = {'aucroc': result_1['aucroc'],
                       'aucpr': result_1['aucpr'],
                       'FDR_at_threshold': recall_at_threshold,
                       'FAR_at_threshold': 1 - precision_at_threshold,
-                      'time_inference': time_inference
+                      'time_inference': time_inference,
+                      'adjust_aucroc': result_2['aucroc'],
+                      'adjust_aucpr': result_2['aucpr'],
                       }
 
             # 创建DataFrame对象

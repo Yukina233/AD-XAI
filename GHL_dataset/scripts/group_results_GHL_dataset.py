@@ -46,12 +46,20 @@ def group_results(base_dir):
     noise_type = None
     group_seed_num = 3
     classes_output = []
-    precision_output = []
-    recall_output = []
-    AUCROC_output = []
-    AUCPR_output = []
-    FDR_at_threshold_output = []
-    FAR_at_threshold_output = []
+    precision_output_mean = []
+    recall_output_mean = []
+    AUCROC_output_mean = []
+    AUCPR_output_mean = []
+    FDR_at_threshold_output_mean = []
+    FAR_at_threshold_output_mean = []
+
+    precision_output_std = []
+    recall_output_std = []
+    AUCROC_output_std = []
+    AUCPR_output_std = []
+    FDR_at_threshold_output_std = []
+    FAR_at_threshold_output_std = []
+
     for fault in fault_list:
         if '.csv' in fault:
             continue
@@ -80,30 +88,54 @@ def group_results(base_dir):
             FAR_at_thresholds.append(df_result['FAR_at_threshold'])
 
         classes_output.append(fault)
-        precision_output.append(np.mean(precisions) * 100)
-        recall_output.append(np.mean(recalls) * 100)
-        AUCROC_output.append(np.mean(AUCROCs) * 100)
-        AUCPR_output.append(np.mean(AUCPRs) * 100)
-        FDR_at_threshold_output.append(np.mean(FDR_at_thresholds) * 100)
-        FAR_at_threshold_output.append(np.mean(FAR_at_thresholds) * 100)
+        precision_output_mean.append(np.mean(precisions) * 100)
+        recall_output_mean.append(np.mean(recalls) * 100)
+        AUCROC_output_mean.append(np.mean(AUCROCs) * 100)
+        AUCPR_output_mean.append(np.mean(AUCPRs) * 100)
+        FDR_at_threshold_output_mean.append(np.mean(FDR_at_thresholds) * 100)
+        FAR_at_threshold_output_mean.append(np.mean(FAR_at_thresholds) * 100)
+
+        precision_output_std.append(np.std(precisions) * 100)
+        recall_output_std.append(np.std(recalls) * 100)
+        AUCROC_output_std.append(np.std(AUCROCs) * 100)
+        AUCPR_output_std.append(np.std(AUCPRs) * 100)
+        FDR_at_threshold_output_std.append(np.std(FDR_at_thresholds) * 100)
+        FAR_at_threshold_output_std.append(np.std(FAR_at_thresholds) * 100)
 
     classes_output.append('mean')
-    precision_output.append(np.mean(precision_output))
-    recall_output.append(np.mean(recall_output))
-    AUCROC_output.append(np.mean(AUCROC_output))
-    AUCPR_output.append(np.mean(AUCPR_output))
-    FDR_at_threshold_output.append(np.mean(FDR_at_threshold_output))
-    FAR_at_threshold_output.append(np.mean(FAR_at_threshold_output))
+    precision_output_mean.append(np.mean(precision_output_mean))
+    recall_output_mean.append(np.mean(recall_output_mean))
+    AUCROC_output_mean.append(np.mean(AUCROC_output_mean))
+    AUCPR_output_mean.append(np.mean(AUCPR_output_mean))
+    FDR_at_threshold_output_mean.append(np.mean(FDR_at_threshold_output_mean))
+    FAR_at_threshold_output_mean.append(np.mean(FAR_at_threshold_output_mean))
 
-    df_output = pd.DataFrame(
+    precision_output_std.append(np.mean(precision_output_std))
+    recall_output_std.append(np.mean(recall_output_std))
+    AUCROC_output_std.append(np.mean(AUCROC_output_std))
+    AUCPR_output_std.append(np.mean(AUCPR_output_std))
+    FDR_at_threshold_output_std.append(np.mean(FDR_at_threshold_output_std))
+    FAR_at_threshold_output_std.append(np.mean(FAR_at_threshold_output_std))
+
+    df_output_mean = pd.DataFrame(
         data={'class': classes_output,
-              'AUCROC': AUCROC_output,
-              'AUCPR': AUCPR_output,
-              'precision': precision_output,
-              'recall': recall_output,
-              'FDR_at_threshold': FDR_at_threshold_output,
-              'FAR_at_threshold': FAR_at_threshold_output})
-    df_output.to_csv(os.path.join(base_dir, f'FDR_FAR_AUCROC_AUCPR_ensemble-{suffix}_grouped.csv'), index=False)
+              'AUCROC': AUCROC_output_mean,
+              'AUCPR': AUCPR_output_mean,
+              'precision': precision_output_mean,
+              'recall': recall_output_mean,
+              'FDR_at_threshold': FDR_at_threshold_output_mean,
+              'FAR_at_threshold': FAR_at_threshold_output_mean})
+    df_output_mean.to_csv(os.path.join(base_dir, f'all_means.csv'), index=False)
+
+    df_output_std = pd.DataFrame(
+        data={'class': classes_output,
+              'AUCROC': AUCROC_output_std,
+              'AUCPR': AUCPR_output_std,
+              'precision': precision_output_std,
+              'recall': recall_output_std,
+              'FDR_at_threshold': FDR_at_threshold_output_std,
+              'FAR_at_threshold': FAR_at_threshold_output_std})
+    df_output_std.to_csv(os.path.join(base_dir, f'all_stds.csv'), index=False)
 
     print("Group results finished!")
 
@@ -116,7 +148,7 @@ def group_results(base_dir):
 if __name__ == '__main__':
 
     base_dir = os.path.join(path_project,
-                            f'GHL_dataset/log/GHL/DeepSAD/cnn, std, window=100, step=10, n_epochs=20')
+                            f'GHL_dataset/log/GHL/DeepSAD/fix_pretrain, net=Dense, std, window=100, step=10, n_epochs=5, ae_n_epochs=20, lr=0.001, ae_lr=0.001')
     group_results(base_dir)
 
 

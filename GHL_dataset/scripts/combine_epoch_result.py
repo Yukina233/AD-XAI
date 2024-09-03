@@ -66,6 +66,6 @@ def combine_epoch_results(base_dir):
 if __name__ == '__main__':
     test_set_name = 'GHL'
     # 定义根目录
-    base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/seed_group', 'GAN1_continue, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=100,lam2=10,lam3=0,latent_dim=80,lr=0.002')
+    base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/seed_group', 'GAN1_continue, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=1,lam2=0,lam3=0,latent_dim=80,lr=0.002')
     # 调用函数
     combine_epoch_results(base_dir)

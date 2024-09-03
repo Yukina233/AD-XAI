@@ -28,7 +28,7 @@ iterations = [0]
 
 for iteration in iterations:
     test_set_name = 'gaussian'
-    model_name = 'GAN, pos=4, no_tau2_K=2,deepsad_epoch=20,gan_epoch=100,lam1=100000,lam2=0,lam3=0,tau1=1,latent_dim=2, betterG1D2,lr=0.002'
+    model_name = 'GAN, pos=4, no_tau2_K=2,deepsad_epoch=20,gan_epoch=100,lam1=0,lam2=0,lam3=0,tau1=1,latent_dim=2, betterG1D2'
     output_dir = os.path.join(path_project, f'gaussian_data/log/{test_set_name}/train_result', model_name)
 
     train_new_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data', 'augment', model_name)
@@ -58,7 +58,7 @@ for iteration in iterations:
         # plot时是否考虑聚类标签
         use_train_cluster_label = False
         # 随机抽取的样本数
-        num_samples = 1000
+        num_samples = 2000
         np.random.seed(0)
 
         data = np.load(os.path.join(test_data_path, dataset_name))
@@ -149,16 +149,37 @@ for iteration in iterations:
         scaler1 = MinMaxScaler()
         # 对数据进行归一化
 
-        plt.rcParams['font.sans-serif'] = ['SimSun']
-        plt.figure(figsize=(12, 9))
-        plt.scatter(X_all[y_all == 1, 0], X_all[y_all == 1, 1], label=f'normal data', alpha=0.5)
-        plt.scatter(X_all[y_all == 0, 0], X_all[y_all == 0, 1], label='generated data', alpha=0.5)
-        plt.scatter(X_all[y_all == -1, 0], X_all[y_all == -1, 1], label='anomaly data', alpha=0.5)
-        plt.legend()
-        # plt.axis('equal')  # 设置x轴和y轴的尺度相同
-        plt.title('原空间真实数据和生成数据的可视化')
-        plt.xlim([-0.4, 1.4])
-        plt.ylim([-0.4, 1.4])
+        # plt.rcParams['font.sans-serif'] = ['SimSun']
+        fig, ax = plt.subplots(figsize=(12, 9))
+
+        # 绘制散点图
+        ax.scatter(X_all[y_all == 1, 0], X_all[y_all == 1, 1], label='normal data point', alpha=0.5, c='gray', s=60)
+        ax.scatter(X_all[y_all == 0, 0], X_all[y_all == 0, 1], label='generated data point', alpha=0.5, c='crimson', s=60)
+        # ax.scatter(X_all[y_all == -1, 0], X_all[y_all == -1, 1], label='anomaly data', alpha=0.5)
+
+        # 设置图例
+        ax.legend(loc='lower right', fontsize=30, framealpha=1.0)
+
+        # 设置标题和轴范围
+        # ax.set_title('Visualization of normal data and generated anomaly data')
+        ax.set_xlim([-0.2, 1.3])
+        ax.set_ylim([-0.2, 1.3])
+
+        # 设置 x 轴和 y 轴的刻度位置，从而控制网格线之间的间距
+        ax.set_xticks(np.arange(-0.2, 1.3, 0.5))
+        ax.set_yticks(np.arange(-0.2, 1.3, 0.5))
+
+        # 隐藏刻度线和刻度标签
+        ax.tick_params(axis='x', which='both', length=0)
+        ax.tick_params(axis='y', which='both', length=0)
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+
+        # 添加网格虚线
+        ax.grid(True, linestyle='dashed', alpha=1)
+
+        plt.tight_layout()
+        # 保存图形并关闭
         plt.savefig(os.path.join(path_plot, f'distribution of Generated Data_train_{iteration}.png'))
         plt.close()
 
