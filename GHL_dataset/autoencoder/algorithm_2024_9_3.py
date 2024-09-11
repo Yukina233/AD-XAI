@@ -159,7 +159,7 @@ def run(seed=0, suffix='window=100, step=10', dataset_name='GHL', epoch=20, path
 if __name__ == '__main__':
     suffix = 'window=100, step=10'
     dataset_name = 'GHL'
-    epoch = 40
+    epoch = 100
     path_results = os.path.join(path_project, f'{dataset_name}_dataset/autoencoder/results/{suffix}, epoch={epoch}')
 
     all_scores = []
