@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from SMD_ensemble_DeepSAD_test import ensemble_test
+from GHL_ensemble_DeepSAD_test_2024_9_3 import ensemble_test
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
 
 from torch.utils.data import Dataset, DataLoader
@@ -162,4 +162,4 @@ if __name__ == '__main__':
 
         gc.collect()
 
-    ensemble_test(param_dir)
+    # ensemble_test(param_dir)
