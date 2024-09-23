@@ -33,60 +33,63 @@ def metric(y_true, y_score, pos_label=1):
     return {'aucroc': aucroc, 'aucpr': aucpr, 'scores': y_score, 'labels': y_true}
 
 
-def ensemble_test(model_name):
-    seed = 0
-    n_samples_threshold = 0
+def ensemble_test(model_name, seed):
+    n_samples_threshold = 2
 
-    iterations = range(0, 30)
+    iterations = range(0, 20)
 
     for iteration in iterations:
         print(f"Start iteration {iteration}")
-        test_set_name = 'GHL'
-        model_path = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
-        train_data_path = os.path.join(path_project,
-                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10/init/K=7')
-        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10, type2')
+        test_set_name = 'SMD'
+        model_dir = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}')
+        train_data_dir = os.path.join(path_project,
+                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=20, step=1/init/K=7')
+        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=20, step=1')
         output_path = os.path.join(path_project,
-                                   f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/type2/{model_name}/{iteration}')
+                                   f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
-        train_data_example = np.load(os.path.join(train_data_path, os.listdir(train_data_path)[0]))
-
-        # 加载模型
-        model_list = []
-        for model_file in os.listdir(model_path):
-            if not model_file.startswith('DeepSAD'):
-                continue
-            model = DeepSAD(seed=seed, load_model=os.path.join(model_path, model_file))
-            model.load_model_from_file(input_size=train_data_example['X_train'].shape[1])
-            model_list.append(model)
-
-        # 计算阈值
-        X_train = None
-        y_train = None
-        for train_dataset in os.listdir(train_data_path):
-            data = np.load(os.path.join(train_data_path, train_dataset))
-            if X_train is None:
-                X_train = data['X_train']
-                y_train = data['y_train']
-            else:
-                X_train = np.concatenate((X_train, data['X_train']))
-                y_train = np.concatenate((y_train, data['y_train']))
-
-        score_list = []
-        for model in model_list:
-            score_seperate, outputs = model.predict_score(X_train)
-            score_list.append(score_seperate)
-        score_train = np.array(score_list).mean(axis=0)
-
-        thresholds = np.percentile(score_train, 95)
 
         score_ensemble_list = []
         y_list = []
         # 遍历所有数据集文件
         for test_set in tqdm(os.listdir(test_data_path)[:-1], desc='Total progress'):
             base_name = os.path.basename(test_set).replace('.npz', '')
-            # 创建结果文件夹路径
+
+            train_data_path = os.path.join(train_data_dir, base_name)
+            train_data_example = np.load(os.path.join(train_data_path, os.listdir(train_data_path)[0]))
+
+            # 加载模型
+            model_list = []
+            model_path = os.path.join(model_dir, base_name, f'{iteration}')
+            for model_file in os.listdir(model_path):
+                if not model_file.startswith('DeepSAD'):
+                    continue
+                model = DeepSAD(seed=seed, load_model=os.path.join(model_path, model_file))
+                model.load_model_from_file(input_size=train_data_example['X_train'].shape[1])
+                model_list.append(model)
+
+            # 计算阈值
+
+            X_train = None
+            y_train = None
+            for train_dataset in os.listdir(train_data_path):
+                data = np.load(os.path.join(train_data_path, train_dataset))
+                if X_train is None:
+                    X_train = data['X_train']
+                    y_train = data['y_train']
+                else:
+                    X_train = np.concatenate((X_train, data['X_train']))
+                    y_train = np.concatenate((y_train, data['y_train']))
+
+            score_list = []
+            for model in model_list:
+                score_seperate, outputs = model.predict_score(X_train)
+                score_list.append(score_seperate)
+            score_train = np.array(score_list).mean(axis=0)
+
+            thresholds = np.percentile(score_train, 95)
+
 
             # 加载数据集
             FDRs = []
@@ -151,8 +154,7 @@ def ensemble_test(model_name):
             scores_ensemble.append(result_1['scores'])
             ys.append(result_1['labels'])
 
-        score_ensemble_list.append(scores_ensemble)
-        y_list.append(ys)
+
 
         path_score_output = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/train_result',
                                          f'{model_name}/scores/{iteration}')
@@ -175,5 +177,6 @@ def ensemble_test(model_name):
     print("All down!")
 
 if __name__ == '__main__':
-    model_name = f'WGAN-GP, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=2000,lam2=300,lam3=0,latent_dim=80,lr=0.0002,clip_value=0.01,lambda_gp=1000000,seed=2'
-    ensemble_test(model_name)
+    seed = 0
+    model_name = f'WGAN-GP, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=100,lam2=0,latent_dim=180,lr=0.0002,clip_value=0.01,lambda_gp=1000,seed=2'
+    ensemble_test(model_name, seed)

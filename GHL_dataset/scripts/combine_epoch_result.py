@@ -63,6 +63,15 @@ def combine_epoch_results(base_dir):
 
     print(f"所有结果已保存到 {output_csv_path}")
 
+    merge_result = pd.DataFrame(
+        {'folder': all_means['folder'],
+         'AUCROC_mean': all_means['AUCROC'], 'AUCROC_std': all_stds['AUCROC'],
+         'AUCPR_mean': all_means['AUCPR'], 'AUCPR_std': all_stds['AUCPR']})
+    output_csv_path = os.path.join(base_dir, 'merge_results.csv')
+    merge_result.to_csv(os.path.join(output_csv_path), index=False)
+
+    print(f"所有结果已保存到 {output_csv_path}")
+
 if __name__ == '__main__':
     test_set_name = 'GHL'
     # 定义根目录

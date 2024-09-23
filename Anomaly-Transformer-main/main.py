@@ -122,16 +122,16 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--num_epochs', type=int, default=10)
     parser.add_argument('--k', type=int, default=3)
-    parser.add_argument('--win_size', type=int, default=100)
-    parser.add_argument('--step', type=int, default=100)
+    parser.add_argument('--win_size', type=int, default=1)
+    parser.add_argument('--step', type=int, default=1)
     parser.add_argument('--input_c', type=int, default=180)
     parser.add_argument('--output_c', type=int, default=180)
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--pretrained_model', type=str, default=None)
-    parser.add_argument('--dataset', type=str, default='SMD')
+    parser.add_argument('--dataset', type=str, default='Metro')
     # parser.add_argument('--mode', type=str, default='test', choices=['train', 'test'])
 
     parser.add_argument('--anormly_ratio', type=float, default=4.00)
@@ -139,9 +139,9 @@ if __name__ == '__main__':
     config = parser.parse_args()
 
     config.data_path = os.path.join(path_project,
-                                    f'data/{config.dataset}/yukina_data/DeepSAD_data, window=100, step=10')
-    config.path_results = os.path.join(path_project, f'Anomaly-Transformer-main/results/{config.dataset}/num_epochs={config.num_epochs}, win_size={config.win_size}, step={config.step}')
-    config.model_save_path = os.path.join(path_project, f'Anomaly-Transformer-main/checkpoints/{config.dataset}/num_epochs={config.num_epochs}, win_size={config.win_size}, step={config.step}')
+                                    f'data/{config.dataset}/yukina_data/DeepSAD_data, window=1, step=1')
+    config.path_results = os.path.join(path_project, f'Anomaly-Transformer-main/results/{config.dataset}/num_epochs={config.num_epochs}, win_size={config.win_size}, step={config.step}, lr={config.lr}')
+    config.model_save_path = os.path.join(path_project, f'Anomaly-Transformer-main/checkpoints/{config.dataset}/num_epochs={config.num_epochs}, win_size={config.win_size}, step={config.step}, lr={config.lr}')
     if config.dataset == 'SMD':
         config.input_c = 180
         config.output_c = 180

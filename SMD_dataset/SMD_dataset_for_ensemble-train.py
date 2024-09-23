@@ -34,10 +34,10 @@ def kmeans_clustering(X_train, num_clusters):
 
 
 num_clusters = 7
-output_path = os.path.join(root_dir, f'ensemble_data, window=100, step=10/init/K={num_clusters}')
+output_path = os.path.join(root_dir, f'ensemble_data, window=20, step=1/init/K={num_clusters}')
 os.makedirs(output_path, exist_ok=True)
 
-input_path = os.path.join(root_dir, 'DeepSAD_data, window=100, step=10')
+input_path = os.path.join(root_dir, 'DeepSAD_data, window=20, step=1, one')
 
 for dataset_name in tqdm(os.listdir(input_path), desc='Cluster progress'):
     data = np.load(os.path.join(input_path, dataset_name))
