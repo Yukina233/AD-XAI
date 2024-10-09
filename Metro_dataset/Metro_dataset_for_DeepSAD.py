@@ -35,10 +35,10 @@ def extract_features(windows):
             series = window[:, col]
             window_features.extend([
                 np.mean(series),
-                # np.std(series),
-                #
-                # np.max(series) - np.min(series),
-                # np.median(series),
+                np.std(series),
+                np.min(series),
+                np.max(series),
+                np.median(series),
                 # series
                 # You can add more features here if needed
             ])
@@ -197,12 +197,13 @@ def process_datasets(input_path, output_path, plot_path, window_size, step_size)
 
 
 # Example usage
-window_size = 1  # Define your window size
+window_size = 10  # Define your window size
 step_size = 1  # Define your step size
-input_path = os.path.join(path_project, 'data/Metro')
+dataset_name = 'WQ'
+input_path = os.path.join(path_project, f'data/{dataset_name}')
 output_path = os.path.join(path_project,
-                           f'data/Metro/yukina_data/DeepSAD_data, window={window_size}, step={step_size}')
-plot_path = os.path.join(path_project, f'data/Metro/plot/DeepSAD_data, window={window_size}, step={step_size}')
+                           f'data/{dataset_name}/yukina_data/DeepSAD_data, window={window_size}, step={step_size}')
+plot_path = os.path.join(path_project, f'data/{dataset_name}/plot/DeepSAD_data, window={window_size}, step={step_size}')
 os.makedirs(output_path, exist_ok=True)
 os.makedirs(plot_path, exist_ok=True)
 

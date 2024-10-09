@@ -84,7 +84,7 @@ if __name__ == '__main__':
     test_set_name = 'SMD'
     # 定义根目录
     base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD')
-    prefix = 'WGAN-GP, euc, window=20, step=1, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=10000,lam2=100,latent_dim=180,lr=0.0002,clip_value=0.01,lambda_gp=1000,seed'
+    prefix = 'WGAN-GP, euc, window=20, step=1, K=13,deepsad_epoch=1,gan_epoch=1,lam1=10000,lam2=100,latent_dim=180,lr=0.0002,clip_value=0.01,lambda_gp=1000,seed'
     # 调用函数
     combine_seed_results(base_dir, prefix)
 

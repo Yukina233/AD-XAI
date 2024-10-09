@@ -66,30 +66,30 @@ def adjust_scores(label, score):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'Metro'
+    train_set_name = 'WQ'
     parser.add_argument("--seed", type=int, default=3, help="seed")
     # parser.add_argument("--path_train_data", type=str,
     #                     default=os.path.join(path_project,
     #                                          f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10'))
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
-                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=1, step=1'))
+                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=10, step=1'))
     parser.add_argument("--path_test", type=str,
                         default=os.path.join(path_project,
-                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=1, step=1'))
+                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=10, step=1'))
     parser.add_argument("--dir_model", type=str,
                         default=os.path.join(path_project, f'{train_set_name}_dataset/models/{train_set_name}/DeepSAD'))
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 200,
-        "ae_n_epochs": 200,
+        "n_epochs": 10,
+        "ae_n_epochs": 10,
         "lr": 0.001,
         "ae_lr": 0.001,
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     config = parser.parse_args()
-    param_dir = f'fix_pretrain, net=Dense, std, window=1, step=1, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
+    param_dir = f'fix_pretrain, net=Dense, std, window=10, step=1, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
 
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)

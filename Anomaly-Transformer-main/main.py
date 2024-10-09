@@ -131,7 +131,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_c', type=int, default=180)
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--pretrained_model', type=str, default=None)
-    parser.add_argument('--dataset', type=str, default='Metro')
+    parser.add_argument('--dataset', type=str, default='SWAT')
     # parser.add_argument('--mode', type=str, default='test', choices=['train', 'test'])
 
     parser.add_argument('--anormly_ratio', type=float, default=4.00)
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     config = parser.parse_args()
 
     config.data_path = os.path.join(path_project,
-                                    f'data/{config.dataset}/yukina_data/DeepSAD_data, window=1, step=1')
+                                    f'data/{config.dataset}/yukina_data/DeepSAD_data, window=20, step=1')
     config.path_results = os.path.join(path_project, f'Anomaly-Transformer-main/results/{config.dataset}/num_epochs={config.num_epochs}, win_size={config.win_size}, step={config.step}, lr={config.lr}')
     config.model_save_path = os.path.join(path_project, f'Anomaly-Transformer-main/checkpoints/{config.dataset}/num_epochs={config.num_epochs}, win_size={config.win_size}, step={config.step}, lr={config.lr}')
     if config.dataset == 'SMD':
@@ -151,6 +151,9 @@ if __name__ == '__main__':
     elif config.dataset == 'GHL':
         config.input_c = 80
         config.output_c = 80
+    elif config.dataset == 'SWAT':
+        config.input_c = 255
+        config.output_c = 255
 
     args = vars(config)
     print('------------ Options -------------')

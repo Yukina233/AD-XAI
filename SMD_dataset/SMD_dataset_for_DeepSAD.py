@@ -178,7 +178,7 @@ def process_datasets(input_path, output_path, plot_path, window_size, step_size)
 
 # Example usage
 window_size = 100  # Define your window size
-step_size = 1  # Define your step size
+step_size = 10  # Define your step size
 input_path = os.path.join(path_project, 'data/SMD')
 output_path = os.path.join(path_project, f'data/SMD/yukina_data/DeepSAD_data, window={window_size}, step={step_size}')
 plot_path = os.path.join(path_project, f'data/SMD/plot/DeepSAD_data, window={window_size}, step={step_size}')

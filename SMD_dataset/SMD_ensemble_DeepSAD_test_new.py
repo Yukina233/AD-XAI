@@ -33,7 +33,7 @@ def metric(y_true, y_score, pos_label=1):
     return {'aucroc': aucroc, 'aucpr': aucpr, 'scores': y_score, 'labels': y_true}
 
 
-def ensemble_test(model_name, seed):
+def ensemble_test(model_name, seed, DeepSAD_config=None):
     n_samples_threshold = 2
 
     iterations = range(0, 20)
@@ -43,8 +43,8 @@ def ensemble_test(model_name, seed):
         test_set_name = 'SMD'
         model_dir = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}')
         train_data_dir = os.path.join(path_project,
-                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=20, step=1/init/K=7')
-        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=20, step=1')
+                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10/init/K=7')
+        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10')
         output_path = os.path.join(path_project,
                                    f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
@@ -53,7 +53,7 @@ def ensemble_test(model_name, seed):
         score_ensemble_list = []
         y_list = []
         # 遍历所有数据集文件
-        for test_set in tqdm(os.listdir(test_data_path)[:-1], desc='Total progress'):
+        for test_set in tqdm(os.listdir(test_data_path), desc='Total progress'):
             base_name = os.path.basename(test_set).replace('.npz', '')
 
             train_data_path = os.path.join(train_data_dir, base_name)
@@ -65,7 +65,7 @@ def ensemble_test(model_name, seed):
             for model_file in os.listdir(model_path):
                 if not model_file.startswith('DeepSAD'):
                     continue
-                model = DeepSAD(seed=seed, load_model=os.path.join(model_path, model_file))
+                model = DeepSAD(seed=seed, load_model=os.path.join(model_path, model_file), config=DeepSAD_config)
                 model.load_model_from_file(input_size=train_data_example['X_train'].shape[1])
                 model_list.append(model)
 
@@ -178,5 +178,5 @@ def ensemble_test(model_name, seed):
 
 if __name__ == '__main__':
     seed = 0
-    model_name = f'WGAN-GP, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=100,lam2=0,latent_dim=180,lr=0.0002,clip_value=0.01,lambda_gp=1000,seed=2'
+    model_name = f'WGAN-GP, euc, window=20, step=1, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=100,lam2=0,latent_dim=180,lr=0.002,clip_value=0.01,lambda_gp=1000,seed=2'
     ensemble_test(model_name, seed)

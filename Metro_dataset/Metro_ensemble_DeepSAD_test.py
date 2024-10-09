@@ -73,7 +73,7 @@ def ensemble_test(model_name):
     iterations = range(0, 49)
     for iteration in iterations:
         print(f"Start iteration {iteration}")
-        test_set_name = 'Metro'
+        test_set_name = 'WQ'
         model_path = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
         train_data_path = os.path.join(path_project,
                                        f'data/{test_set_name}/yukina_data/ensemble_data, window=1, step=1/init/K=7')
@@ -198,7 +198,7 @@ def ensemble_test(model_name):
 
         group_results(output_path)
 
-    base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/Metro/ensemble/DeepSAD', model_name)
+    base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD', model_name)
     # 调用函数
     combine_epoch_results(base_dir)
     print("All down!")

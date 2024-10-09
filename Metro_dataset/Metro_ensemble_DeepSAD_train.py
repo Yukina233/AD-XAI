@@ -24,7 +24,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'Metro'
+    train_set_name = 'WQ'
     parser.add_argument("--seed", type=int, default=1, help="seed")
     parser.add_argument("--K", type=int, default=7, help="number of sub-models")
     parser.add_argument("--n_epochs", type=int, default=50, help="number of epochs of overall training")
@@ -42,14 +42,14 @@ if __name__ == '__main__':
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "latent_dim": 5,
+        "latent_dim": 9,
         "n_epochs": 1,
         "lr": 0.002,
-        "lam1": 0,
-        "lam2": 1000,
+        "lam1": 1000,
+        "lam2": 0,
         "lam3": 0,
         "tau1": 1,
-        "img_size": 5
+        "img_size": 9
     }, help="config of GAN")
 
     config = parser.parse_args()

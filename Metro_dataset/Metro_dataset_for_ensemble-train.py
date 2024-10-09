@@ -17,7 +17,7 @@ from glob import glob
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 # Create the dataset
-root_dir = os.path.join(path_project, 'data/Metro/yukina_data')
+root_dir = os.path.join(path_project, 'data/WQ/yukina_data')
 
 
 # Save as NPY

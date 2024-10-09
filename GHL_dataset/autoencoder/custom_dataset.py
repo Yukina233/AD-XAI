@@ -10,9 +10,10 @@ import numpy as np
 
 from glob import glob
 
-data_path = os.path.join(path_project, 'data/GHL/yukina_data/DeepSAD_data, window=100, step=10')
+dataset_name = 'SWAT'
+data_path = os.path.join(path_project, f'data/{dataset_name}/yukina_data/DeepSAD_data, window=20, step=1')
 
-output_path = os.path.join(path_project, f'data/GHL/csv/window=100, step=10')
+output_path = os.path.join(path_project, f'data/{dataset_name}/csv/window=20, step=1')
 os.makedirs(output_path, exist_ok=True)  # 创建结果文件夹
 
 train_data = np.load(os.path.join(data_path, 'train.npz'))
@@ -52,4 +53,4 @@ for test_path in tqdm(test_files, desc='Total progress'):
 
 train_data = np.concatenate((X_train, y_train.reshape(-1, 1)), axis=1)
 train_df = pd.DataFrame(train_data)
-train_df.to_csv(os.path.join(output_path, f'train_1500000_seed_11_vars_23.train.csv'))  # 不包含索引和列名
+train_df.to_csv(os.path.join(output_path, f'train.csv'))  # 不包含索引和列名

@@ -31,21 +31,21 @@ def metric(y_true, y_score, pos_label=1):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'GHL'
+    train_set_name = 'SWAT'
     parser.add_argument("--seed", type=int, default=3, help="seed")
     # parser.add_argument("--path_train_data", type=str,
     #                     default=os.path.join(path_project,
     #                                          f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10'))
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
-                                             f'data/GHL/yukina_data/DeepSAD_data, window=100, step=10'))
+                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=20, step=1'))
     parser.add_argument("--path_test", type=str,
                         default=os.path.join(path_project,
-                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10, type2'))
+                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=20, step=1'))
     parser.add_argument("--dir_model", type=str,
-                        default=os.path.join(path_project, f'GHL_dataset/models/{train_set_name}/DeepSAD'))
+                        default=os.path.join(path_project, f'{train_set_name}_dataset/models/{train_set_name}/DeepSAD'))
     parser.add_argument("--path_output", type=str,
-                        default=os.path.join(path_project, f'GHL_dataset/log/{train_set_name}/train_result'))
+                        default=os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
         "n_epochs": 5,
         "ae_n_epochs": 20,
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     config = parser.parse_args()
-    param_dir = f'fix_pretrain, net=Dense, std, window=100, step=10, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
+    param_dir = f'fix_pretrain, net=Dense, std, window=20, step=1, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     y_train = data['y_train']
 
 
-    dir_save = os.path.join(path_project, f'GHL_dataset/log/GHL/DeepSAD/type2', param_dir)
+    dir_save = os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/DeepSAD', param_dir)
 
     test_files = glob(os.path.join(config.path_test, '*test.npz'))
 

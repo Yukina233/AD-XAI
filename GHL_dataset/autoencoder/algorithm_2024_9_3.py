@@ -155,18 +155,107 @@ def run(seed=0, suffix='window=100, step=10', dataset_name='GHL', epoch=20, path
 
     print('Results saved.')
 
+def run_1_by_1(seed=0, suffix='window=100, step=10', dataset_name='SMD', epoch=20, path_results=''):
+    input_path = os.path.join(path_project, f"data/{dataset_name}/csv/{suffix}")
+
+    train_files = glob(os.path.join(input_path, '*train.csv'))
+    test_files = glob(os.path.join(input_path, '*test.csv'))
+
+    os.makedirs(os.path.join(path_results, f'{seed}/models'), exist_ok=True)
+    os.makedirs(os.path.join(path_results, f'{seed}/scores'), exist_ok=True)
+
+    auc_roc_list = []
+    auc_pr_list = []
+
+    for id, file in enumerate(train_files):
+        print(f"Train file {id}: {file}")
+        mock_args = {
+            "executionType": "train",  # 或 "execute"
+            "dataInput": os.path.join(path_project, file),
+            "modelOutput": os.path.join(path_results, f"{seed}/models/model.h5"),
+            "modelInput": os.path.join(path_results, f"{seed}/models/model.h5"),  # 仅在 execute 时需要
+            "dataOutput": os.path.join(path_results, f"{seed}/scores/anomaly_scores-{id}.csv"),  # 仅在 execute 时需要
+            "customParameters": {'random_state': seed, 'epochs': epoch}
+        }
+        sys.argv = [sys.argv[0], json.dumps(mock_args)]
+
+        args = AlgorithmArgs.from_sys_args()
+        set_random_state(args)
+
+        if args.executionType == "train":
+            train(args)
+        elif args.executionType == "execute":
+            pred(args)
+        else:
+            raise ValueError(f"No executionType '{args.executionType}' available! Choose either 'train' or 'execute'.")
+
+        file = test_files[id]
+        print(f"Test file {id}: {file}")
+        mock_args = {
+            "executionType": "execute",  # 或 "execute"
+            "dataInput": os.path.join(path_project, file),
+            "modelOutput": os.path.join(path_results, f"{seed}/models/model.h5"),
+            "modelInput": os.path.join(path_results, f"{seed}/models/model.h5"),  # 仅在 execute 时需要
+            "dataOutput": os.path.join(path_results, f"{seed}/scores/anomaly_scores-{id}.csv"),
+            # 仅在 execute 时需要
+            "customParameters": {}
+        }
+        sys.argv = [sys.argv[0], json.dumps(mock_args)]
+
+        args = AlgorithmArgs.from_sys_args()
+        set_random_state(args)
+
+        if args.executionType == "train":
+            train(args)
+        elif args.executionType == "execute":
+            pred(args)
+        else:
+            raise ValueError(f"No executionType '{args.executionType}' available! Choose either 'train' or 'execute'.")
+
+        _, labels = load_data(args)
+
+        scores = np.loadtxt(args.dataOutput, delimiter=",")
+
+        # 计算AUC-ROC和AUC-PR
+        auc_roc = roc_auc_score(labels, scores)
+        auc_pr = average_precision_score(labels, scores)
+
+        auc_roc_list.append(auc_roc)
+        auc_pr_list.append(auc_pr)
+        import gc
+        gc.collect()
+
+    # 创建包含AUC-ROC和AUC-PR值的DataFrame
+    result = pd.DataFrame({'AUC-ROC': auc_roc_list, 'AUC-PR': auc_pr_list})
+
+    # 计算均值
+    mean_auc_roc = result['AUC-ROC'].mean()
+    mean_auc_pr = result['AUC-PR'].mean()
+
+    # 将均值添加为DataFrame的新行
+    mean_row = pd.DataFrame({'AUC-ROC': [mean_auc_roc], 'AUC-PR': [mean_auc_pr]}, index=['Mean'])
+    result = pd.concat([result, mean_row])
+
+    # 保存结果到CSV文件
+    results_csv_path = os.path.join(path_results, f'{seed}/results.csv')
+    result.to_csv(results_csv_path, index=True)  # index=True保留索引，这样'Mean'也会被写入文件
+
+    print('Results saved.')
 
 if __name__ == '__main__':
     suffix = 'window=100, step=10'
-    dataset_name = 'GHL'
-    epoch = 100
+    dataset_name = 'SMD'
+    epoch = 10
     path_results = os.path.join(path_project, f'{dataset_name}_dataset/autoencoder/results/{suffix}, epoch={epoch}')
 
     all_scores = []
     AUCROC_seed = []
     AUCPR_seed = []
     for seed in range(3):
-        run(seed, suffix, dataset_name, epoch, path_results)
+        if dataset_name == 'SMD':
+            run_1_by_1(seed, suffix, dataset_name, epoch, path_results)
+        else:
+            run(seed, suffix, dataset_name, epoch, path_results)
         result = pd.read_csv(os.path.join(path_results, f'{seed}/results.csv'), index_col=0)
         AUCROC_seed.append(result['AUC-ROC'].values)
         AUCPR_seed.append(result['AUC-PR'].values)

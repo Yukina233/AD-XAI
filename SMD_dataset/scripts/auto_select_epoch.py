@@ -66,6 +66,6 @@ if __name__ == '__main__':
     test_set_name = 'SMD'
     # 定义根目录
     base_dir = os.path.join(path_project, f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/seed_group')
-    prefix = 'WGAN-GP, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=1000000,lam2=0,latent_dim=180,lr=0.0002,clip_value=0.01,lambda_gp=1000,seed'
+    prefix = 'WGAN-GP, euc, window=100, step=10, K=13,deepsad_epoch=1,gan_epoch=1,lam1=1000000,lam2=0,latent_dim=180,lr=0.0002,clip_value=0.01,lambda_gp=1000,seed'
 
     auto_select_epoch(os.path.join(base_dir, prefix))

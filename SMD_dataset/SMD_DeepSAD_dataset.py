@@ -35,10 +35,10 @@ def metric(y_true, y_score, pos_label=1):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     train_set_name = 'SMD'
-    parser.add_argument("--seed", type=int, default=3, help="seed")
+    parser.add_argument("--seed", type=int, default=2, help="seed")
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
-                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10, raw'))
+                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10'))
     parser.add_argument("--dir_model", type=str,
                         default=None)
     parser.add_argument("--path_output", type=str,
@@ -57,11 +57,11 @@ if __name__ == '__main__':
         except json.JSONDecodeError as e:
             parser.error(f"argument --DeepSAD_config: invalid JSON value: {e}")
 
-    param_dir = f'fix_pretrain, net=Simple_Dense, std, window=100, step=10, raw, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
+    param_dir = f'Simple_Dense, std, window=100, step=10, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}, seed={config.seed}'
     config.path_output = os.path.join(config.path_output, param_dir)
 
 
-    for train_path in tqdm(os.listdir(config.path_train_data)[:10], desc='Total progress'):
+    for train_path in tqdm(os.listdir(config.path_train_data), desc='Total progress'):
         base_name = os.path.basename(train_path).replace('.npz', '')
         # 创建结果文件夹路径
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
         ys = []
         scores_seed = []
-        for seed in tqdm(range(0, config.seed), desc='Seed progress'):
+        for seed in tqdm(range(config.seed, config.seed+1), desc='Seed progress'):
             config.DeepSAD_config["loss_output_path"] = os.path.join(config.path_output, 'deepsad_loss', base_name,
                                                                      f'seed={seed}')
             os.makedirs(config.DeepSAD_config["loss_output_path"], exist_ok=True)

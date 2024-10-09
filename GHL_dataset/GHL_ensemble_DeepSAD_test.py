@@ -41,13 +41,13 @@ def ensemble_test(model_name):
 
     for iteration in iterations:
         print(f"Start iteration {iteration}")
-        test_set_name = 'GHL'
+        test_set_name = 'SWAT'
         model_path = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
         train_data_path = os.path.join(path_project,
-                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10/init/K=7')
-        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10, type2')
+                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=20, step=1/init/K=7')
+        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=20, step=1')
         output_path = os.path.join(path_project,
-                                   f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/type2/{model_name}/{iteration}')
+                                   f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
 
         train_data_example = np.load(os.path.join(train_data_path, os.listdir(train_data_path)[0]))

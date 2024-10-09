@@ -115,8 +115,8 @@ def run_1_by_1(seed=0, input_path='', path_results='', epoch_num=10):
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 if __name__ == '__main__':
-    suffix = 'window=100, step=10'
-    dataset_name = 'SMD'
+    suffix = 'window=20, step=1'
+    dataset_name = 'SWAT'
     epoch_num = 10
 
     path_data = os.path.join(path_project, f'data/{dataset_name}/csv/{suffix}')

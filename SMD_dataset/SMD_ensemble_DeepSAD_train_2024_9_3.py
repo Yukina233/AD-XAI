@@ -72,11 +72,11 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser()
         parser.add_argument("--seed", type=int, default=seed, help="seed")
         parser.add_argument("--K", type=int, default=7, help="number of sub-models")
-        parser.add_argument("--n_epochs", type=int, default=20, help="number of epochs of overall training")
+        parser.add_argument("--n_epochs", type=int, default=30, help="number of epochs of overall training")
         parser.add_argument("--path_train_data", type=str,
                             default=os.path.join(path_project,
 
-                                                 f'data/{train_set_name}/yukina_data/ensemble_data, window=20, step=1'))
+                                                 f'data/{train_set_name}/yukina_data/ensemble_data, window=100, step=10'))
         parser.add_argument("--dir_model", type=str,
                             default=os.path.join(path_project,
                                                  f'{train_set_name}_dataset/models/{train_set_name}/ensemble'))
@@ -86,17 +86,17 @@ if __name__ == '__main__':
         parser.add_argument("--DeepSAD_config", type=dict, default={
             "n_epochs": 1,
             "ae_n_epochs": 20,
-            "net_name": 'Dense'
+            "net_name": 'Simple_Dense'
         }, help="config of DeepSAD")
         parser.add_argument("--GAN_config", type=dict, default={
             "seed": seed,
             "latent_dim": 180,
-            "lr": 0.002,
+            "lr": 0.0002,
             "clip_value": 0.01,
             "lambda_gp": 1000,
             "n_epochs": 1,
             "lam1": 1000,
-            "lam2": 0,
+            "lam2": 100,
             "lam3": 0,
             "tau1": 1,
             "img_size": 180
@@ -105,7 +105,7 @@ if __name__ == '__main__':
         config = parser.parse_args()
 
         # 生成特定参数的文件夹
-        param_dir = f'WGAN-GP, euc, window=20, step=1, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},clip_value={config.GAN_config["clip_value"]},lambda_gp={config.GAN_config["lambda_gp"]},seed={config.seed}'
+        param_dir = f'{config.DeepSAD_config["net_name"]}, WGAN-GP, euc, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},clip_value={config.GAN_config["clip_value"]},lambda_gp={config.GAN_config["lambda_gp"]},seed={config.seed}'
         config.dir_model = os.path.join(config.dir_model, param_dir)
         config.path_output = os.path.join(config.path_output, param_dir)
 
@@ -147,7 +147,7 @@ if __name__ == '__main__':
                         y_train = data['y_train']
                     else:
                         # 加载生成模型
-                        generator = Adversarial_Generator(config=config.GAN_config)
+                        generator = Adversarial_Generator(config=config.GAN_config, DeepSAD_config=config.DeepSAD_config)
                         generator.load_model(os.path.join(config.dir_model, f'{machine}', f'{iteration - 1}'))
                         num_generate = data['y_train'].shape[0]
                         gen_samples = generator.sample_generate(num=num_generate)
@@ -187,7 +187,7 @@ if __name__ == '__main__':
                 print("Train Adversarial Generator")
                 path_detector = os.path.join(config.dir_model, f'{machine}', f'{iteration}')
                 config.GAN_config["path_detector"] = path_detector
-                ad_g = Adversarial_Generator(config=config.GAN_config)
+                ad_g = Adversarial_Generator(config=config.GAN_config, DeepSAD_config=config.DeepSAD_config)
 
                 if iteration != 0:
                     ad_g.load_model(os.path.join(config.dir_model, f'{machine}', f'{iteration - 1}'))
@@ -220,7 +220,7 @@ if __name__ == '__main__':
             gc.collect()
 
         group_loss(config.path_output, config.n_epochs - 1)
-        ensemble_test(param_dir, seed)
+        ensemble_test(param_dir, seed, DeepSAD_config=config.DeepSAD_config)
 
     base_dir = os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/ensemble/DeepSAD')
     prefix = param_dir.split('seed')[0] + 'seed'

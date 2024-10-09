@@ -364,12 +364,13 @@ class Adversarial_Generator:
 
                     batches_done += self.n_critic
 
-                    print(
-                        "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [var loss: %f] [mean loss: %f] [pull away loss: %f] [Wass: %f] [GP: %f]"
-                        % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(),
-                           var_ensemble_loss.item(), mean_ensemble_loss.item(), pull_away_loss.item(),
-                           wassestein_distance.item(), gradient_penalty.item()
-                           ))
+                    if i % 70 == 0:
+                        print(
+                            "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [var loss: %f] [mean loss: %f] [pull away loss: %f] [Wass: %f] [GP: %f]"
+                            % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(),
+                               var_ensemble_loss.item(), mean_ensemble_loss.item(), pull_away_loss.item(),
+                               wassestein_distance.item(), gradient_penalty.item()
+                               ))
 
                     loss_gen_batch.append(g_loss.item())
                     loss_dis_batch.append(d_loss.item())

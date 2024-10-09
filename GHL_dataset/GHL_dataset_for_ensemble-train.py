@@ -17,7 +17,7 @@ from glob import glob
 path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 # Create the dataset
-root_dir = os.path.join(path_project, 'data/GHL/yukina_data')
+root_dir = os.path.join(path_project, 'data/SWAT/yukina_data')
 
 
 # Save as NPY
@@ -33,12 +33,12 @@ def kmeans_clustering(X_train, num_clusters):
 
 
 num_clusters = 7
-output_path = os.path.join(root_dir, f'ensemble_data, window=100, step=10/init/K={num_clusters}')
+output_path = os.path.join(root_dir, f'ensemble_data, window=20, step=1/init/K={num_clusters}')
 os.makedirs(output_path, exist_ok=True)
 
-input_path = os.path.join(root_dir, 'DeepSAD_data, window=100, step=10')
+input_path = os.path.join(root_dir, 'DeepSAD_data, window=20, step=1')
 
-data = np.load(os.path.join(input_path, os.listdir(input_path)[0]))
+data = np.load(os.path.join(input_path, 'train.npz'))
 
 X_train = data['X_train']
 y_train = data['y_train']
