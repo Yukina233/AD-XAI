@@ -110,6 +110,12 @@ def process_datasets(input_path, output_path, plot_path, window_size, step_size)
     train_data = train_df.iloc[:, 1:-1].values
     train_labels = train_df.iloc[:, -1].values
 
+    # Normalize the data
+    scaler = MinMaxScaler()
+    scaler.fit(train_data)
+
+    train_data = scaler.transform(train_data)
+
     # Apply windowing to the data
     train_windows, train_window_labels = windowed_features(train_data, train_labels, window_size, step_size)
 
@@ -128,6 +134,8 @@ def process_datasets(input_path, output_path, plot_path, window_size, step_size)
 
         test_data = test_df.iloc[:, 1:-1].values
         test_labels = test_df.iloc[:, -1].values
+
+        test_data = scaler.transform(test_data)
 
         test_windows, test_window_labels = windowed_features(test_data, test_labels, window_size, step_size)
 
@@ -183,8 +191,8 @@ dataset_name = 'SWAT'
 window_size = 20  # Define your window size
 step_size = 1  # Define your step size
 input_path = os.path.join(path_project, f'data/{dataset_name}')
-output_path = os.path.join(path_project, f'data/{dataset_name}/yukina_data/DeepSAD_data, window={window_size}, step={step_size}')
-plot_path = os.path.join(path_project, f'data/{dataset_name}/plot/DeepSAD_data, window={window_size}, step={step_size}')
+output_path = os.path.join(path_project, f'data/{dataset_name}/yukina_data/DeepSAD_data, window={window_size}, step={step_size}, norm')
+plot_path = os.path.join(path_project, f'data/{dataset_name}/plot/DeepSAD_data, window={window_size}, step={step_size}, norm')
 os.makedirs(output_path, exist_ok=True)
 os.makedirs(plot_path, exist_ok=True)
 
