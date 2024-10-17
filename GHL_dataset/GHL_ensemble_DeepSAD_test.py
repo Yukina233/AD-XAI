@@ -23,7 +23,7 @@ from scripts.group_result_ensemble import group_results
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/media/test/d/Yukina/AD-XAI_data'
 
 
 def metric(y_true, y_score, pos_label=1):
@@ -33,7 +33,7 @@ def metric(y_true, y_score, pos_label=1):
     return {'aucroc': aucroc, 'aucpr': aucpr, 'scores': y_score, 'labels': y_true}
 
 
-def ensemble_test(model_name):
+def ensemble_test(model_name, K):
     seed = 0
     n_samples_threshold = 0
 
@@ -44,7 +44,7 @@ def ensemble_test(model_name):
         test_set_name = 'SWAT'
         model_path = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
         train_data_path = os.path.join(path_project,
-                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=20, step=1/init/K=7')
+                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=20, step=1/init/K={K}')
         test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=20, step=1')
         output_path = os.path.join(path_project,
                                    f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
@@ -61,30 +61,30 @@ def ensemble_test(model_name):
             model.load_model_from_file(input_size=train_data_example['X_train'].shape[1])
             model_list.append(model)
 
-        # 计算阈值
-        X_train = None
-        y_train = None
-        for train_dataset in os.listdir(train_data_path):
-            data = np.load(os.path.join(train_data_path, train_dataset))
-            if X_train is None:
-                X_train = data['X_train']
-                y_train = data['y_train']
-            else:
-                X_train = np.concatenate((X_train, data['X_train']))
-                y_train = np.concatenate((y_train, data['y_train']))
-
-        score_list = []
-        for model in model_list:
-            score_seperate, outputs = model.predict_score(X_train)
-            score_list.append(score_seperate)
-        score_train = np.array(score_list).mean(axis=0)
-
-        thresholds = np.percentile(score_train, 95)
+        # # 计算阈值
+        # X_train = None
+        # y_train = None
+        # for train_dataset in os.listdir(train_data_path):
+        #     data = np.load(os.path.join(train_data_path, train_dataset))
+        #     if X_train is None:
+        #         X_train = data['X_train']
+        #         y_train = data['y_train']
+        #     else:
+        #         X_train = np.concatenate((X_train, data['X_train']))
+        #         y_train = np.concatenate((y_train, data['y_train']))
+        #
+        # score_list = []
+        # for model in model_list:
+        #     score_seperate, outputs = model.predict_score(X_train)
+        #     score_list.append(score_seperate)
+        # score_train = np.array(score_list).mean(axis=0)
+        #
+        # thresholds = np.percentile(score_train, 95)
 
         score_ensemble_list = []
         y_list = []
         # 遍历所有数据集文件
-        for test_set in tqdm(os.listdir(test_data_path)[:-1], desc='Total progress'):
+        for test_set in tqdm(os.listdir(test_data_path)[1:], desc='Total progress'):
             base_name = os.path.basename(test_set).replace('.npz', '')
             # 创建结果文件夹路径
 
@@ -111,36 +111,36 @@ def ensemble_test(model_name):
                 score_list.append(score_seperate)
             score_ensemble = np.array(score_list).mean(axis=0)
 
-            id_anomaly_pred = np.where(score_ensemble > thresholds)[0]
-            id_normal_pred = np.where(score_ensemble <= thresholds)[0]
+            # id_anomaly_pred = np.where(score_ensemble > thresholds)[0]
+            # id_normal_pred = np.where(score_ensemble <= thresholds)[0]
 
             end_time = time.time()
             time_inference = end_time - start_time
 
-            tp = np.size(np.where(dataset['y_test'][id_anomaly_pred] == 1)[0], 0)
-            fp = np.size(np.where(dataset['y_test'][id_anomaly_pred] == 0)[0], 0)
-            fn = np.size(np.where(dataset['y_test'][id_normal_pred] == 1)[0], 0)
+            # tp = np.size(np.where(dataset['y_test'][id_anomaly_pred] == 1)[0], 0)
+            # fp = np.size(np.where(dataset['y_test'][id_anomaly_pred] == 0)[0], 0)
+            # fn = np.size(np.where(dataset['y_test'][id_normal_pred] == 1)[0], 0)
 
-            if tp + fp == 0:
-                precision = 0
-            else:
-                precision = tp / (tp + fp)
-            recall = tp / (tp + fn)
-
-            precision_list, recall_list, _ = precision_recall_curve(dataset['y_test'], score_ensemble)
-            precision_threshold = 0.95
-            recall_at_threshold = recall_list[np.where(precision_list >= precision_threshold)[0][0]]
-            recall_threshold = 0.95
-            precision_at_threshold = precision_list[np.where(recall_list >= recall_threshold)[0][-1]]
+            # if tp + fp == 0:
+            #     precision = 0
+            # else:
+            #     precision = tp / (tp + fp)
+            # recall = tp / (tp + fn)
+            #
+            # precision_list, recall_list, _ = precision_recall_curve(dataset['y_test'], score_ensemble)
+            # precision_threshold = 0.95
+            # recall_at_threshold = recall_list[np.where(precision_list >= precision_threshold)[0][0]]
+            # recall_threshold = 0.95
+            # precision_at_threshold = precision_list[np.where(recall_list >= recall_threshold)[0][-1]]
 
             # performance
             result_1 = metric(y_true=dataset['y_test'], y_score=score_ensemble, pos_label=1)
             result = {'aucroc': result_1['aucroc'],
                       'aucpr': result_1['aucpr'],
-                      'precision': precision,
-                      'recall': recall,
-                      'FDR_at_threshold': recall_at_threshold,
-                      'FAR_at_threshold': 1 - precision_at_threshold,
+                      # 'precision': precision,
+                      # 'recall': recall,
+                      # 'FDR_at_threshold': recall_at_threshold,
+                      # 'FAR_at_threshold': 1 - precision_at_threshold,
                       'time_inference': time_inference
                       }
 
@@ -176,4 +176,4 @@ def ensemble_test(model_name):
 
 if __name__ == '__main__':
     model_name = f'WGAN-GP, euc, window=100, step=10, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=2000,lam2=300,lam3=0,latent_dim=80,lr=0.0002,clip_value=0.01,lambda_gp=1000000,seed=2'
-    ensemble_test(model_name)
+    ensemble_test(model_name, 7)

@@ -23,7 +23,7 @@ from GHL_dataset.scripts.group_result_ensemble import group_results
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/media/test/d/Yukina/AD-XAI'
+path_project = '/media/test/d/Yukina/AD-XAI_data'
 
 
 def metric(y_true, y_score, pos_label=1):

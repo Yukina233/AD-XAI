@@ -22,19 +22,19 @@ from adversarial_ensemble_AD.data_generate.gan_mnist import Adversarial_Generato
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/media/test/d/Yukina/AD-XAI'
+path_project = '/media/test/d/Yukina/AD-XAI_data'
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
-    train_set_name = 'MNIST'
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    train_set_name = 'MNIST_all_nonorm'
     window = 1
     step = 1
     time_start = time.time()
-    for seed in range(3):
+    for seed in range(1):
         parser = argparse.ArgumentParser()
         parser.add_argument("--seed", type=int, default=seed, help="seed")
         parser.add_argument("--K", type=int, default=7, help="number of sub-models")
-        parser.add_argument("--n_epochs", type=int, default=11, help="number of epochs of overall training")
+        parser.add_argument("--n_epochs", type=int, default=50, help="number of epochs of overall training")
         parser.add_argument("--path_train_data", type=str,
                             default=os.path.join(path_project,
 
@@ -50,14 +50,14 @@ if __name__ == '__main__':
         }, help="config of DeepSAD")
         parser.add_argument("--GAN_config", type=dict, default={
             "seed": seed,
-            "latent_dim": 50,
+            "latent_dim": 96,
             "lr": 0.0003,
             "clip_value": 0.01,
             "lambda_gp": 10000,
-            "n_epochs": 20,
-            "pre_epochs": 0,
-            "lam1": 0,
-            "lam2": 0,
+            "n_epochs": 1,
+            "pre_epochs": 20,
+            "lam1": 10,
+            "lam2": 1,
             "lam3": 0,
             "tau1": 1,
             "img_size": 784
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         config = parser.parse_args()
 
         # 生成特定参数的文件夹
-        param_dir = f'GAN, euc, window={window}, step={step}, K={config.K},deepsad_ae_epoch={config.DeepSAD_config["ae_n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},pre_epochs={config.GAN_config["pre_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},clip_value={config.GAN_config["clip_value"]},lambda_gp={config.GAN_config["lambda_gp"]},seed={config.seed}'
+        param_dir = f'GAN_sigmoid, euc, window={window}, step={step}, K={config.K},deepsad_ae_epoch={config.DeepSAD_config["ae_n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},pre_epochs={config.GAN_config["pre_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},clip_value={config.GAN_config["clip_value"]},lambda_gp={config.GAN_config["lambda_gp"]},seed={config.seed}'
         config.dir_model = os.path.join(config.dir_model, param_dir)
         config.path_output = os.path.join(config.path_output, param_dir)
 
@@ -94,7 +94,7 @@ if __name__ == '__main__':
                 config.DeepSAD_config["loss_output_path"] = os.path.join(config.path_output, 'deepsad_loss', f'iteration={iteration}', f'model_id={base_name}')
                 os.makedirs(config.DeepSAD_config["loss_output_path"], exist_ok=True)
 
-                # 加载数据集
+                # 加载数据集F
                 data = np.load(os.path.join(path_train, train_dataset))
 
                 if iteration == 0:
@@ -150,7 +150,7 @@ if __name__ == '__main__':
             train_dataloader_GAN = torch.utils.data.DataLoader(train_dataset_GAN, batch_size=ad_g.batch_size, shuffle=True)
 
             if iteration == 0:
-                ad_g.train_origin(dataloader=train_dataloader_GAN)
+                ad_g.pretrain(dataloader=train_dataloader_GAN)
             loss_train = ad_g.train(dataloader=train_dataloader_GAN)
             ad_g.save_model(os.path.join(config.dir_model, f'{iteration}'))
             # loss_train = ad_g.train_no_GAN(dataloader=train_dataloader_GAN)
@@ -170,18 +170,18 @@ if __name__ == '__main__':
 
             gc.collect()
 
-        ensemble_test(param_dir, config.K)
+        # ensemble_test(param_dir, config.K)
 
-    base_dir = os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/ensemble/DeepSAD')
-    prefix = param_dir.split('seed')[0] + 'seed'
-
-    from GHL_dataset.scripts.combine_seed_result import combine_seed_results
-    from GHL_dataset.scripts.combine_epoch_result import combine_epoch_results
-    # 调用函数
-    combine_seed_results(base_dir, prefix)
-
-    seed_dir = os.path.join(base_dir, 'seed_group', prefix)
-    combine_epoch_results(seed_dir)
-
-    time_end = time.time()
-    print(f"Time total cost: {time_end - time_start}")
+    # base_dir = os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/ensemble/DeepSAD')
+    # prefix = param_dir.split('seed')[0] + 'seed'
+    #
+    # from GHL_dataset.scripts.combine_seed_result import combine_seed_results
+    # from GHL_dataset.scripts.combine_epoch_result import combine_epoch_results
+    # # 调用函数
+    # combine_seed_results(base_dir, prefix)
+    #
+    # seed_dir = os.path.join(base_dir, 'seed_group', prefix)
+    # combine_epoch_results(seed_dir)
+    #
+    # time_end = time.time()
+    # print(f"Time total cost: {time_end - time_start}")
