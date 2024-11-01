@@ -24,16 +24,16 @@ from data_generate.wgan_gp import Adversarial_Generator
 path_project = '/media/test/d/Yukina/AD-XAI_data'
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    train_set_name = 'SWAT'
-    window = 20
-    step = 1
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    train_set_name = 'GHL'
+    window = 100
+    step = 10
     time_start = time.time()
     for seed in range(3):
         parser = argparse.ArgumentParser()
         parser.add_argument("--seed", type=int, default=seed, help="seed")
         parser.add_argument("--K", type=int, default=7, help="number of sub-models")
-        parser.add_argument("--n_epochs", type=int, default=30, help="number of epochs of overall training")
+        parser.add_argument("--n_epochs", type=int, default=20, help="number of epochs of overall training")
         parser.add_argument("--path_train_data", type=str,
                             default=os.path.join(path_project,
 
@@ -45,23 +45,23 @@ if __name__ == '__main__':
                             default=os.path.join(path_project,
                                                  f'{train_set_name}_dataset/log/{train_set_name}/train_result'))
         parser.add_argument("--DeepSAD_config", type=dict, default={
-            "n_epochs": 3,
-            "ae_n_epochs": 1,
+            "n_epochs": 1,
+            "ae_n_epochs": 50,
             "net_name": 'Dense'
         }, help="config of DeepSAD")
         parser.add_argument("--GAN_config", type=dict, default={
             "seed": seed,
-            "latent_dim": 255,
+            "latent_dim": 80,
             "lr": 0.002,
             "clip_value": 0.01,
             "lambda_gp": 10000,
             "n_epochs": 1,
-            "lam1": 1000,
-            "lam2": 100,
+            "lam1": 2000,
+            "lam2": 300,
             "lam3": 0,
             "alpha": 1,
             "tau1": 1,
-            "img_size": 255
+            "img_size": 80
         }, help="config of GAN")
 
         config = parser.parse_args()

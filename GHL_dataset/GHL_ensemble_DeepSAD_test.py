@@ -37,15 +37,15 @@ def ensemble_test(model_name, K):
     seed = 0
     n_samples_threshold = 0
 
-    iterations = range(0, 30)
+    iterations = range(0, 20)
 
     for iteration in iterations:
         print(f"Start iteration {iteration}")
-        test_set_name = 'SWAT'
+        test_set_name = 'GHL'
         model_path = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
         train_data_path = os.path.join(path_project,
-                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=20, step=1/init/K={K}')
-        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=20, step=1')
+                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10/init/K={K}')
+        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10')
         output_path = os.path.join(path_project,
                                    f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
@@ -84,7 +84,9 @@ def ensemble_test(model_name, K):
         score_ensemble_list = []
         y_list = []
         # 遍历所有数据集文件
-        for test_set in tqdm(os.listdir(test_data_path)[1:], desc='Total progress'):
+        for test_set in tqdm(os.listdir(test_data_path), desc='Total progress'):
+            if test_set.startswith('train'):
+                continue
             base_name = os.path.basename(test_set).replace('.npz', '')
             # 创建结果文件夹路径
 

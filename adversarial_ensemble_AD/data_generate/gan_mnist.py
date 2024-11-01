@@ -29,38 +29,38 @@ class Generator(nn.Module):
         self.img_shape = img_shape
 
         self.model = nn.Sequential(
-            # nn.Linear(self.latent_dim, 128),
-            # # 引入batchnorm可以提高收敛速度，具体做法是在生成器的Linear层后面添加BatchNorm1d，
-            # # 最后一层除外，判别器不要加
-            # torch.nn.BatchNorm1d(128),
-            # torch.nn.GELU(),  # 将激活函数ReLU换成GELU效果更好
-            # nn.Linear(128, 256),
-            # torch.nn.BatchNorm1d(256),
-            # torch.nn.GELU(),
-            # nn.Linear(256, 512),
-            # torch.nn.BatchNorm1d(512),
-            # torch.nn.GELU(),
-            # nn.Linear(512, 1024),
-            # torch.nn.BatchNorm1d(1024),
-            # torch.nn.GELU(),
-            # nn.Linear(1024, np.prod(int(np.prod(self.img_shape)), dtype=np.int32)),  # 映射成图片大小（输出）
-            # #  nn.Tanh(),
-            # nn.Sigmoid(),
-
             nn.Linear(self.latent_dim, 128),
-            nn.LeakyReLU(0.2),
+            # 引入batchnorm可以提高收敛速度，具体做法是在生成器的Linear层后面添加BatchNorm1d，
+            # 最后一层除外，判别器不要加
+            torch.nn.BatchNorm1d(128),
+            torch.nn.GELU(),  # 将激活函数ReLU换成GELU效果更好
             nn.Linear(128, 256),
-            nn.BatchNorm1d(256),
-            nn.LeakyReLU(0.2),
+            torch.nn.BatchNorm1d(256),
+            torch.nn.GELU(),
             nn.Linear(256, 512),
-            nn.BatchNorm1d(512),
-            nn.LeakyReLU(0.2),
+            torch.nn.BatchNorm1d(512),
+            torch.nn.GELU(),
             nn.Linear(512, 1024),
-            nn.BatchNorm1d(1024),
-            nn.LeakyReLU(0.2),
-            nn.Linear(1024, int(np.prod(self.img_shape))),
-            # nn.Tanh()
-            nn.Sigmoid()
+            torch.nn.BatchNorm1d(1024),
+            torch.nn.GELU(),
+            nn.Linear(1024, np.prod(int(np.prod(self.img_shape)), dtype=np.int32)),  # 映射成图片大小（输出）
+            #  nn.Tanh(),
+            nn.Sigmoid(),
+
+            # nn.Linear(self.latent_dim, 128),
+            # nn.LeakyReLU(0.2),
+            # nn.Linear(128, 256),
+            # nn.BatchNorm1d(256),
+            # nn.LeakyReLU(0.2),
+            # nn.Linear(256, 512),
+            # nn.BatchNorm1d(512),
+            # nn.LeakyReLU(0.2),
+            # nn.Linear(512, 1024),
+            # nn.BatchNorm1d(1024),
+            # nn.LeakyReLU(0.2),
+            # nn.Linear(1024, int(np.prod(self.img_shape))),
+            # # nn.Tanh()
+            # nn.Sigmoid()
         )
 
     def forward(self, z):
@@ -76,24 +76,24 @@ class Discriminator(nn.Module):
 
         self.model = nn.Sequential(
             # 堆很多全连接层
-            # nn.Linear(int(np.prod(self.img_shape)), 512),  # 输入是图片
-            # torch.nn.GELU(),
-            # nn.Linear(512, 256),
-            # torch.nn.GELU(),
-            # nn.Linear(256, 128),
-            # torch.nn.GELU(),
-            # nn.Linear(128, 64),
-            # torch.nn.GELU(),
-            # nn.Linear(64, 32),
-            # torch.nn.GELU(),
-            # nn.Linear(32, 1),
-            # nn.Sigmoid(),
-            nn.Linear(int(np.prod(self.img_shape)), 512),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(int(np.prod(self.img_shape)), 512),  # 输入是图片
+            torch.nn.GELU(),
             nn.Linear(512, 256),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(256, 1),
-            nn.Sigmoid()
+            torch.nn.GELU(),
+            nn.Linear(256, 128),
+            torch.nn.GELU(),
+            nn.Linear(128, 64),
+            torch.nn.GELU(),
+            nn.Linear(64, 32),
+            torch.nn.GELU(),
+            nn.Linear(32, 1),
+            nn.Sigmoid(),
+            # nn.Linear(int(np.prod(self.img_shape)), 512),
+            # nn.LeakyReLU(0.2, inplace=True),
+            # nn.Linear(512, 256),
+            # nn.LeakyReLU(0.2, inplace=True),
+            # nn.Linear(256, 1),
+            # nn.Sigmoid()
 
         )
 
@@ -176,6 +176,7 @@ class Adversarial_Generator:
     def __init__(self, config=None, DeepSAD_config=None):
         # 默认参数
         parser = argparse.ArgumentParser()
+        parser.add_argument("--train_set_name", type=str, default=None)
         parser.add_argument("--seed", type=int, default=0)
         parser.add_argument("--n_epochs", type=int, default=5, help="number of epochs of training")
         parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
@@ -214,8 +215,11 @@ class Adversarial_Generator:
         self.generator = Generator(self.latent_dim, self.img_shape)
         self.discriminator = Discriminator(self.img_shape)
         self.adversarial_loss = torch.nn.BCELoss()
-        self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=self.lr, betas=(self.b1, self.b2))
-        self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr, betas=(self.b1, self.b2))
+        self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=self.lr, betas=(self.b1, self.b2), weight_decay=self.weight_decay)
+        self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr, betas=(self.b1, self.b2), weight_decay=self.weight_decay)
+        self.optimizer_G_pretrain = torch.optim.Adam(self.generator.parameters(), lr=self.lr/10, betas=(self.b1, self.b2), weight_decay=self.weight_decay)
+        self.optimizer_D_pretrain = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr/10, betas=(self.b1, self.b2),
+                                            weight_decay=self.weight_decay)
 
         cuda = True if torch.cuda.is_available() else False
         if cuda:
@@ -402,7 +406,7 @@ class Adversarial_Generator:
                 #  Train Generator
                 # -----------------
 
-                self.optimizer_G.zero_grad()
+                self.optimizer_G_pretrain.zero_grad()
 
                 # Sample noise as generator input
                 z = torch.randn(samples.shape[0], self.latent_dim, device='cuda')
@@ -422,13 +426,13 @@ class Adversarial_Generator:
                 # g_loss = self.lam1 * entropy_loss + self.lam2 * torch.mean(mean_ensemble_loss)
 
                 g_loss.backward()
-                self.optimizer_G.step()
+                self.optimizer_G_pretrain.step()
 
                 # ---------------------
                 #  Train Discriminator
                 # ---------------------
 
-                self.optimizer_D.zero_grad()
+                self.optimizer_D_pretrain.zero_grad()
 
                 # Measure discriminator's ability to classify real from generated samples
                 real_loss = self.adversarial_loss(self.discriminator(real_samples), valid)
@@ -436,7 +440,7 @@ class Adversarial_Generator:
                 d_loss = (real_loss + fake_loss) / 2
 
                 d_loss.backward()
-                self.optimizer_D.step()
+                self.optimizer_D_pretrain.step()
 
                 print(
                     "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [var loss: %f] [mean loss: %f] [pull away loss: %f]"

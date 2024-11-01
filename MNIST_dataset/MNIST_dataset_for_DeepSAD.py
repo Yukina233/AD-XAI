@@ -179,7 +179,7 @@ def process_datasets(input_path, output_path, plot_path, window_size, step_size)
 
 
 # Example usage
-dataset_name = 'MNIST_all_nonorm'
+dataset_name = 'MNIST_nonorm_9'
 window_size = 1  # Define your window size
 step_size = 1  # Define your step size
 input_path = os.path.join(path_project, f'data/{dataset_name}')

@@ -61,6 +61,9 @@ class Discriminator(nn.Module):
             nn.Linear(512, 256),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(256, 1),
+            # nn.Linear(int(np.prod(self.img_shape)), 256),
+            # nn.LeakyReLU(0.2, inplace=True),
+            # nn.Linear(256, 1),
         )
 
     def forward(self, img):
@@ -106,7 +109,7 @@ class Adversarial_Generator:
         self.generator = Generator(self.latent_dim, self.img_shape)
         self.discriminator = Discriminator(self.img_shape)
         self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=self.lr, betas=(self.b1, self.b2))
-        self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr, betas=(self.b1, self.b2))
+        self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr/10, betas=(self.b1, self.b2))
 
         cuda = True if torch.cuda.is_available() else False
         if cuda:

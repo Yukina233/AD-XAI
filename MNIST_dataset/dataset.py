@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 
+
+
 # matplotlib.use('TkAgg')
 
 path_project = '/media/test/d/Yukina/AD-XAI_data'
@@ -24,11 +26,11 @@ def dataset_to_dataframe(dataset):
     return df
 
 
-def dataset_train_to_dataframe(dataset):
+def dataset_train_to_dataframe(dataset, y):
     images = []
     labels = []
     for img, label in dataset:
-        if label == 0:
+        if label == y:
             # 将图像展平为一维向量
             images.append(img.view(-1).numpy())
             labels.append(0)
@@ -38,15 +40,15 @@ def dataset_train_to_dataframe(dataset):
     return df
 
 
-def dataset_test_to_dataframe(dataset):
+def dataset_test_to_dataframe(dataset, y):
     images = []
     labels = []
     for img, label in dataset:
-        if label == 0:
+        if label == y:
             # 将图像展平为一维向量
             images.append(img.view(-1).numpy())
             labels.append(0)
-        elif label == 1:
+        else:
             images.append(img.view(-1).numpy())
             labels.append(1)
     # 将图像和标签转换为DataFrame
@@ -54,7 +56,8 @@ def dataset_test_to_dataframe(dataset):
     df['is_anomaly'] = labels
     return df
 
-
+dataset_name = 'MNIST_nonorm'
+y = 9
 # 定义数据预处理（如归一化）
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -66,17 +69,19 @@ train_dataset = datasets.MNIST(root=os.path.join(path_project, 'data/MNIST'), tr
 test_dataset = datasets.MNIST(root=os.path.join(path_project, 'data/MNIST'), train=False, download=True,
                               transform=transform)
 # 转换训练集和测试集
-train_df = dataset_to_dataframe(train_dataset)
-# train_df = dataset_train_to_dataframe(train_dataset)
-# test_df = dataset_test_to_dataframe(test_dataset)
+# train_df = dataset_to_dataframe(train_dataset)
+train_df = dataset_train_to_dataframe(train_dataset, y)
+test_df = dataset_test_to_dataframe(test_dataset, y)
 # 保存为CSV文件
-train_csv_path = os.path.join(path_project, 'data/MNIST_all_nonorm/mnist.train.csv')
-# test_csv_path = os.path.join(path_project, 'data/MNIST/mnist.test.csv')
+output_dir = os.path.join(path_project, f'data/{dataset_name}_{str(y)}')
+os.makedirs(output_dir, exist_ok=True)
+train_csv_path = os.path.join(path_project, output_dir, f'mnist.train.csv')
+test_csv_path = os.path.join(path_project, output_dir, f'mnist.test.csv')
 
 train_df.to_csv(train_csv_path, index=True)
-# test_df.to_csv(test_csv_path, index=True)
+test_df.to_csv(test_csv_path, index=True)
 print(f"训练集已保存到 {train_csv_path}")
-# print(f"测试集已保存到 {test_csv_path}")
+print(f"测试集已保存到 {test_csv_path}")
 
 
 num_generate = 15
@@ -101,5 +106,7 @@ plt.tight_layout()
 # plt.show()
 
 # 保存成一张图像
-plt.savefig(os.path.join(path_project, 'MNIST_all_dataset/plots/origin.png'))
+plt_dir = os.path.join(path_project, f'{dataset_name}_dataset/plots/{str(y)}')
+os.makedirs(plt_dir, exist_ok=True)
+plt.savefig(os.path.join(plt_dir, f'origin.png'))
 

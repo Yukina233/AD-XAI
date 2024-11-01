@@ -17,7 +17,7 @@ from glob import glob
 path_project = '/media/test/d/Yukina/AD-XAI_data'
 
 # Create the dataset
-root_dir = os.path.join(path_project, 'data/MNIST_all_nonorm/yukina_data')
+root_dir = os.path.join(path_project, 'data/MNIST_nonorm_9/yukina_data')
 
 
 # Save as NPY
