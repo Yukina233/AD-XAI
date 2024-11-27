@@ -5,7 +5,7 @@ import pandas as pd
 
 # from combine_epoch_result import combine_epoch_results
 
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/media/test/d/Yukina/AD-XAI'
 
 
 def combine_seed_results(base_dir, prefix):

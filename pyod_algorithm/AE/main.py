@@ -112,10 +112,10 @@ def run_1_by_1(seed=0, input_path='', path_results='', epoch_num=10):
 
     print('Results saved.')
 
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/media/test/d/Yukina/AD-XAI'
 
 if __name__ == '__main__':
-    suffix = 'window=20, step=1'
+    suffix = 'window=20, step=1, norm'
     dataset_name = 'SWAT'
     epoch_num = 10
 

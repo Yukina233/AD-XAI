@@ -4,7 +4,7 @@ import cmath
 import numpy as np
 import pandas as pd
 
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/media/test/d/Yukina/AD-XAI'
 
 def combine_epoch_results(base_dir):
     # 创建一个空的DataFrame来保存所有结果

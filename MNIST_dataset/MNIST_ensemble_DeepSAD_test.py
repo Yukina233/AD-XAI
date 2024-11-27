@@ -16,7 +16,7 @@ from adbench_modified.myutils import Utils
 from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 from adbench_modified.run import RunPipeline
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
-from scripts.group_result_ensemble import group_results
+from GHL_dataset.scripts.group_result_ensemble import group_results
 # from scripts.combine_seed_result import combine_seed_results
 # from scripts.combine_epoch_result import combine_epoch_results
 
@@ -37,15 +37,15 @@ def ensemble_test(model_name, K):
     seed = 0
     n_samples_threshold = 0
 
-    iterations = range(0, 20)
+    iterations = range(0, 11)
 
     for iteration in iterations:
         print(f"Start iteration {iteration}")
-        test_set_name = 'GHL'
+        test_set_name = 'MNIST'
         model_path = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
         train_data_path = os.path.join(path_project,
-                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10/init/K={K}')
-        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=100, step=10')
+                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=1, step=1/init/K={K}')
+        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=1, step=1')
         output_path = os.path.join(path_project,
                                    f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
@@ -84,9 +84,7 @@ def ensemble_test(model_name, K):
         score_ensemble_list = []
         y_list = []
         # 遍历所有数据集文件
-        for test_set in tqdm(os.listdir(test_data_path), desc='Total progress'):
-            if test_set.startswith('train'):
-                continue
+        for test_set in tqdm(os.listdir(test_data_path)[1:], desc='Total progress'):
             base_name = os.path.basename(test_set).replace('.npz', '')
             # 创建结果文件夹路径
 

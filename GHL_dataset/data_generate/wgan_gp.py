@@ -61,6 +61,9 @@ class Discriminator(nn.Module):
             nn.Linear(512, 256),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(256, 1),
+            # nn.Linear(int(np.prod(self.img_shape)), 256),
+            # nn.LeakyReLU(0.2, inplace=True),
+            # nn.Linear(256, 1),
         )
 
     def forward(self, img):
@@ -106,7 +109,7 @@ class Adversarial_Generator:
         self.generator = Generator(self.latent_dim, self.img_shape)
         self.discriminator = Discriminator(self.img_shape)
         self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=self.lr, betas=(self.b1, self.b2))
-        self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr, betas=(self.b1, self.b2))
+        self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=self.lr/10, betas=(self.b1, self.b2))
 
         cuda = True if torch.cuda.is_available() else False
         if cuda:
@@ -279,6 +282,128 @@ class Adversarial_Generator:
             plt.close()
 
         return scores
+
+    def train_origin(self, dataloader):
+        loss_gen = []
+        loss_dis = []
+
+        # 分别记录生成器的两部分loss
+        loss_gen_adv = []
+        loss_gen_var_ensemble = []
+        loss_gen_mean_ensemble = []
+        loss_gen_pull_away = []
+        loss_dis_wass = []
+        loss_dis_gp = []
+        batches_done = 0
+        for epoch in range(self.pre_epochs):
+            loss_gen_batch = []
+            loss_dis_batch = []
+
+            # 分别记录生成器的两部分loss
+            loss_gen_adv_batch = []
+            loss_gen_var_ensemble_batch = []
+            loss_gen_mean_ensemble_batch = []
+            loss_gen_pull_away_batch = []
+            loss_dis_wass_batch = []
+            loss_dis_gp_batch = []
+
+            for i, (samples, _) in enumerate(dataloader):
+
+                # Configure input
+                real_samples = Variable(samples.type(self.Tensor))
+
+                # ---------------------
+                #  Train Discriminator
+                # ---------------------
+
+                self.optimizer_D.zero_grad()
+
+                # Sample noise as generator input
+                z = Variable(self.Tensor(np.random.normal(0, 1, (samples.shape[0], self.latent_dim))))
+
+                # Generate a batch of images
+                gen_samples = self.generator(z)
+
+                # Real images
+                real_validity = self.discriminator(real_samples)
+                # Fake images
+                fake_validity = self.discriminator(gen_samples)
+                # Gradient penalty
+                gradient_penalty = self.compute_gradient_penalty(self.discriminator, real_samples.data,
+                                                                 gen_samples.data)
+                # Adversarial loss
+                wassestein_distance = torch.mean(real_validity) - torch.mean(fake_validity)
+                d_loss = -wassestein_distance + self.lambda_gp * gradient_penalty
+
+                d_loss.backward()
+                self.optimizer_D.step()
+
+                self.optimizer_G.zero_grad()
+
+                # Train the generator every n_critic steps
+                if i % self.n_critic == 0:
+                    # -----------------
+                    #  Train Generator
+                    # -----------------
+
+                    # Generate a batch of images
+                    gen_samples = self.generator(z)
+                    # Loss measures generator's ability to fool the discriminator
+                    # Train on fake images
+                    fake_validity = self.discriminator(gen_samples)
+                    adv_loss = -torch.mean(fake_validity)
+
+                    var_ensemble_loss, mean_ensemble_loss = self.calculate_regular_loss(X=gen_samples, tau1=self.tau1)
+                    var_ensemble_loss = torch.mean(var_ensemble_loss)
+                    mean_ensemble_loss = torch.mean(mean_ensemble_loss)
+
+                    pull_away_loss = self.calculate_pull_away_loss(gen_samples)
+
+                    g_loss = adv_loss
+
+                    g_loss.backward()
+                    self.optimizer_G.step()
+
+                    batches_done += self.n_critic
+
+                    if i % 70 == 0:
+                        print(
+                            "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f] [adv loss: %f] [var loss: %f] [mean loss: %f] [pull away loss: %f] [Wass: %f] [GP: %f]"
+                            % (epoch, self.n_epochs, i, len(dataloader), d_loss.item(), g_loss.item(), adv_loss.item(),
+                               var_ensemble_loss.item(), mean_ensemble_loss.item(), pull_away_loss.item(),
+                               wassestein_distance.item(), gradient_penalty.item()
+                               ))
+
+                    loss_gen_batch.append(g_loss.item())
+                    loss_dis_batch.append(d_loss.item())
+                    loss_gen_adv_batch.append(adv_loss.item())
+                    loss_gen_var_ensemble_batch.append(var_ensemble_loss.item())
+                    loss_gen_mean_ensemble_batch.append(mean_ensemble_loss.item())
+                    loss_gen_pull_away_batch.append(pull_away_loss.item())
+                    loss_dis_wass_batch.append(wassestein_distance.item())
+                    loss_dis_gp_batch.append(gradient_penalty.item())
+
+            loss_gen.append(np.mean(loss_gen_batch))
+            loss_dis.append(np.mean(loss_dis_batch))
+            loss_gen_adv.append(np.mean(loss_gen_adv_batch))
+            loss_gen_var_ensemble.append(np.mean(loss_gen_var_ensemble_batch))
+            loss_gen_mean_ensemble.append(np.mean(loss_gen_mean_ensemble_batch))
+            loss_gen_pull_away.append(np.mean(loss_gen_pull_away_batch))
+            loss_dis_wass.append(np.mean(loss_dis_wass_batch))
+            loss_dis_gp.append(np.mean(loss_dis_gp_batch))
+
+        loss_train = {
+            'loss_gen': np.array(loss_gen),
+            'loss_dis': np.array(loss_dis),
+            'loss_gen_adv': np.array(loss_gen_adv),
+            'loss_gen_entropy': np.array(loss_gen_var_ensemble),
+            'loss_gen_mean_ensemble': np.array(loss_gen_mean_ensemble),
+            'loss_gen_pull_away': np.array(loss_gen_pull_away),
+            'loss_dis_wass': np.array(loss_dis_wass),
+            'loss_dis_gp': np.array(loss_dis_gp)
+        }
+
+        return loss_train
 
     def train(self, dataloader):
         loss_gen = []

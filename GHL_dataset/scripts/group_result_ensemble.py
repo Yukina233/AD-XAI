@@ -4,7 +4,7 @@ import cmath
 import numpy as np
 import pandas as pd
 
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/media/test/d/Yukina/AD-XAI'
 
 
 #  单独输出每个类的结果
@@ -71,12 +71,12 @@ def group_results(base_dir):
         for i in range(0, metrics.__len__()):
             df_result[metrics[i]] = scores[i]
 
-        precisions.append(df_result['precision'])
-        recalls.append(df_result['recall'])
+        # precisions.append(df_result['precision'])
+        # recalls.append(df_result['recall'])
         AUCROCs.append(df_result['aucroc'])
         AUCPRs.append(df_result['aucpr'])
-        FDR_at_thresholds.append(df_result['FDR_at_threshold'])
-        FAR_at_thresholds.append(df_result['FAR_at_threshold'])
+        # FDR_at_thresholds.append(df_result['FDR_at_threshold'])
+        # FAR_at_thresholds.append(df_result['FAR_at_threshold'])
 
         classes_output.append(fault)
         precision_output.append(np.mean(precisions) * 100)
@@ -95,9 +95,14 @@ def group_results(base_dir):
     FAR_at_threshold_output.append(np.mean(FAR_at_threshold_output))
 
     df_output = pd.DataFrame(
-        data={'class': classes_output, 'AUCROC': AUCROC_output,
-              'AUCPR': AUCPR_output, 'precision': precision_output, 'recall': recall_output, 'FDR_at_threshold': FDR_at_threshold_output,
-              'FAR_at_threshold': FAR_at_threshold_output})
+        data={'class': classes_output,
+              'AUCROC': AUCROC_output,
+              'AUCPR': AUCPR_output,
+              # 'precision': precision_output,
+              # 'recall': recall_output,
+              # 'FDR_at_threshold': FDR_at_threshold_output,
+              # 'FAR_at_threshold': FAR_at_threshold_output
+              })
     df_output.to_csv(os.path.join(base_dir, f'FDR_FAR_AUCROC_AUCPR_ensemble-{suffix}_grouped.csv'), index=False)
 
     print("Group results finished!")
