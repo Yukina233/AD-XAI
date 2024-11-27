@@ -299,7 +299,7 @@ def draw_cd_diagram(df_perf=None, alpha=0.05, title=None, labels=False):
         }
     # if title:
     #     plt.title(title,fontdict=font, y=0.9, x=0.5)
-    plt.savefig(os.path.join(path_project, f'plot/results/cd-diagram-{title}.png'),bbox_inches='tight')
+    plt.savefig(os.path.join(path_project, f'plot/results/cd-diagram-{title}.jpg'), dpi=330, format='jpg', bbox_inches='tight')
 
 def wilcoxon_holm(alpha=0.05, df_perf=None):
     """

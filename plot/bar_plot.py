@@ -1,23 +1,29 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
+
+path_project = '/home/yukina/Missile_Fault_Detection/project'
+output_path = os.path.join(path_project, 'plot/results')
+os.makedirs(output_path, exist_ok=True)
 
 # 数据
 datasets = ("AUROC", "AUPR")
 means = {
     'DeepSAD': (52.37, 0.68),
     'Ensemble DeepSAD': (71.84, 1.23),
-    'EGD-SAD without Mean Loss': (77.28, 1.47),
-    'EGD-SAD without Consistency Loss': (72.01, 1.36),
-    'EGD-SAD': (81.09, 1.62)
+    'BAEM without Anomaly Score': (77.28, 1.47),
+    'BAEM without Uncertainty': (72.01, 1.36),
+    'BAEM': (81.09, 1.62)
 }
 
 # 错误数据
 errors = {
     'DeepSAD': (7.56, 0.12),
     'Ensemble DeepSAD': (4.92, 0.26),
-    'EGD-SAD without Mean Loss': (3.26, 0.16),
-    'EGD-SAD without Consistency Loss': (8.24, 0.16),
-    'EGD-SAD': (0.06, 0.01)
+    'BAEM without Anomaly Score': (3.26, 0.16),
+    'BAEM without Uncertainty': (8.24, 0.16),
+    'BAEM': (0.06, 0.01)
 }
 
 # 颜色
@@ -54,6 +60,7 @@ ax.tick_params(axis='y', labelsize=tick_fontsize)  # 设置y轴刻度字体大�
 ax.legend(loc='upper right', ncols=1, fontsize=legend_fontsize)  # 图例字体大小
 ax.set_ylim(0, 105)  # 调整y轴范围以适应误差线
 
+plt.savefig(os.path.join(output_path, 'bar_plot_1.jpg'), dpi=330, format='jpg')
 plt.show()
 plt.cla()
 
@@ -62,18 +69,18 @@ datasets = ("AUROC", "AUPR")
 means = {
     'DeepSAD': (74.59, 5.77),
     'Ensemble DeepSAD': (86.69, 12.18),
-    'EGD-SAD without Mean Loss': (91.85, 10.11),
-    'EGD-SAD without Consistency Loss': (83.26, 9.71),
-    'EGD-SAD': (93.52, 12.46)
+    'BAEM without Anomaly Score': (91.85, 10.11),
+    'BAEM without Uncertainty': (83.26, 9.71),
+    'BAEM': (93.52, 12.46)
 }
 
 # 错误数据
 errors = {
     'DeepSAD': (7.49, 2.95),
     'Ensemble DeepSAD': (10.68, 7.50),
-    'EGD-SAD without Mean Loss': (4.65, 8.68),
-    'EGD-SAD without Consistency Loss': (8.20, 5.60),
-    'EGD-SAD': (1.94, 5.06)
+    'BAEM without Anomaly Score': (4.65, 8.68),
+    'BAEM without Uncertainty': (8.20, 5.60),
+    'BAEM': (1.94, 5.06)
 }
 
 # 颜色
@@ -106,5 +113,6 @@ ax.tick_params(axis='y', labelsize=tick_fontsize)  # 设置y轴刻度字体大�
 ax.legend(loc='upper right', ncols=1, fontsize=legend_fontsize)  # 图例字体大小
 ax.set_ylim(0, 105)  # 调整y轴范围以适应误差线
 
+plt.savefig(os.path.join(output_path, 'bar_plot_2.jpg'), dpi=330, format='jpg')
 plt.show()
 plt.cla()
