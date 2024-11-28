@@ -1,7 +1,11 @@
+import os
+
 import matplotlib.pyplot as plt
 
 
+path_project = '/home/yukina/Missile_Fault_Detection/project'
 
+output_dir = os.path.join(path_project, 'plot/results')
 plt.cla()
 
 x_values = [1, 5, 10, 15, 20, 25, 30]
@@ -22,7 +26,30 @@ plt.ylabel('AUROC(%)')
 plt.ylim(70, 100)
 plt.tight_layout()
 # 显示图表
-plt.show()
+plt.savefig(os.path.join(output_dir, 'alpha.jpg'), dpi=330, format='jpg')
+plt.cla()
+
+x_values = [0, 0.1, 1, 5, 10, 20, 25]
+y_values1 = [58.98, 55.84, 60.63, 71.67, 69.46, 75.85, 73.59]
+
+# 创建折线图
+plt.figure(figsize=(14, 5))
+plt.rcParams['font.family'] = 'Times New Roman'
+ax = plt.gca()  # 获取当前的坐标轴
+plt.plot(range(len(x_values)), y_values1, label="SWAT Dataset", marker='o', color='#1e488f', linestyle='-', linewidth=2)
+# plt.plot(range(len(x_values)), y_values2, label="SWAT Dataset-AUPR", marker='o', color='#1e488f', linestyle='--', linewidth=2)
+# plt.plot(range(len(x_values)), y_values4, label="TLM Dataset-AUPR", marker='s', color='green', linestyle='--', linewidth=2)
+plt.xticks(ticks=range(len(x_values)), labels=x_values)
+plt.xlabel(r"Weight of Uncertainty Term $\beta$", fontsize=16, weight='bold')
+plt.ylabel('AUROC(%)', fontsize=16, weight='bold')
+plt.ylim(50, 100)
+ax.spines['top'].set_visible(False)   # 隐藏上边框
+ax.spines['right'].set_visible(False) # 隐藏右边框
+plt.tight_layout()
+
+
+# 显示图表
+plt.savefig(os.path.join(output_dir, 'beta.jpg'), dpi=330, format='jpg')
 plt.cla()
 
 x_values = [5, 7, 9, 11, 13, 15]
