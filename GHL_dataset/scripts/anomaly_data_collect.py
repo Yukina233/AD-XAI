@@ -20,5 +20,5 @@ for dataset_name in os.listdir(test_data_path):
     all_anomaly_data.append(anomaly_data)
 
 all_anomaly_data = np.concatenate(all_anomaly_data)
-np.savez(os.path.join(test_data_path, 'all_anomally_data'), X=all_anomaly_data)
+np.savez(os.path.join(test_data_path, 'all_anomally_data'), X=[], y=[], X_train=[], y_train=[], X_test=all_anomaly_data, y_test=np.ones(all_anomaly_data.shape[0]))
 
