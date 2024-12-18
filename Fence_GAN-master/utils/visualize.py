@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import auc, precision_recall_curve, roc_curve
+from sklearn.metrics import auc, precision_recall_curve, roc_curve, average_precision_score
+
 
 def deprocess(x):
     x = (x+1)/2 * 255
@@ -39,8 +40,9 @@ def compute_au(D, G, GAN, x_val, y_val, x_test, y_test, mode):
         val_prc = 0
         ###TEST
         y_pred_test = np.squeeze(D.predict(x_test))
-        precision, recall, _ = precision_recall_curve(y_test, y_pred_test)
-        test_prc = auc(recall, precision)
+        # precision, recall, _ = precision_recall_curve(y_test, y_pred_test)
+        # test_prc = auc(recall, precision)
+        test_prc = average_precision_score(y_true=y_test, y_score=y_pred_test, pos_label=0)
     
         return val_prc, test_prc
     

@@ -13,6 +13,7 @@ import os
 from glob import glob
 
 # 针对故障检测数据集，构建训练集和测试集用于DeepSAD
+# path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 path_project = '/media/test/d/Yukina/AD-XAI_data'
 
 

@@ -105,6 +105,7 @@ if __name__ == '__main__':
         # 训练对抗样本生成器
         print("Train Adversarial Generator")
         path_detector = os.path.join(config.dir_model, f'{iteration}')
+
         config.GAN_config["path_detector"] = path_detector
         ad_g = Adversarial_Generator(config=config.GAN_config)
 

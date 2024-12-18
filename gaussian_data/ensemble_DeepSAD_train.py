@@ -19,14 +19,14 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     train_set_name = 'gaussian'
     parser.add_argument("--seed", type=int, default=0, help="seed")
     parser.add_argument("--K", type=int, default=2, help="number of sub-models")
-    parser.add_argument("--n_epochs", type=int, default=2, help="number of epochs of overall training")
+    parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of overall training")
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
 
@@ -36,15 +36,15 @@ if __name__ == '__main__':
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'gaussian_data/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 20,
+        "n_epochs": 1,
         "ae_n_epochs": 20,
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "latent_dim": 100,
+        "latent_dim": 2,
         "batch_size": 400,
-        "n_epochs": 100,
-        "lr": 0.002,
+        "n_epochs": 1,
+        "lr": 0.0002,
         "lam1": 0,
         "lam2": 0,
         "lam3": 0,

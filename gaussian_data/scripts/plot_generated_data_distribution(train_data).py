@@ -22,13 +22,13 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 iterations = [0]
 
 for iteration in iterations:
     test_set_name = 'gaussian'
-    model_name = 'GAN, pos=4, no_tau2_K=2,deepsad_epoch=20,gan_epoch=100,lam1=0,lam2=0,lam3=0,tau1=1,latent_dim=2, betterG1D2'
+    model_name = 'GAN, pos=4, no_tau2_K=2,deepsad_epoch=20,gan_epoch=100,lam1=0,lam2=0,lam3=0,tau1=1,latent_dim=2, betterG1D2,lr=0.0002'
     output_dir = os.path.join(path_project, f'gaussian_data/log/{test_set_name}/train_result', model_name)
 
     train_new_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data', 'augment', model_name)
@@ -162,12 +162,12 @@ for iteration in iterations:
 
         # 设置标题和轴范围
         # ax.set_title('Visualization of normal data and generated anomaly data')
-        ax.set_xlim([-0.2, 1.3])
-        ax.set_ylim([-0.2, 1.3])
-
-        # 设置 x 轴和 y 轴的刻度位置，从而控制网格线之间的间距
-        ax.set_xticks(np.arange(-0.2, 1.3, 0.5))
-        ax.set_yticks(np.arange(-0.2, 1.3, 0.5))
+        # ax.set_xlim([-0.2, 1.3])
+        # ax.set_ylim([-0.2, 1.3])
+        #
+        # # 设置 x 轴和 y 轴的刻度位置，从而控制网格线之间的间距
+        # ax.set_xticks(np.arange(-0.2, 1.3, 0.5))
+        # ax.set_yticks(np.arange(-0.2, 1.3, 0.5))
 
         # 隐藏刻度线和刻度标签
         ax.tick_params(axis='x', which='both', length=0)

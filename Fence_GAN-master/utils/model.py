@@ -179,6 +179,10 @@ def get_others_model(args):
     # 构建判别器
     D_in = Input(shape=args.img_shape)
     x = Flatten()(D_in)
+
+    x = Dense(1024, kernel_initializer=init_kernel)(x)
+    x = LeakyReLU(alpha=0.2)(x)
+
     x = Dense(512, kernel_initializer=init_kernel)(x)
     x = LeakyReLU(alpha=0.2)(x)
 

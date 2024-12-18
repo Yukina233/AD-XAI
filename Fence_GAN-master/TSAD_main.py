@@ -9,6 +9,7 @@ from pyod.models.auto_encoder import AutoEncoder
 import argparse
 from fgan import FGAN
 
+
 def load_data(dataInput):
     df = pd.read_csv(dataInput)
     data = df.iloc[:, 1:-1].values
@@ -26,21 +27,25 @@ def run(input_path='', path_results='', args=None):
         print(f"Train file {id}: {file}")
         train_data, train_labels = load_data(file)
         test_data, test_labels = load_data(test_files[0])
+        test_labels = 1 - test_labels
         clf = FGAN(args)
         clf.fit(train_data, train_labels, test_data, test_labels)
+        generated_data = clf.G.predict(np.random.normal(0, 1, [1000, latent_dim]))
+        np.savez(os.path.join(path_results, f'{seed}/generated_data_{id}.npz'), X=generated_data)
 
     auc_roc_list = []
     auc_pr_list = []
     for id, file in enumerate(test_files):
         print(f"Test file {id}: {file}")
         data, labels = load_data(file)
+        labels = 1 - labels
 
         scores = clf.decision_function(data)  # Outlier scores for test data
         scores.tofile(os.path.join(path_results, f"{seed}/scores/anomaly_scores-{id}.csv"), sep="\n")
 
         # 计算AUC-ROC和AUC-PR
         auc_roc = roc_auc_score(labels, scores)
-        auc_pr = average_precision_score(labels, scores)
+        auc_pr = average_precision_score(labels, scores, pos_label=0)
 
         auc_roc_list.append(auc_roc)
         auc_pr_list.append(auc_pr)
@@ -62,6 +67,7 @@ def run(input_path='', path_results='', args=None):
 
     print('Results saved.')
 
+
 def run_1_by_1(input_path='', path_results='', args=None):
     train_files = glob(os.path.join(input_path, '*train.csv'))
     test_files = glob(os.path.join(input_path, '*test.csv'))
@@ -76,12 +82,15 @@ def run_1_by_1(input_path='', path_results='', args=None):
         print(f"Train file {id}: {file}")
         train_data, train_labels = load_data(file)
         test_data, test_labels = load_data(test_files[0])
+        test_labels = 1 - test_labels
+
         clf = FGAN(args)
         clf.fit(train_data, train_labels, test_data, test_labels)
 
         file = test_files[id]
         print(f"Test file {id}: {file}")
         data, labels = load_data(file)
+        labels = 1 - labels
 
         scores = clf.decision_function(data)  # Outlier scores for test data
         scores.tofile(os.path.join(path_results, f"{seed}/scores/anomaly_scores-{id}.csv"), sep="\n")
@@ -113,20 +122,49 @@ def run_1_by_1(input_path='', path_results='', args=None):
 
     print('Results saved.')
 
+
 path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
+
+def get_dataset_config(dataset_name):
+    if dataset_name == 'Metro':
+        img_shape = 5
+        latent_dim = 5
+        suffix = 'window=1, step=1'
+
+    elif dataset_name == 'SMD_group4':
+        img_shape = 180
+        latent_dim = 200
+        suffix = 'window=100, step=10'
+    elif dataset_name == 'SWAT':
+        img_shape = 255
+        latent_dim = 200
+        suffix = 'window=20, step=1'
+    elif dataset_name == 'GHL':
+        img_shape = 80
+        latent_dim = 80
+        suffix = 'window=100, step=10'
+    elif dataset_name == 'TLM-RATE':
+        img_shape = 48
+        latent_dim = 48
+        suffix = 'window=10, step=2'
+    else:
+        return None, None
+    return img_shape, latent_dim, suffix
+
+
 if __name__ == '__main__':
-    suffix = 'window=20, step=1'
-    dataset_name = 'SWAT'
-    alpha = 0.01
-    epochs = 50
-    gamma = 0.5
+    dataset_name = 'TLM-RATE'
+    img_shape, latent_dim, suffix = get_dataset_config(dataset_name)
+    alpha = 0.1
+    epochs = 20
+    gamma = 3
+    pretrain = 1
 
     path_data = os.path.join(path_project, f'data/{dataset_name}/csv/{suffix}')
+    prefix = f'alpha={alpha},epochs={epochs},gamma={gamma},pretrain={pretrain}'
     path_results = os.path.join(path_project,
-                                f'Fence_GAN-master/results/{dataset_name}/{suffix}/alpha={alpha},epochs={epochs},gamma={gamma}')
-
-
+                                f'Fence_GAN-master/results/{dataset_name}/{suffix}', prefix)
 
     all_scores = []
     AUCROC_seed = []
@@ -146,19 +184,18 @@ if __name__ == '__main__':
 
         ###Other hyperparameters
         args = parser.add_argument('--batch_size', type=int, default=200, help='')
-        args = parser.add_argument('--pretrain', type=int, default=15, help='number of pretrain epoch')
+        args = parser.add_argument('--pretrain', type=int, default=pretrain, help='number of pretrain epoch')
         args = parser.add_argument('--d_l2', type=float, default=0, help='L2 Regularizer for Discriminator')
         args = parser.add_argument('--d_lr', type=float, default=1e-5, help='learning_rate of discriminator')
         args = parser.add_argument('--g_lr', type=float, default=2e-5, help='learning rate of generator')
-        args = parser.add_argument('--v_freq', type=int, default=4, help='epoch frequency to evaluate performance')
+        args = parser.add_argument('--v_freq', type=int, default=1, help='epoch frequency to evaluate performance')
         args = parser.add_argument('--seed', type=int, default=seed, help='numpy and tensorflow seed')
         args = parser.add_argument('--evaluation', type=str, default='auprc', help="'auprc' or 'auroc'")
-        args = parser.add_argument('--latent_dim', type=int, default=200,
+        args = parser.add_argument('--latent_dim', type=int, default=latent_dim,
                                    help='Latent dimension of Gaussian noise input to Generator')
-        args = parser.add_argument('--img_shape', type=int, default=255)
+        args = parser.add_argument('--img_shape', type=int, default=img_shape)
 
         args = parser.parse_args()
-
 
         if dataset_name == 'SMD':
             run_1_by_1(path_data, path_results, args)
@@ -192,3 +229,5 @@ if __name__ == '__main__':
     result = pd.concat([result, mean_row])
 
     result.to_csv(os.path.join(path_results, 'results.csv'), index=True)
+
+    print(prefix)

@@ -27,7 +27,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 gan_config = {
     "seed": 0,
-    "latent_dim": 5,
+    "latent_dim": 48,
     "lr": 0.005,
     "clip_value": 0.01,
     "lambda_gp": 10000,
@@ -36,31 +36,31 @@ gan_config = {
     "lam2": 2.5,
     "lam3": 0,
     "tau1": 1,
-    "img_size": 5
+    "img_size": 48
 }
 
 tsne_config = {
     'perplexity': 10
 }
-iterations = [0]
+iterations = [70]
 # plot时是否考虑聚类标签
 use_train_cluster_label = False
 # 随机抽取的样本数
-num_samples = 500
+num_samples = 100
 
-np.random.seed(1)
+np.random.seed(0)
 for iteration in iterations:
     print(f"Start iteration {iteration}")
-    test_set_name = 'Metro'
-    model_name = 'GAN1_continue, window=1, step=1, no_tau2_K=7,deepsad_epoch=1,gan_epoch=1,lam1=0,lam2=0,lam3=0,latent_dim=5,lr=0.002,seed=3'
+    test_set_name = 'TLM-RATE'
+    model_name = 'WGAN-GP, euc, window=10, step=2, no_tau2_K=7,deepsad_ae_epoch=10,deepsad_epoch=1,gan_epoch=1,lam1=25,lam2=2.5,alpha=1,latent_dim=48,lr=0.005,clip_value=0.01,lambda_gp=10000,seed=0'
     output_dir = os.path.join(path_project, f'{test_set_name}_dataset/plot', model_name)
 
-    train_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data, window=1, step=1',
+    train_dir = os.path.join(path_project, f'data/{test_set_name}/yukina_data/ensemble_data, window=10, step=2',
                              'init', 'K=7')
 
     model_dir = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble', model_name, f'{iteration}')
 
-    test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=1, step=1')
+    test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=10, step=2')
 
     for dataset_name in os.listdir(test_data_path):
         if not dataset_name.startswith('test'):
@@ -71,7 +71,7 @@ for iteration in iterations:
 
         generator = Adversarial_Generator(config=gan_config)
         generator.load_model(model_dir)
-        generated_data = generator.sample_generate(num=int(num_samples*1))
+        generated_data = generator.sample_generate(num=int(num_samples*2))
         generated_data = generated_data.detach().cpu().numpy().squeeze(1)
 
         np.savez(os.path.join(path_plot, f'generated_data_{iteration}.npz'), X=generated_data)
@@ -118,7 +118,7 @@ for iteration in iterations:
             sampled_train_data.append(train_data[np.random.choice(range(0, train_data.shape[0]), num_samples, replace=True)])
 
         init_train_data = np.concatenate(init_train_data)
-        sampled_init_train_data = init_train_data[np.random.choice(range(0, init_train_data.shape[0]), num_samples*1, replace=True)]
+        sampled_init_train_data = init_train_data[np.random.choice(range(0, init_train_data.shape[0]), num_samples*5, replace=True)]
 
         # X_plot = np.concatenate((sampled_normal, np.concatenate(fault_data)))
         # y_plot = np.concatenate((np.zeros(num_samples), np.concatenate([np.ones(num_samples) * (id + 1) for id, fault in enumerate(fault_data)])))
@@ -146,7 +146,7 @@ for iteration in iterations:
         else:
             # 不区分训练数据的聚类标签
             X_plot = np.concatenate((sampled_init_train_data, sampled_anomaly))
-            y_plot = np.concatenate((np.ones(num_samples*1), -np.ones(num_samples)))
+            y_plot = np.concatenate((np.ones(num_samples*5), -np.ones(num_samples)))
 
         sampled_generated = generated_data
 
@@ -161,7 +161,7 @@ for iteration in iterations:
         # X_2d = umap_model.fit_transform(X_train)
 
         # tsne1 = TSNE(n_components=2, random_state=0, perplexity=tsne_config['perplexity'])  # n_components表示目标维度
-        tsne1 = MDS(n_components=2, random_state=0)
+        tsne1 = MDS(n_components=2, random_state=0, normalized_stress='auto')
         # tsne1 = Isomap(n_components=2, n_neighbors=10)
         # tsne1 = umap.UMAP(n_components=2, random_state=0)
 
@@ -216,7 +216,7 @@ for iteration in iterations:
 
         # 将故障数据一并打印
         # tsne2 = TSNE(n_components=2, random_state=0, perplexity=tsne_config['perplexity'])  # n_components表示目标维度
-        tsne2 = MDS(n_components=2, random_state=0)
+        tsne2 = MDS(n_components=2, random_state=0, normalized_stress='auto')
         # tsne2 = Isomap(n_components=2, n_neighbors=10)
         # tsne2 = umap.UMAP(n_components=2, random_state=0)
         # 创建MinMaxScaler对象

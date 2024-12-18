@@ -300,28 +300,28 @@ class Adversarial_Generator:
         # Normalize the features
         normalized_features = F.normalize(X, p=2, dim=1)
 
-        # # Calculate the cosine similarity matrix
-        # cosine_similarity = torch.mm(normalized_features, normalized_features.t())
-        #
-        # # Subtract the identity matrix to remove self-similarity
-        # identity_matrix = torch.eye(batch_size, device=X.device)
-        # cosine_similarity = cosine_similarity - identity_matrix
-        #
-        # # Calculate the pull-away term
-        # pull_away_term = torch.sum(cosine_similarity ** 2) / (batch_size * (batch_size - 1))
+        # Calculate the cosine similarity matrix
+        cosine_similarity = torch.mm(normalized_features, normalized_features.t())
 
-        # Calculate the Euclidean distance matrix
-        dist_matrix = torch.cdist(normalized_features, normalized_features, p=2)
-
-        # Subtract the identity matrix to remove self-similarity by setting diagonal to infinity
-        mask = torch.eye(batch_size, device=X.device).bool()
-        # dist_matrix = dist_matrix.masked_fill(mask, float('inf'))
-        dist_matrix = dist_matrix.masked_fill(mask, float(0))
+        # Subtract the identity matrix to remove self-similarity
+        identity_matrix = torch.eye(batch_size, device=X.device)
+        cosine_similarity = cosine_similarity - identity_matrix
 
         # Calculate the pull-away term
-        pull_away_term = torch.sum((dist_matrix ** 2)) / (batch_size * (batch_size - 1))
+        pull_away_term = torch.sum(cosine_similarity ** 2) / (batch_size * (batch_size - 1))
 
-        return - pull_away_term
+        # # Calculate the Euclidean distance matrix
+        # dist_matrix = torch.cdist(normalized_features, normalized_features, p=2)
+        #
+        # # Subtract the identity matrix to remove self-similarity by setting diagonal to infinity
+        # mask = torch.eye(batch_size, device=X.device).bool()
+        # # dist_matrix = dist_matrix.masked_fill(mask, float('inf'))
+        # dist_matrix = dist_matrix.masked_fill(mask, float(0))
+        #
+        # # Calculate the pull-away term
+        # pull_away_term = torch.sum((dist_matrix ** 2)) / (batch_size * (batch_size - 1))
+
+        return pull_away_term
 
     def calculate_entropy_test(self, X, tau=1):
         detectors = []

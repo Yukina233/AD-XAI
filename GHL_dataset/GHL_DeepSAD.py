@@ -21,7 +21,7 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 def metric(y_true, y_score, pos_label=1):
     aucroc = roc_auc_score(y_true=y_true, y_score=y_score)
@@ -31,30 +31,31 @@ def metric(y_true, y_score, pos_label=1):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'SWAT'
+    train_set_name = 'TLM-RATE'
+    suffix = 'window=10, step=2'
     parser.add_argument("--seed", type=int, default=3, help="seed")
     # parser.add_argument("--path_train_data", type=str,
     #                     default=os.path.join(path_project,
     #                                          f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10'))
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
-                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=20, step=1'))
+                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, {suffix}'))
     parser.add_argument("--path_test", type=str,
                         default=os.path.join(path_project,
-                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, window=20, step=1'))
+                                             f'data/{train_set_name}/yukina_data/DeepSAD_data, {suffix}'))
     parser.add_argument("--dir_model", type=str,
                         default=os.path.join(path_project, f'{train_set_name}_dataset/models/{train_set_name}/DeepSAD'))
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
-        "n_epochs": 5,
+        "n_epochs": 30,
         "ae_n_epochs": 20,
         "lr": 0.001,
         "ae_lr": 0.001,
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     config = parser.parse_args()
-    param_dir = f'fix_pretrain, net=Dense, std, window=20, step=1, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
+    param_dir = f'fix_pretrain, net=Dense, std, {suffix}, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
 

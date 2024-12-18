@@ -3,6 +3,7 @@ import os
 
 from tqdm import tqdm
 
+# path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 path_project = '/media/test/d/Yukina/AD-XAI'
 
 import pandas as pd
@@ -11,9 +12,9 @@ import numpy as np
 from glob import glob
 
 dataset_name = 'SWAT'
-data_path = os.path.join(path_project, f'data/{dataset_name}/yukina_data/DeepSAD_data, window=20, step=1, norm')
+data_path = os.path.join(path_project, f'data/{dataset_name}/yukina_data/DeepSAD_data, window=1, step=1, norm')
 
-output_path = os.path.join(path_project, f'data/{dataset_name}/csv/window=20, step=1, norm')
+output_path = os.path.join(path_project, f'data/{dataset_name}/csv/window=1, step=1, norm')
 os.makedirs(output_path, exist_ok=True)  # 创建结果文件夹
 
 train_data = np.load(os.path.join(data_path, 'train.npz'))

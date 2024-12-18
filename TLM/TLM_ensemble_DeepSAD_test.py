@@ -16,15 +16,15 @@ from adbench_modified.myutils import Utils
 from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 from adbench_modified.run import RunPipeline
 from adbench_modified.baseline.DeepSAD.src.run import DeepSAD
-from scripts.group_result_ensemble import group_results
+from GHL_dataset.scripts.group_result_ensemble import group_results
 # from scripts.combine_seed_result import combine_seed_results
 # from scripts.combine_epoch_result import combine_epoch_results
 
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/media/test/d/Yukina/AD-XAI_data'
-# path_project = '/home/yukina/Missile_Fault_Detection/project_data'
+# path_project = '/media/test/d/Yukina/AD-XAI_data'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 
 def metric(y_true, y_score, pos_label=1):
@@ -38,7 +38,7 @@ def ensemble_test(model_name, train_set_name, suffix):
     seed = 0
     n_samples_threshold = 0
 
-    iterations = range(0, 20)
+    iterations = range(0, 100)
 
     for iteration in iterations:
         print(f"Start iteration {iteration}")

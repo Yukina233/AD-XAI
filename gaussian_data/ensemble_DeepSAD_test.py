@@ -21,7 +21,7 @@ from scripts.group_result_ensemble import group_results
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 
 def metric(y_true, y_score, pos_label=1):

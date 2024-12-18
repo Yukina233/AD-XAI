@@ -4,7 +4,7 @@ import cmath
 import numpy as np
 import pandas as pd
 
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 
 #  单独输出每个类的结果

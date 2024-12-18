@@ -1,6 +1,7 @@
-import numpy as np
+import torch
 
-data_path = "/home/yukina/Missile_Fault_Detection/project/Anomaly-Transformer-main/data/SMD"
-data = np.load(data_path + "/SMD_train.npy")
-
-print(data.shape)
+print("Is CUDA available?:", torch.cuda.is_available())
+print("Number of GPUs:", torch.cuda.device_count())
+print("Current device index:", torch.cuda.current_device())
+if torch.cuda.is_available():
+    print("Device name:", torch.cuda.get_device_name(torch.cuda.current_device()))

@@ -25,22 +25,22 @@ datasets = ("Metro", "GHL")
 means = {
     'DeepSAD': (52.37, 74.59),
     'Ensemble DeepSAD': (71.84, 86.69),
-    'BAEM without Anomaly Score': (77.28, 91.85),
-    'BAEM without Uncertainty': (72.01, 83.26),
-    'BAEM': (81.09, 93.52)
+    'BAEM (w/o Anomaly Score Loss)': (77.28, 91.85),
+    'BAEM (w/o Uncertainty Loss)': (72.01, 83.26),
+    'BAEM (ours)': (81.09, 93.52)
 }
 
 # 错误数据
 errors = {
     'DeepSAD': (7.56, 7.49),
     'Ensemble DeepSAD': (4.92, 10.68),
-    'BAEM without Anomaly Score': (3.26, 4.65),
-    'BAEM without Uncertainty': (8.24, 8.20),
-    'BAEM': (0.06, 1.94)
+    'BAEM (w/o Anomaly Score Loss)': (3.26, 4.65),
+    'BAEM (w/o Uncertainty Loss)': (8.24, 8.20),
+    'BAEM (ours)': (0.06, 1.94)
 }
 
 # 颜色
-colors = ['#ae7181', '#e6daa6', 'darkseagreen', 'baby blue', 'slategrey']
+colors = ['#ae7181', '#e6daa6', 'darkseagreen', '#5a86ad', 'slategrey']
 # 花纹模式
 hatches = ['', '|', '+', 'x', '.']  # 每个条形的不同花纹
 # 花纹颜色（边框颜色）

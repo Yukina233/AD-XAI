@@ -34,21 +34,21 @@ def metric(y_true, y_score, pos_label=1):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    train_set_name = 'SMD'
-    parser.add_argument("--seed", type=int, default=2, help="seed")
+    train_set_name = 'SMD_group4'
+    parser.add_argument("--seed", type=int, default=3, help="seed")
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
                                              f'data/{train_set_name}/yukina_data/DeepSAD_data, window=100, step=10'))
     parser.add_argument("--dir_model", type=str,
                         default=None)
     parser.add_argument("--path_output", type=str,
-                        default=os.path.join(path_project, f'SMD_dataset/log/{train_set_name}/train_result'))
+                        default=os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=str, default='{\
         "n_epochs": 10,\
         "ae_n_epochs": 10,\
         "lr": 0.005,\
         "ae_lr": 0.01,\
-        "net_name": "Simple_Dense"\
+        "net_name": "Dense"\
     }', help="config of DeepSAD")
     config = parser.parse_args()
     if config.DeepSAD_config:
@@ -57,7 +57,7 @@ if __name__ == '__main__':
         except json.JSONDecodeError as e:
             parser.error(f"argument --DeepSAD_config: invalid JSON value: {e}")
 
-    param_dir = f'Simple_Dense, std, window=100, step=10, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}, seed={config.seed}'
+    param_dir = f'Dense, std, window=100, step=10, n_epochs={config.DeepSAD_config["n_epochs"]}, ae_n_epochs={config.DeepSAD_config["ae_n_epochs"]}, lr={config.DeepSAD_config["lr"]}, ae_lr={config.DeepSAD_config["ae_lr"]}, seed={config.seed}'
     config.path_output = os.path.join(config.path_output, param_dir)
 
 
@@ -79,7 +79,7 @@ if __name__ == '__main__':
                                                                      f'seed={seed}')
             os.makedirs(config.DeepSAD_config["loss_output_path"], exist_ok=True)
 
-            path_save = os.path.join(path_project, f'SMD_dataset/log/SMD/DeepSAD', param_dir,
+            path_save = os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/DeepSAD', param_dir,
                                      base_name, f'seed={seed}')
             os.makedirs(path_save, exist_ok=True)  # 创建结果文件夹
 
@@ -146,5 +146,5 @@ if __name__ == '__main__':
         np.save(os.path.join(path_score_output, f"scores_DeepSAD.npy"), np.array(scores_seed).mean(axis=0))
         np.save(os.path.join(path_score_output, f"labels_DeepSAD.npy"), np.array(ys).mean(axis=0))
 
-    group_results(os.path.join(path_project, f'SMD_dataset/log/SMD/DeepSAD', param_dir))
+    group_results(os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/DeepSAD', param_dir))
 

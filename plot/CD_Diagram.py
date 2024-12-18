@@ -232,7 +232,7 @@ def graph_ranks(avranks, names, p_values, cd=None, cdmethod=None, lowv=None, hig
             print('drawing: ', l, r)
 
     # draw_lines(lines)
-    start = cline + 0.2
+    start = cline + 0.1
     side = -0.02
     height = 0.1
 

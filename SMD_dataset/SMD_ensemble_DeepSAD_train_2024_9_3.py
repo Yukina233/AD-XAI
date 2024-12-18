@@ -67,7 +67,7 @@ def group_loss(loss_dir, iterations):
 
 
 if __name__ == '__main__':
-    train_set_name = 'SMD'
+    train_set_name = 'SMD_group4'
     for seed in range(3):
         parser = argparse.ArgumentParser()
         parser.add_argument("--seed", type=int, default=seed, help="seed")
@@ -84,19 +84,20 @@ if __name__ == '__main__':
                             default=os.path.join(path_project,
                                                  f'{train_set_name}_dataset/log/{train_set_name}/train_result'))
         parser.add_argument("--DeepSAD_config", type=dict, default={
-            "n_epochs": 1,
+            "n_epochs": 5,
             "ae_n_epochs": 20,
-            "net_name": 'Simple_Dense'
+            "net_name": 'Dense'
         }, help="config of DeepSAD")
         parser.add_argument("--GAN_config", type=dict, default={
             "seed": seed,
             "latent_dim": 180,
-            "lr": 0.0002,
+            "lr": 0.002,
             "clip_value": 0.01,
             "lambda_gp": 1000,
             "n_epochs": 1,
-            "lam1": 1000,
-            "lam2": 100,
+            "lam1": 10,
+            "lam2": 1,
+            "alpha": 1,
             "lam3": 0,
             "tau1": 1,
             "img_size": 180
@@ -105,7 +106,7 @@ if __name__ == '__main__':
         config = parser.parse_args()
 
         # 生成特定参数的文件夹
-        param_dir = f'{config.DeepSAD_config["net_name"]}, WGAN-GP, euc, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},clip_value={config.GAN_config["clip_value"]},lambda_gp={config.GAN_config["lambda_gp"]},seed={config.seed}'
+        param_dir = f'{config.DeepSAD_config["net_name"]}, WGAN-GP, euc, window=100, step=10, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},ae_epoch={config.DeepSAD_config["ae_n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},alpha={config.GAN_config["alpha"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},clip_value={config.GAN_config["clip_value"]},lambda_gp={config.GAN_config["lambda_gp"]},seed={config.seed}'
         config.dir_model = os.path.join(config.dir_model, param_dir)
         config.path_output = os.path.join(config.path_output, param_dir)
 
@@ -149,7 +150,7 @@ if __name__ == '__main__':
                         # 加载生成模型
                         generator = Adversarial_Generator(config=config.GAN_config, DeepSAD_config=config.DeepSAD_config)
                         generator.load_model(os.path.join(config.dir_model, f'{machine}', f'{iteration - 1}'))
-                        num_generate = data['y_train'].shape[0]
+                        num_generate = int(data['y_train'].shape[0] * config.GAN_config["alpha"])
                         gen_samples = generator.sample_generate(num=num_generate)
 
                         X_train = np.concatenate((data['X_train'], np.array(gen_samples.detach().cpu()).squeeze(1)))
@@ -193,7 +194,7 @@ if __name__ == '__main__':
                     ad_g.load_model(os.path.join(config.dir_model, f'{machine}', f'{iteration - 1}'))
                 train_dataset_GAN = torch.utils.data.TensorDataset(torch.Tensor(X_train_init), torch.Tensor(y_train_init))
                 train_dataloader_GAN = torch.utils.data.DataLoader(train_dataset_GAN, batch_size=ad_g.batch_size,
-                                                                   shuffle=True)
+                                                                   shuffle=True, drop_last=True)
                 loss_train = {
                     'iteration': np.array([iteration]),
                 }

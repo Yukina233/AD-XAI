@@ -20,42 +20,69 @@ from adversarial_ensemble_AD.data_generate.gan import Adversarial_Generator
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
+
+def get_dataset_config(dataset_name):
+    if dataset_name == 'Metro':
+        img_shape = 5
+        latent_dim = 5
+        suffix = 'window=1, step=1'
+
+    elif dataset_name == 'SMD_group4':
+        img_shape = 180
+        latent_dim = 50
+        suffix = 'window=100, step=10'
+    elif dataset_name == 'SWAT':
+        img_shape = 255
+        latent_dim = 200
+        suffix = 'window=20, step=1'
+    elif dataset_name == 'GHL':
+        img_shape = 80
+        latent_dim = 80
+        suffix = 'window=100, step=10'
+    elif dataset_name == 'TLM-RATE':
+        img_shape = 48
+        latent_dim = 48
+        suffix = 'window=10, step=2'
+    else:
+        return None, None
+    return img_shape, latent_dim, suffix
 
 if __name__ == '__main__':
+    train_set_name = 'Metro'
+    img_shape, latent_dim, suffix = get_dataset_config(train_set_name)
     parser = argparse.ArgumentParser()
-    train_set_name = 'WQ'
-    parser.add_argument("--seed", type=int, default=1, help="seed")
+    parser.add_argument("--seed", type=int, default=0, help="seed")
     parser.add_argument("--K", type=int, default=7, help="number of sub-models")
-    parser.add_argument("--n_epochs", type=int, default=50, help="number of epochs of overall training")
+    parser.add_argument("--n_epochs", type=int, default=2, help="number of epochs of overall training")
     parser.add_argument("--path_train_data", type=str,
                         default=os.path.join(path_project,
 
-                                             f'data/{train_set_name}/yukina_data/ensemble_data, window=1, step=1'))
+                                             f'data/{train_set_name}/yukina_data/ensemble_data, {suffix}'))
     parser.add_argument("--dir_model", type=str,
                         default=os.path.join(path_project, f'{train_set_name}_dataset/models/{train_set_name}/ensemble'))
     parser.add_argument("--path_output", type=str,
                         default=os.path.join(path_project, f'{train_set_name}_dataset/log/{train_set_name}/train_result'))
     parser.add_argument("--DeepSAD_config", type=dict, default={
         "n_epochs": 1,
-        "ae_n_epochs": 50,
+        "ae_n_epochs": 5,
         "net_name": 'Dense'
     }, help="config of DeepSAD")
     parser.add_argument("--GAN_config", type=dict, default={
-        "latent_dim": 9,
+        "latent_dim": latent_dim,
         "n_epochs": 1,
         "lr": 0.002,
-        "lam1": 1000,
-        "lam2": 0,
+        "lam1": 7000,
+        "lam2": 1000,
         "lam3": 0,
         "tau1": 1,
-        "img_size": 9
+        "img_size": img_shape
     }, help="config of GAN")
 
     config = parser.parse_args()
 
     # 生成特定参数的文件夹
-    param_dir = f'GAN1_continue, window=1, step=1, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},seed={config.seed}'
+    param_dir = f'GAN1_continue, {suffix}, no_tau2_K={config.K},deepsad_epoch={config.DeepSAD_config["n_epochs"]},gan_epoch={config.GAN_config["n_epochs"]},lam1={config.GAN_config["lam1"]},lam2={config.GAN_config["lam2"]},lam3={config.GAN_config["lam3"]},latent_dim={config.GAN_config["latent_dim"]},lr={config.GAN_config["lr"]},seed={config.seed}'
     # param_dir = 'baseline, window=100, step=10, deepsad_epoch=100'
     config.dir_model = os.path.join(config.dir_model, param_dir)
     config.path_output = os.path.join(config.path_output, param_dir)
@@ -171,4 +198,4 @@ if __name__ == '__main__':
 
         gc.collect()
 
-    ensemble_test(param_dir)
+    ensemble_test(param_dir, train_set_name, suffix)

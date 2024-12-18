@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 train_set_name = 'TLM-RATE'
-dataset_name = 'window=100, step=10'
+dataset_name = 'window=10, step=2'
 data_path = os.path.join(path_project, f'data/{train_set_name}/yukina_data/DeepSAD_data, {dataset_name}')
 
 output_path = os.path.join(path_project, f'data/{train_set_name}/csv/{dataset_name}')

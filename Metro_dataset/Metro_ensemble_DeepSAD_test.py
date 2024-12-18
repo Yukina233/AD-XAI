@@ -22,7 +22,7 @@ from scripts.group_result_ensemble import group_results
 # logging.basicConfig(level=logging.INFO)
 
 # 设置项目路径
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 
 def metric(y_true, y_score, pos_label=1):
@@ -66,18 +66,17 @@ def adjust_scores(label, score):
         score[pos:sp] = np.max(score[pos:sp])
     return score
 
-def ensemble_test(model_name):
+def ensemble_test(model_name, train_set_name, suffix):
     seed = 0
     n_samples_threshold = 0
-
-    iterations = range(0, 49)
+    test_set_name = train_set_name
+    iterations = range(0, 2)
     for iteration in iterations:
         print(f"Start iteration {iteration}")
-        test_set_name = 'WQ'
         model_path = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}/{iteration}')
         train_data_path = os.path.join(path_project,
-                                       f'data/{test_set_name}/yukina_data/ensemble_data, window=1, step=1/init/K=7')
-        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, window=1, step=1')
+                                       f'data/{test_set_name}/yukina_data/ensemble_data, {suffix}/init/K=7')
+        test_data_path = os.path.join(path_project, f'data/{test_set_name}/yukina_data/DeepSAD_data, {suffix}')
         output_path = os.path.join(path_project,
                                    f'{test_set_name}_dataset/log/{test_set_name}/ensemble/DeepSAD/{model_name}/{iteration}')
         timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')

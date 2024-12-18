@@ -102,7 +102,7 @@ def train(args, G, D, GAN, x_train, x_test, y_test, x_val, y_val):
     evaluation = args.evaluation
 
     dir_result = os.path.join(path_project, 'Fence_GAN-master',
-                              f'results_origin/{args.dataset}/alpha={args.alpha},epochs={args.epochs},gamma={args.gamma}')
+                              f'results_origin/{args.dataset}/alpha={args.alpha},epochs={args.epochs},gamma={args.gamma},pretrain={args.pretrain}')
     if not os.path.exists(dir_result):
         os.makedirs(dir_result)
     result_path = os.path.join(dir_result, f'{len(os.listdir(dir_result))}')
@@ -159,7 +159,7 @@ def train(args, G, D, GAN, x_train, x_test, y_test, x_val, y_val):
             f.close()
 
             # if val > best_val:
-            if test_pr > best_test_pr:
+            if best_test_roc > test_roc or epoch == 0:
                 best_val = val
                 best_test_roc = test_roc
                 best_test_pr = test_pr

@@ -112,11 +112,11 @@ def run_1_by_1(seed=0, input_path='', path_results=''):
 
     print('Results saved.')
 
-path_project = '/home/yukina/Missile_Fault_Detection/project'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 if __name__ == '__main__':
-    suffix = 'window=20, step=1'
-    dataset_name = 'SWAT'
+    suffix = 'window=10, step=2'
+    dataset_name = 'TLM-RATE'
 
     path_data = os.path.join(path_project, f'data/{dataset_name}/csv/{suffix}')
     path_results = os.path.join(path_project,

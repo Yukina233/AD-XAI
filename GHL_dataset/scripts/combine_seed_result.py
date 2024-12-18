@@ -5,13 +5,14 @@ import pandas as pd
 
 # from combine_epoch_result import combine_epoch_results
 
-path_project = '/media/test/d/Yukina/AD-XAI'
+# path_project = '/media/test/d/Yukina/AD-XAI'
+path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
 
 def combine_seed_results(base_dir, prefix):
     # 初始化一个空的列表来存储所有结果
 
-    for iteration in range(0, 49):
+    for iteration in range(0, 98):
         all_results = []
         # 遍历所有实验文件夹
         for seed_folder in os.listdir(base_dir):

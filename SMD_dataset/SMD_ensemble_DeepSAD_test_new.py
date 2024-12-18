@@ -36,11 +36,11 @@ def metric(y_true, y_score, pos_label=1):
 def ensemble_test(model_name, seed, DeepSAD_config=None):
     n_samples_threshold = 2
 
-    iterations = range(0, 20)
+    iterations = range(0, 30)
 
     for iteration in iterations:
         print(f"Start iteration {iteration}")
-        test_set_name = 'SMD'
+        test_set_name = 'SMD_group4'
         model_dir = os.path.join(path_project, f'{test_set_name}_dataset/models/{test_set_name}/ensemble/{model_name}')
         train_data_dir = os.path.join(path_project,
                                        f'data/{test_set_name}/yukina_data/ensemble_data, window=100, step=10/init/K=7')

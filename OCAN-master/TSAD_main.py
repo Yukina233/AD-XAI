@@ -5,8 +5,9 @@ from glob import glob
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score, average_precision_score
-from pyod.models.ecod import ECOD
-
+from pyod.models.auto_encoder import AutoEncoder
+import argparse
+from oc_gan import OCGAN
 
 def load_data(dataInput):
     df = pd.read_csv(dataInput)
@@ -15,7 +16,7 @@ def load_data(dataInput):
     return data, labels
 
 
-def run(seed=0, input_path='', path_results=''):
+def run(input_path='', path_results='', args=None):
     train_files = glob(os.path.join(input_path, '*train.csv'))
     test_files = glob(os.path.join(input_path, '*test.csv'))
 
@@ -23,10 +24,12 @@ def run(seed=0, input_path='', path_results=''):
     os.makedirs(os.path.join(path_results, f'{seed}/scores'), exist_ok=True)
     for id, file in enumerate(train_files):
         print(f"Train file {id}: {file}")
-        data, labels = load_data(file)
-
-        clf = ECOD()
-        clf.fit(data)
+        train_data, train_labels = load_data(file)
+        test_data, test_labels = load_data(test_files[0])
+        clf = OCGAN(args)
+        clf.fit(train_data, train_labels, test_data, test_labels)
+        generated_data = clf.generate_samples(num_samples=1000)
+        np.savez(os.path.join(path_results, f'{seed}/generated_data_{id}.npz'), X=generated_data)
 
     auc_roc_list = []
     auc_pr_list = []
@@ -39,7 +42,7 @@ def run(seed=0, input_path='', path_results=''):
 
         # 计算AUC-ROC和AUC-PR
         auc_roc = roc_auc_score(labels, scores)
-        auc_pr = average_precision_score(labels, scores)
+        auc_pr = average_precision_score(labels, scores, pos_label=1)
 
         auc_roc_list.append(auc_roc)
         auc_pr_list.append(auc_pr)
@@ -61,7 +64,7 @@ def run(seed=0, input_path='', path_results=''):
 
     print('Results saved.')
 
-def run_1_by_1(seed=0, input_path='', path_results=''):
+def run_1_by_1(input_path='', path_results='', args=None):
     train_files = glob(os.path.join(input_path, '*train.csv'))
     test_files = glob(os.path.join(input_path, '*test.csv'))
 
@@ -73,10 +76,11 @@ def run_1_by_1(seed=0, input_path='', path_results=''):
 
     for id, file in enumerate(train_files):
         print(f"Train file {id}: {file}")
-        data, labels = load_data(file)
+        train_data, train_labels = load_data(file)
+        test_data, test_labels = load_data(test_files[0])
 
-        clf = ECOD()
-        clf.fit(data)
+        clf = OCGAN(args)
+        clf.fit(train_data, train_labels, test_data, test_labels)
 
         file = test_files[id]
         print(f"Test file {id}: {file}")
@@ -112,25 +116,66 @@ def run_1_by_1(seed=0, input_path='', path_results=''):
 
     print('Results saved.')
 
-
 path_project = '/home/yukina/Missile_Fault_Detection/project_data'
 
+def get_dataset_config(dataset_name):
+    if dataset_name == 'Metro':
+        img_shape = 5
+        latent_dim = 5
+        suffix = 'window=1, step=1'
+
+    elif dataset_name == 'SMD_group4':
+        img_shape = 180
+        latent_dim = 50
+        suffix = 'window=100, step=10'
+    elif dataset_name == 'SWAT':
+        img_shape = 255
+        latent_dim = 200
+        suffix = 'window=20, step=1'
+    elif dataset_name == 'GHL':
+        img_shape = 80
+        latent_dim = 80
+        suffix = 'window=100, step=10'
+    elif dataset_name == 'TLM-RATE':
+        img_shape = 48
+        latent_dim = 48
+        suffix = 'window=10, step=2'
+    else:
+        return None, None
+    return img_shape, latent_dim, suffix
+
 if __name__ == '__main__':
-    suffix = 'window=10, step=2'
-    dataset_name = 'TLM-RATE'
+    dataset_name = 'GHL'
+    img_shape, latent_dim, suffix = get_dataset_config(dataset_name)
+    epochs = 40
 
     path_data = os.path.join(path_project, f'data/{dataset_name}/csv/{suffix}')
+    prefix = f'epochs={epochs}, latent_dim={latent_dim}'
     path_results = os.path.join(path_project,
-                                f'pyod_algorithm/ECOD/results/{dataset_name}/{suffix}/default')
+                                f'OCAN-master/results/{dataset_name}/{suffix}', prefix)
+
 
     all_scores = []
     AUCROC_seed = []
     AUCPR_seed = []
-    for seed in range(1):
+    for seed in range(3):
+        parser = argparse.ArgumentParser('Train your OCGAN')
+
+        ###Training hyperparameter
+        parser.add_argument('--dataset', type=str, default=dataset_name, help='mnist | cifar10')
+        parser.add_argument('--en_ae', type=int, default=1, help='network config id')
+        parser.add_argument('--epochs', type=int, default=epochs, help='number of epochs to train')
+        parser.add_argument('--latent_dim', type=int, default=latent_dim,
+                                   help='Latent dimension of Gaussian noise input to Generator')
+        parser.add_argument('--img_shape', type=int, default=img_shape)
+
+        args = parser.parse_args()
+
+
         if dataset_name == 'SMD':
-            run_1_by_1(seed, path_data, path_results)
+            run_1_by_1(path_data, path_results, args)
         else:
-            run(seed, path_data, path_results)
+            run(path_data, path_results, args)
         result = pd.read_csv(os.path.join(path_results, f'{seed}/results.csv'), index_col=0)
         AUCROC_seed.append(result['AUC-ROC'].values)
         AUCPR_seed.append(result['AUC-PR'].values)
@@ -159,3 +204,5 @@ if __name__ == '__main__':
     result = pd.concat([result, mean_row])
 
     result.to_csv(os.path.join(path_results, 'results.csv'), index=True)
+
+    print(prefix)

@@ -18,7 +18,7 @@ path_project = '/home/yukina/Missile_Fault_Detection/project'
 
 
 # Create the dataset
-root_dir = os.path.join(path_project, 'data/SMD/yukina_data')
+root_dir = os.path.join(path_project, 'data/SMD_group4/yukina_data')
 
 
 # Save as NPY
@@ -33,7 +33,7 @@ def kmeans_clustering(X_train, num_clusters):
     return centroids, labels
 
 
-num_clusters = 13
+num_clusters = 7
 output_path = os.path.join(root_dir, f'ensemble_data, window=100, step=10/init/K={num_clusters}')
 os.makedirs(output_path, exist_ok=True)
 

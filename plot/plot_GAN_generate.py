@@ -13,9 +13,9 @@ tsne_config = {
 
 test_set_name = 'TLM-RATE'
 num_samples = 100
-np.random.seed(0)
+np.random.seed(2)
 
-param = 'beta_new'
+param = 'GAN'
 
 output_dir = os.path.join(path_project, f'{test_set_name}_dataset/plot_data/{param}')
 
@@ -28,7 +28,7 @@ generated_data_dir = os.path.join(path_project, f'{test_set_name}_dataset/plot_d
 
 init_train_data = np.load(train_path)['X_train']
 sampled_init_train_data = init_train_data[
-    np.random.choice(range(0, init_train_data.shape[0]), num_samples*5, replace=True)]
+    np.random.choice(range(0, init_train_data.shape[0]), num_samples*10, replace=True)]
 
 test_data = np.load(test_path)['X_test']
 test_y = np.load(test_path)['y_test']
@@ -37,23 +37,24 @@ test_normal_data = test_data[np.where(test_y == 0)]
 sampled_anomaly = anomaly_data[np.random.choice(range(0, anomaly_data.shape[0]), num_samples, replace=True)]
 sampled_test_normal = test_normal_data[np.random.choice(range(0, test_normal_data.shape[0]), num_samples, replace=True)]
 
-# beta_list = [0, 0.1, 1, 1.5, 2, 2.5, 3]
-beta_list = [0, 0.1, 1, 5, 10, 20, 25]
-
+beta_list = ['FenceGAN', 'OCAN', 'BAEM']
+color_list = ['orange', 'red', 'green']
 generated_data = []
 for beta in beta_list:
     data = np.load(os.path.join(generated_data_dir, f'{beta}.npz'))['X']
-    generated_data.append(data[np.random.choice(range(0, data.shape[0]), num_samples*2, replace=True)])
+    generated_data.append(data[np.random.choice(range(0, data.shape[0]), num_samples, replace=True)])
 
 all_generated_data = np.concatenate(generated_data)
+# X_plot = np.concatenate((sampled_init_train_data, sampled_test_normal))
 X_plot = np.concatenate((init_train_data, test_normal_data))
+# X_plot = np.concatenate((X_plot, sampled_anomaly))
 X_plot = np.concatenate((X_plot, all_generated_data))
+# Y_plot = np.zeros(num_samples*10)
+# Y_plot = np.concatenate((Y_plot, np.zeros(num_samples)))
 Y_plot = np.zeros(init_train_data.shape[0]+test_normal_data.shape[0])
-# X_plot = np.concatenate((sampled_init_train_data, all_generated_data))
-# Y_plot = np.zeros(num_samples*5)
-# Y_plot = np.concatenate((Y_plot, -np.ones(num_samples*2)))
+# Y_plot = np.concatenate((Y_plot, -np.ones(num_samples)))
 for i, beta in enumerate(beta_list):
-    Y_plot = np.concatenate((Y_plot, np.ones(num_samples*2) * (i + 1)))
+    Y_plot = np.concatenate((Y_plot, np.ones(num_samples) * (i + 1)))
 
 # tsne1 = TSNE(n_components=2, random_state=0, perplexity=tsne_config['perplexity'])  # n_components表示目标维度
 #
@@ -77,7 +78,7 @@ for i, beta in enumerate(beta_list):
 # plt.savefig(os.path.join(output_dir, f'TSNE1 of Generated Data.jpg'), dpi=330, format='jpg')
 # plt.close()
 
-embeddings = MDS(n_components=2, random_state=0, normalized_stress='auto')  # n_components表示目标维度
+embeddings = MDS(n_components=2, random_state=1, normalized_stress='auto', max_iter=200)  # n_components表示目标维度
 
 # 创建MinMaxScaler对象
 scaler1 = MinMaxScaler()
@@ -85,57 +86,31 @@ scaler1 = MinMaxScaler()
 normalized_data = scaler1.fit_transform(X_plot)
 X_2d = embeddings.fit_transform(normalized_data)  # 对数据进行降维处理
 
+plt.rcParams['font.sans-serif'] = ['SimSun']
+plt.figure(figsize=(6.4, 4.8))
 
-handles = []
-labels = []
-# plt.rcParams['font.sans-serif'] = ['SimSun']
-plt.figure(figsize=(3, 3))
-
-
-# 图例句柄和标签存储
-handles = []
-labels = []
-
-plt.figure(figsize=(3, 3))
 
 for i, beta in enumerate(beta_list):
-    # 绘制正常数据
-    scatter_normal = plt.scatter(X_2d[Y_plot == 0, 0], X_2d[Y_plot == 0, 1], label=f'normal data', alpha=0.5, color='blue')
-    if i == 0:  # 避免重复添加
-        handles.append(scatter_normal)
-        labels.append('normal data')
+    plt.scatter(X_2d[Y_plot == 0, 0], X_2d[Y_plot == 0, 1], label=f'normal data', alpha=0.5, color='blue')
+    plt.scatter(X_2d[Y_plot == -1, 0], X_2d[Y_plot == -1, 1], label=f'anomaly data', alpha=0.5, color='black')
+    plt.scatter(X_2d[Y_plot == (i + 1), 0], X_2d[Y_plot == (i + 1), 1], label=f'generated data of {beta}', alpha=0.5, color='red', marker='^')
 
-    # 绘制生成数据
-    scatter_generated = plt.scatter(X_2d[Y_plot == (i + 1), 0], X_2d[Y_plot == (i + 1), 1],
-                                     label=f'generated data', alpha=0.5, color='red', marker='^')
-    if i == 0:
-        handles.append(scatter_generated)
-        labels.append(f'generated data')
-
-    plt.tight_layout()
-    # plt.legend(loc='lower center')
+    plt.legend()
     plt.xlim([-4, 4])
     plt.ylim([-4, 4])
-    plt.axis('off')
+    plt.xlabel('Dimension 1')
+    plt.ylabel('Dimension 2')
     plt.savefig(os.path.join(output_dir, f'MDS of Generated Data_{param}={beta}.jpg'), dpi=330, format='jpg')
     plt.cla()
 
-# 绘制图例到单独的图中
-fig_legend = plt.figure(figsize=(6, 2))  # 图例画布大小
-plt.legend(handles=handles, labels=labels, loc='center', frameon=False, ncol=2)  # 自定义图例样式
-plt.axis('off')  # 去掉坐标轴
-plt.tight_layout()
-fig_legend.savefig(os.path.join(output_dir, 'legend.jpg'), dpi=330, format='jpg')
-
-
-plt.scatter(X_2d[Y_plot == 0, 0], X_2d[Y_plot == 0, 1], label=f'normal data', alpha=0.5, color='black')
-# plt.scatter(X_2d[Y_plot == -1, 0], X_2d[Y_plot == -1, 1], label=f'anomaly data', alpha=0.5, color='red')
+plt.scatter(X_2d[Y_plot == 0, 0], X_2d[Y_plot == 0, 1], label=f'normal data', alpha=0.5, color='blue')
+plt.scatter(X_2d[Y_plot == -1, 0], X_2d[Y_plot == -1, 1], label=f'anomaly data', alpha=0.5, color='black')
 for i, beta in enumerate(beta_list):
-    plt.scatter(X_2d[Y_plot == (i + 1), 0], X_2d[Y_plot == (i + 1), 1], label=f'generated data, beta={beta}', alpha=0.5, marker='^')
+    plt.scatter(X_2d[Y_plot == (i + 1), 0], X_2d[Y_plot == (i + 1), 1], label=f'generated data of {beta}', alpha=0.5, color=color_list[i], marker='^')
 
 plt.legend()
 
 plt.xlabel('Dimension 1')
 plt.ylabel('Dimension 2')
-plt.savefig(os.path.join(output_dir, f'MDS of Generated Data_{beta}.jpg'), dpi=330, format='jpg')
+plt.savefig(os.path.join(output_dir, f'MDS of Generated Data.jpg'), dpi=330, format='jpg')
 plt.cla()
